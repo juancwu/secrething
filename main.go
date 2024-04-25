@@ -5,16 +5,15 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
-	"fmt"
 	"net/http"
 	"os"
 
 	"github.com/charmbracelet/log"
 	"github.com/go-playground/validator"
-	"github.com/joho/godotenv"
+	"github.com/labstack/echo/v4"
+
 	"github.com/juancwu/konbini/database"
 	"github.com/juancwu/konbini/router"
-	"github.com/labstack/echo/v4"
 )
 
 type ReqValidator struct {
@@ -44,14 +43,10 @@ func loadPublicKey(pemData []byte) (*rsa.PublicKey, error) {
 }
 
 func main() {
-	if os.Getenv("APP_ENV") != "production" {
-		err := godotenv.Load()
-		if err != nil {
-			log.Fatalf("Error loading env: %v\n", err)
-		}
-	}
-
-	fmt.Println("Konbini!")
+	/*
+	   Environemnt variables are loaded in the env package when it is imported
+	*/
+	database.Connect()
 	database.Migrate()
 
 	e := echo.New()

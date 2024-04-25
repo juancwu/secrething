@@ -1,17 +1,16 @@
 package database
 
 import (
-	"os"
-
 	"github.com/charmbracelet/log"
+	"github.com/juancwu/konbini/env"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
 var db *gorm.DB
 
-func init() {
-	gormdb, err := gorm.Open(postgres.Open(os.Getenv("POSTGRES_DSN")), &gorm.Config{})
+func Connect() {
+	gormdb, err := gorm.Open(postgres.Open(env.Values.DB_URL), &gorm.Config{})
 	if err != nil {
 		log.Fatalf("Error connecting to database: %v\n", err)
 	}
