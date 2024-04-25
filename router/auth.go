@@ -1,8 +1,11 @@
 package router
 
 import (
+	"errors"
 	"net/http"
 
+	"github.com/charmbracelet/log"
+	"github.com/juancwu/konbini/service"
 	"github.com/labstack/echo/v4"
 )
 
@@ -13,6 +16,13 @@ import (
 type AuthReqBody struct {
 	Email     string `json:"email" validate:"required"`
 	Challenge string `json:"challenge" validate:"required"`
+}
+
+type RegisterReqBody struct {
+	Email        string  `json:"email" validate:"required"`
+	FirstName    *string `json:"first_name" validate:"alpha"`
+	LastName     *string `json:"last_name" validate:"alpha"`
+	PemPublicKey string  `json:"pem_public_key" validate:"required"`
 }
 
 func SetupAuthRoutes(e *echo.Echo) {
@@ -35,5 +45,38 @@ func handleAuth(c echo.Context) error {
 }
 
 func handleRegister(c echo.Context) error {
+	reqBody := new(RegisterReqBody)
+
+	// bind the incoming request data
+	if err := c.Bind(reqBody); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+	if err := c.Validate(reqBody); err != nil {
+		return err
+	}
+
+	user, err := service.GetUserByEmail(reqBody.Email)
+	if err != nil {
+		log.Errorf("Error registering user: %v\n", err)
+		c.Response().WriteHeader(http.StatusInternalServerError)
+		return errors.New("Error registering user.")
+	}
+
+	if user != nil {
+		log.Error("Error registering user: an account with the given email already exists.", reqBody.Email)
+		c.Response().WriteHeader(http.StatusBadRequest)
+		return errors.New("An account with the given email already exists.")
+	}
+
+	// register user
+	err = service.RegisterUser(reqBody.FirstName, reqBody.LastName, reqBody.Email, reqBody.PemPublicKey)
+	if err != nil {
+		log.Errorf("Error registering user: %v\n", err)
+		c.Response().WriteHeader(http.StatusInternalServerError)
+		return errors.New("Error registering user.")
+	}
+
+	c.Response().WriteHeader(http.StatusCreated)
+
 	return nil
 }
