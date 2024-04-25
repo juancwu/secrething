@@ -32,4 +32,7 @@ Grant privileges to the user `cashier`:
 GRANT ALL PRIVILEGES ON DATABASE konbini TO cashier;
 ```
 
-Now you can run the application and migrations will run automatically. `go run .`
+Now you can run the application and migrations will run automatically.
+```
+air
+```
