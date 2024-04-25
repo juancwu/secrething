@@ -13,13 +13,9 @@ import (
 	"github.com/go-playground/validator"
 	"github.com/joho/godotenv"
 	"github.com/juancwu/konbini/database"
+	"github.com/juancwu/konbini/router"
 	"github.com/labstack/echo/v4"
 )
-
-type AuthReqBody struct {
-	Email     string `json:"email" validate:"required"`
-	Challenge string `json:"challenge" validate:"required"`
-}
 
 type ReqValidator struct {
 	validator *validator.Validate
@@ -56,41 +52,12 @@ func main() {
 	}
 
 	fmt.Println("Konbini!")
-	db := database.New()
-	db.Migrate()
+	database.Migrate()
 
 	e := echo.New()
 	e.Validator = &ReqValidator{validator: validator.New()}
 
-	e.GET("/health", func(c echo.Context) error {
-		report := make(map[string]string)
-
-		sqlDB, err := db.Conn.DB()
-		if err != nil {
-			report["database"] = "down"
-		} else if err := sqlDB.Ping(); err != nil {
-			report["database"] = "down"
-		} else {
-			report["database"] = "up"
-		}
-
-		return c.JSON(http.StatusOK, report)
-	})
-
-	// auth handling
-	e.POST("/auth", func(c echo.Context) error {
-		auth := new(AuthReqBody)
-
-		// bind the incoming request data
-		if err := c.Bind(auth); err != nil {
-			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
-		}
-		if err := c.Validate(auth); err != nil {
-			return err
-		}
-
-		return c.JSON(http.StatusOK, auth)
-	})
+	router.SetupAuthRoutes(e)
 
 	log.Fatal(e.Start(os.Getenv("PORT")))
 }
