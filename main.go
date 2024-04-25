@@ -6,10 +6,10 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 
+	"github.com/charmbracelet/log"
 	"github.com/go-playground/validator"
 	"github.com/joho/godotenv"
 	"github.com/juancwu/konbini/database"
@@ -92,5 +92,5 @@ func main() {
 		return c.JSON(http.StatusOK, auth)
 	})
 
-	e.Logger.Fatal(e.Start(os.Getenv("PORT")))
+	log.Fatal(e.Start(os.Getenv("PORT")))
 }
