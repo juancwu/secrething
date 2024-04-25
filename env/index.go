@@ -11,9 +11,10 @@ type Env struct {
 	APP_ENV string
 	PORT    string
 	DB_URL  string
+	DB_NAME string
 }
 
-var Values Env
+var values Env
 
 func init() {
 	if os.Getenv("APP_ENV") != "production" {
@@ -22,14 +23,15 @@ func init() {
 		}
 	}
 
-	Values = Env{}
+	values = Env{}
 
 	// required env
-	Values.PORT = getEnv("PORT", true)
-	Values.DB_URL = getEnv("DB_URL", true)
+	values.PORT = getEnv("PORT", true)
+	values.DB_URL = getEnv("DB_URL", true)
+	values.DB_NAME = getEnv("DB_NAME", true)
 
 	// optional env
-	Values.APP_ENV = getEnv("APP_ENV", false)
+	values.APP_ENV = getEnv("APP_ENV", false)
 }
 
 // checks if env exists or not
@@ -43,4 +45,8 @@ func getEnv(key string, required bool) string {
 		}
 	}
 	return v
+}
+
+func Values() *Env {
+	return &values
 }

@@ -46,6 +46,7 @@ func main() {
 	/*
 	   Environemnt variables are loaded in the env package when it is imported
 	*/
+
 	database.Connect()
 	database.Migrate()
 
