@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/go-playground/validator"
 	"github.com/labstack/echo/v4"
+	// "github.com/labstack/echo/v4/middleware"
 
 	"github.com/juancwu/konbini/database"
 	"github.com/juancwu/konbini/router"
@@ -51,6 +52,7 @@ func main() {
 	database.Migrate()
 
 	e := echo.New()
+	// e.Use(middleware.Logger())
 	e.Validator = &ReqValidator{validator: validator.New()}
 
 	router.SetupAuthRoutes(e)

@@ -9,27 +9,25 @@ import (
 )
 
 func GetUserByEmail(email string) (*model.UserModel, error) {
-	log.Info("Getting user by email", email)
-	row := database.DB().QueryRowContext(context.Background(), "SELECT id, first_name, last_name, email, pem_public_key FROM users WHERE email = ?;", email)
-	if row.Err() != nil {
-		log.Errorf("Error getting user with email: %s, cause: %s\n", email, row.Err())
-		return nil, row.Err()
-	}
-
+	log.Info("Getting user by email", "email", email)
 	user := model.UserModel{}
-	err := row.Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.PemPublicKey)
+	err := database.DB().QueryRow("SELECT id, first_name, last_name, email, pem_public_key FROM users WHERE email = $1", email).Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.PemPublicKey)
 	if err != nil {
-		log.Errorf("Error scanning values for user: %v, function: GetUserByEmail\n", err)
+		if err.Error() == "sql: no rows in result set" {
+			log.Info("No user found with email", "email", email)
+			return nil, nil
+		}
+		log.Errorf("Error getting user with email: %s, cause: %s\n", email, err)
 		return nil, err
 	}
 
 	return &user, nil
 }
 
-func RegisterUser(firstName, lastName *string, email, pemPublicKey string) error {
+func RegisterUser(firstName, lastName, email, pemPublicKey string) error {
 	log.Info("Registering user with email", email)
 
-	result, err := database.DB().ExecContext(context.Background(), "INSERT INTO users (first_name, last_name, email, pem_public_key) VALUES (?, ?, ?, ?);", firstName, lastName, email, pemPublicKey)
+	result, err := database.DB().ExecContext(context.Background(), "INSERT INTO users (first_name, last_name, email, pem_public_key) VALUES ($1, $2, $3, $4);", firstName, lastName, email, pemPublicKey)
 	if err != nil {
 		log.Errorf("Error resgitering user: %v\n", err)
 	}
