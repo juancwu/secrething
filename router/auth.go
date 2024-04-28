@@ -2,7 +2,6 @@ package router
 
 import (
 	"bytes"
-	"errors"
 	"net/http"
 
 	"github.com/charmbracelet/log"
@@ -58,8 +57,10 @@ func handleRegister(c echo.Context) error {
 
 	// bind the incoming request data
 	if err := c.Bind(reqBody); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+		log.Errorf("Error binding request body: %v\n", err)
+		return c.String(http.StatusBadRequest, "Invalid payload")
 	}
+
 	if err := c.Validate(reqBody); err != nil {
 		return err
 	}
@@ -67,24 +68,19 @@ func handleRegister(c echo.Context) error {
 	user, err := service.GetUserByEmail(reqBody.Email)
 	if err != nil && err.Error() != "sql: no rows in result set" {
 		log.Errorf("Error registering user: %v\n", err)
-		c.Response().WriteHeader(http.StatusInternalServerError)
-		return errors.New("Error registering user.")
+		return c.String(http.StatusInternalServerError, "Error registering user.")
 	}
 
 	if user != nil {
 		log.Error("Error registering user: an account with the given email already exists.", "email", reqBody.Email)
-		c.Response().WriteHeader(http.StatusBadRequest)
-		err = errors.New("An account with the given email already exists.")
-		c.Response().Writer.Write([]byte(err.Error()))
-		return err
+		return c.String(http.StatusBadRequest, "An account with the given email already exists.")
 	}
 
 	// register user
 	err = service.RegisterUser(reqBody.FirstName, reqBody.LastName, reqBody.Email, reqBody.PemPublicKey)
 	if err != nil {
 		log.Errorf("Error registering user: %v\n", err)
-		c.Response().WriteHeader(http.StatusInternalServerError)
-		return errors.New("Error registering user.")
+		return c.String(http.StatusInternalServerError, "Error registering user.")
 	}
 
 	// get verify email template
@@ -92,14 +88,12 @@ func handleRegister(c echo.Context) error {
 	err = templates.Render(&tpl, "verify-email.html", VerifyEmailData{FirstName: reqBody.FirstName, LastName: reqBody.LastName, URL: "http://localhost:3000/verify-email"})
 	if err != nil {
 		log.Errorf("Failed to get verify email template: %v - handleRegister\n", err)
-		return err
+		return c.String(http.StatusInternalServerError, "Error sending verification email.")
 	}
 
 	log.Info("Request verify email", "func", "handleRegister")
 	emailId, err := service.SendEmail("noreply@juancwu.dev", reqBody.Email, "[Konbini] Verify Your Email", tpl.String())
 	log.Info("Verify email sent", "id", emailId, "func", "handleRegister")
 
-	c.Response().WriteHeader(http.StatusCreated)
-
-	return nil
+	return c.String(http.StatusCreated, "Account registered.")
 }
