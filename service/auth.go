@@ -1,9 +1,8 @@
 package service
 
 import (
-	"context"
-
 	"github.com/charmbracelet/log"
+
 	"github.com/juancwu/konbini/database"
 	"github.com/juancwu/konbini/model"
 )
@@ -24,20 +23,21 @@ func GetUserByEmail(email string) (*model.UserModel, error) {
 	return &user, nil
 }
 
-func RegisterUser(firstName, lastName, email, pemPublicKey string) error {
+func RegisterUser(firstName, lastName, email, pemPublicKey string) (int64, error) {
 	log.Info("Registering user with email", email)
 
-	result, err := database.DB().ExecContext(context.Background(), "INSERT INTO users (first_name, last_name, email, pem_public_key) VALUES ($1, $2, $3, $4);", firstName, lastName, email, pemPublicKey)
-	if err != nil {
-		log.Errorf("Error resgitering user: %v\n", err)
+	row := database.DB().QueryRow("INSERT INTO users (first_name, last_name, email, pem_public_key) VALUES ($1, $2, $3, $4) RETURNING id;", firstName, lastName, email, pemPublicKey)
+	if row.Err() != nil {
+		log.Errorf("Error resgitering user: %v\n", row.Err())
+		return 0, row.Err()
 	}
 
-	count, err := result.RowsAffected()
+	var id int64
+	err := row.Scan(&id)
 	if err != nil {
-		log.Errorf("Error getting rows inserted after registering user: %v\n", err)
-	} else {
-		log.Infof("Resgitered %d user(s)\n", count)
+		log.Errorf("Error getting returning user id after insert: %v\n", err)
+		return 0, err
 	}
 
-	return nil
+	return id, nil
 }

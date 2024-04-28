@@ -77,10 +77,17 @@ func handleRegister(c echo.Context) error {
 	}
 
 	// register user
-	err = service.RegisterUser(reqBody.FirstName, reqBody.LastName, reqBody.Email, reqBody.PemPublicKey)
+	userId, err := service.RegisterUser(reqBody.FirstName, reqBody.LastName, reqBody.Email, reqBody.PemPublicKey)
 	if err != nil {
 		log.Errorf("Error registering user: %v\n", err)
 		return c.String(http.StatusInternalServerError, "Error registering user.")
+	}
+
+	// create entry for an email verification
+	err = service.CreateEmailVerification(userId)
+	if err != nil {
+		log.Errorf("Error creating email verificaiton: %v\n", err)
+		return c.String(http.StatusInternalServerError, "Error creating email verification.")
 	}
 
 	// get verify email template
