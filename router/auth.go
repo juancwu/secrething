@@ -2,9 +2,11 @@ package router
 
 import (
 	"bytes"
+	"fmt"
 	"net/http"
 
 	"github.com/charmbracelet/log"
+	"github.com/juancwu/konbini/database"
 	"github.com/juancwu/konbini/service"
 	"github.com/juancwu/konbini/templates"
 	"github.com/labstack/echo/v4"
@@ -35,6 +37,7 @@ type VerifyEmailData struct {
 func SetupAuthRoutes(e *echo.Echo) {
 	e.POST("/auth", handleAuth)
 	e.POST("/auth/register", handleRegister)
+	e.GET("/auth/verify-email/:refId", handleVerifyEmail)
 }
 
 func handleAuth(c echo.Context) error {
@@ -84,7 +87,7 @@ func handleRegister(c echo.Context) error {
 	}
 
 	// create entry for an email verification
-	err = service.CreateEmailVerification(userId)
+	refId, err := service.CreateEmailVerification(userId)
 	if err != nil {
 		log.Errorf("Error creating email verificaiton: %v\n", err)
 		return c.String(http.StatusInternalServerError, "Error creating email verification.")
@@ -92,7 +95,7 @@ func handleRegister(c echo.Context) error {
 
 	// get verify email template
 	var tpl bytes.Buffer
-	err = templates.Render(&tpl, "verify-email.html", VerifyEmailData{FirstName: reqBody.FirstName, LastName: reqBody.LastName, URL: "http://localhost:3000/verify-email"})
+	err = templates.Render(&tpl, "verify-email.html", VerifyEmailData{FirstName: reqBody.FirstName, LastName: reqBody.LastName, URL: fmt.Sprintf("http://localhost:3000/auth/verify-email/%s", refId)})
 	if err != nil {
 		log.Errorf("Failed to get verify email template: %v - handleRegister\n", err)
 		return c.String(http.StatusInternalServerError, "Error sending verification email.")
@@ -103,4 +106,38 @@ func handleRegister(c echo.Context) error {
 	log.Info("Verify email sent", "id", emailId, "func", "handleRegister")
 
 	return c.String(http.StatusCreated, "Account registered.")
+}
+
+func handleVerifyEmail(c echo.Context) error {
+	log.Info("GET /auth/verify-email/:refId")
+	refId := c.Param("refId")
+	if refId == "" {
+		log.Info("Invalid request to verify email when no ref id was found.")
+		return c.String(http.StatusBadRequest, "Missing value.")
+	}
+
+	ev, err := service.GetEmailVerification(refId)
+	if err != nil {
+		log.Errorf("Error verifying email: %v\n", err)
+		return c.String(http.StatusInternalServerError, "Could not verify email. Please try again later.")
+	}
+
+	// update the user entry that email has been verified
+	log.Info("Updating user entry to set email_verified...")
+	_, err = database.DB().Exec("UPDATE users SET email_verified = true WHERE id = $1;", ev.UserId)
+	if err != nil {
+		log.Errorf("Error updating user entry to set email_verified to true: %v\n", err)
+		return c.String(http.StatusInternalServerError, "Could not verify email. Please try again later.")
+	}
+
+	// now we can update the email verification status because user entry has been updated
+	log.Info("Updating email verification status...")
+	_, err = database.DB().Exec("UPDATE email_verifications SET status = $1 WHERE id = $2;", service.EMAIL_STATUS_VERIFIED, ev.Id)
+	if err != nil {
+		// this error doesn't matter that much as long as the user entry has been updated
+		log.Errorf("Error updating email verification entry to set status to verified: %v\n", err)
+	}
+
+	log.Info("Email verified")
+	return c.String(http.StatusOK, "Email verified.")
 }
