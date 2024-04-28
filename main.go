@@ -55,5 +55,10 @@ func main() {
 
 	router.SetupAuthRoutes(e)
 
+	e.GET("/health", func(c echo.Context) error {
+		c.Response().WriteHeader(http.StatusOK)
+		return nil
+	})
+
 	log.Fatal(e.Start(os.Getenv("PORT")))
 }
