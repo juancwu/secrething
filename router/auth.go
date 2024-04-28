@@ -7,6 +7,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/juancwu/konbini/database"
+	"github.com/juancwu/konbini/env"
 	"github.com/juancwu/konbini/service"
 	"github.com/juancwu/konbini/templates"
 	"github.com/labstack/echo/v4"
@@ -95,7 +96,7 @@ func handleRegister(c echo.Context) error {
 
 	// get verify email template
 	var tpl bytes.Buffer
-	err = templates.Render(&tpl, "verify-email.html", VerifyEmailData{FirstName: reqBody.FirstName, LastName: reqBody.LastName, URL: fmt.Sprintf("http://localhost:3000/auth/verify-email/%s", refId)})
+	err = templates.Render(&tpl, "verify-email.html", VerifyEmailData{FirstName: reqBody.FirstName, LastName: reqBody.LastName, URL: fmt.Sprintf("%s/auth/verify-email/%s", env.Values().SERVER_URL, refId)})
 	if err != nil {
 		log.Errorf("Failed to get verify email template: %v - handleRegister\n", err)
 		return c.String(http.StatusInternalServerError, "Error sending verification email.")

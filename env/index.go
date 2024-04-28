@@ -13,6 +13,7 @@ type Env struct {
 	DB_URL         string
 	DB_NAME        string
 	RESEND_API_KEY string
+	SERVER_URL     string
 }
 
 var values Env
@@ -31,6 +32,7 @@ func init() {
 	values.DB_URL = getEnv("DB_URL", true)
 	values.DB_NAME = getEnv("DB_NAME", true)
 	values.RESEND_API_KEY = getEnv("RESEND_API_KEY", true)
+	values.SERVER_URL = getEnv("SERVER_URL", true)
 
 	// optional env
 	values.APP_ENV = getEnv("APP_ENV", false)
