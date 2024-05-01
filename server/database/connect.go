@@ -6,7 +6,7 @@ import (
 	"github.com/charmbracelet/log"
 	_ "github.com/lib/pq"
 
-	"github.com/juancwu/konbini/env"
+	"github.com/juancwu/konbini/server/env"
 )
 
 var db *sql.DB

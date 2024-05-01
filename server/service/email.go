@@ -7,8 +7,8 @@ import (
 	"github.com/matoous/go-nanoid/v2"
 	"github.com/resend/resend-go/v2"
 
-	"github.com/juancwu/konbini/database"
-	"github.com/juancwu/konbini/env"
+	"github.com/juancwu/konbini/server/database"
+	"github.com/juancwu/konbini/server/env"
 )
 
 type EmailVerification struct {

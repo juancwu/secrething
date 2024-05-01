@@ -13,8 +13,8 @@ import (
 	"github.com/labstack/echo/v4"
 	// "github.com/labstack/echo/v4/middleware"
 
-	"github.com/juancwu/konbini/database"
-	"github.com/juancwu/konbini/router"
+	"github.com/juancwu/konbini/server/database"
+	"github.com/juancwu/konbini/server/router"
 )
 
 type ReqValidator struct {

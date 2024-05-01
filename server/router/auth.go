@@ -6,10 +6,10 @@ import (
 	"net/http"
 
 	"github.com/charmbracelet/log"
-	"github.com/juancwu/konbini/database"
-	"github.com/juancwu/konbini/env"
-	"github.com/juancwu/konbini/service"
-	"github.com/juancwu/konbini/templates"
+	"github.com/juancwu/konbini/server/database"
+	"github.com/juancwu/konbini/server/env"
+	"github.com/juancwu/konbini/server/service"
+	"github.com/juancwu/konbini/server/templates"
 	"github.com/labstack/echo/v4"
 )
 

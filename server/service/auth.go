@@ -3,8 +3,8 @@ package service
 import (
 	"github.com/charmbracelet/log"
 
-	"github.com/juancwu/konbini/database"
-	"github.com/juancwu/konbini/model"
+	"github.com/juancwu/konbini/server/database"
+	"github.com/juancwu/konbini/server/model"
 )
 
 func GetUserByEmail(email string) (*model.UserModel, error) {

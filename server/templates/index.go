@@ -8,7 +8,7 @@ import (
 var t *template.Template
 
 func init() {
-	t = template.Must(template.ParseGlob("templates/*.html"))
+	t = template.Must(template.ParseGlob("server/templates/*.html"))
 }
 
 func Render(w io.Writer, name string, data interface{}) error {

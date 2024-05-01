@@ -6,7 +6,7 @@ import (
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 
-	"github.com/juancwu/konbini/env"
+	"github.com/juancwu/konbini/server/env"
 )
 
 func Migrate() {
