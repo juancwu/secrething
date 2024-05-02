@@ -9,6 +9,7 @@ import (
 
 	"github.com/juancwu/konbini/server/database"
 	"github.com/juancwu/konbini/server/env"
+	"github.com/juancwu/konbini/server/sql"
 )
 
 type EmailVerification struct {
@@ -58,7 +59,7 @@ func CreateEmailVerification(userId int64) (string, error) {
 	}
 
 	log.Info("Creating email verification...")
-	res, err := database.DB().Exec("INSERT INTO email_verifications (ref_id, user_id) VALUES ($1, $2);", refId, userId)
+	res, err := database.DB().Exec(sql.CreateVerificationEmail, refId, userId)
 	if err != nil {
 		log.Errorf("Error creating email verification: %v\n", err)
 		return "", err
@@ -76,7 +77,7 @@ func CreateEmailVerification(userId int64) (string, error) {
 
 func GetEmailVerification(refId string) (*EmailVerification, error) {
 	log.Info("Get email verification with refId.", "refId", refId)
-	row := database.DB().QueryRow("SELECT id, ref_id, status, user_id, created_at, updated_at FROM email_verifications WHERE ref_id = $1;", refId)
+	row := database.DB().QueryRow(sql.GetVerificationEmail, refId)
 	if row.Err() != nil {
 		log.Errorf("Error querying email verification: %v\n", row.Err())
 		return nil, row.Err()

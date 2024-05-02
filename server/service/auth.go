@@ -1,16 +1,42 @@
 package service
 
 import (
+	"time"
+
 	"github.com/charmbracelet/log"
 
 	"github.com/juancwu/konbini/server/database"
-	"github.com/juancwu/konbini/server/model"
+	"github.com/juancwu/konbini/server/env"
+	"github.com/juancwu/konbini/server/sql"
 )
 
-func GetUserByEmail(email string) (*model.UserModel, error) {
+type User struct {
+	Id            int64
+	FirstName     string
+	LastName      string
+	Password      string // password is always encrypted when fetched from db
+	Email         string
+	EmailVerified bool
+	PubKey        string
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+}
+
+func GetUserWithEmail(email string) (*User, error) {
 	log.Info("Getting user by email", "email", email)
-	user := model.UserModel{}
-	err := database.DB().QueryRow("SELECT id, first_name, last_name, email, pem_public_key FROM users WHERE email = $1", email).Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.PemPublicKey)
+	user := User{}
+	err := database.DB().
+		QueryRow(sql.GetUserWithEmail, email, env.Values().PGP_SYM_KEY).
+		Scan(
+			&user.Id,
+			&user.FirstName,
+			&user.LastName,
+			&user.Email,
+			&user.EmailVerified,
+			&user.CreatedAt,
+			&user.UpdatedAt,
+			&user.PubKey,
+		)
 	if err != nil {
 		if err.Error() == "sql: no rows in result set" {
 			log.Info("No user found with email", "email", email)
@@ -23,10 +49,10 @@ func GetUserByEmail(email string) (*model.UserModel, error) {
 	return &user, nil
 }
 
-func RegisterUser(firstName, lastName, email string) (int64, error) {
+func RegisterUser(firstName, lastName, email, password string) (int64, error) {
 	log.Info("Registering user with email", email)
 
-	row := database.DB().QueryRow("INSERT INTO users (first_name, last_name, email) VALUES ($1, $2, $3) RETURNING id;", firstName, lastName, email)
+	row := database.DB().QueryRow(sql.CreateUser, firstName, lastName, email, password)
 	if row.Err() != nil {
 		log.Errorf("Error resgitering user: %v\n", row.Err())
 		return 0, row.Err()

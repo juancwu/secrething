@@ -26,6 +26,7 @@ type RegisterReqBody struct {
 	Email     string `json:"email" validate:"required"`
 	FirstName string `json:"first_name" validate:"required,alpha"`
 	LastName  string `json:"last_name" validate:"required,alpha"`
+	Password  string `json:"password" validate:"required"`
 }
 
 type VerifyEmailData struct {
@@ -68,7 +69,7 @@ func handleRegister(c echo.Context) error {
 		return err
 	}
 
-	user, err := service.GetUserByEmail(reqBody.Email)
+	user, err := service.GetUserWithEmail(reqBody.Email)
 	if err != nil && err.Error() != "sql: no rows in result set" {
 		log.Errorf("Error registering user: %v\n", err)
 		return c.String(http.StatusInternalServerError, "Error registering user.")
@@ -80,7 +81,7 @@ func handleRegister(c echo.Context) error {
 	}
 
 	// register user
-	userId, err := service.RegisterUser(reqBody.FirstName, reqBody.LastName, reqBody.Email)
+	userId, err := service.RegisterUser(reqBody.FirstName, reqBody.LastName, reqBody.Email, reqBody.Password)
 	if err != nil {
 		log.Errorf("Error registering user: %v\n", err)
 		return c.String(http.StatusInternalServerError, "Error registering user.")
