@@ -6,6 +6,9 @@ CREATE TABLE personal_bentos (
     content BYTEA NOT NULL, -- encrypted
     pub_key BYTEA NOT NULL, -- encrypted
 
-    CONSTRAINT unique_bento_owner UNIQUE INDEX (name, owner_id),
-    CONSTRAINT fk_owner_id FOREIGN KEY (owner_id) REFERENCES users(id)
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT unique_bento_owner UNIQUE (name, owner_id),
+    CONSTRAINT fk_owner_id FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
 );
