@@ -1,0 +1,15 @@
+CREATE TABLE email_verifications (
+    id SERIAL PRIMARY KEY NOT NULL,
+    verification_id CHAR(16) UNIQUE NOT NULL,
+    user_id INTEGER NOT NULL,
+    verified BOOLEAN NOT NULL DEFAULT false,
+    email_sent_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    verified_at TIMESTAMP WITH TIME ZONE,
+
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    -- foreign keys
+    CONSTRAINT fk_email_verification_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
