@@ -3,8 +3,8 @@ package env
 import (
 	"os"
 
-	"github.com/charmbracelet/log"
 	"github.com/joho/godotenv"
+	"github.com/juancwu/konbini/server/utils"
 )
 
 type Env struct {
@@ -24,7 +24,7 @@ var values Env
 func init() {
 	if os.Getenv("APP_ENV") != "production" {
 		if err := godotenv.Load(); err != nil {
-			log.Fatalf("Error loading env: %v\n", err)
+			utils.Logger().Fatalf("Error loading env: %v\n", err)
 		}
 	}
 
@@ -49,9 +49,9 @@ func getEnv(key string, required bool) string {
 	v := os.Getenv(key)
 	if v == "" {
 		if required {
-			log.Fatalf("Missing required env: %s\n", key)
+			utils.Logger().Fatalf("Missing required env: %s\n", key)
 		} else {
-			log.Warnf("Missing optional env: %s\n", key)
+			utils.Logger().Warnf("Missing optional env: %s\n", key)
 		}
 	}
 	return v
