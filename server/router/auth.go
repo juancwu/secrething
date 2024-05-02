@@ -81,18 +81,34 @@ func handleRegister(c echo.Context) error {
 		return c.String(http.StatusBadRequest, "An account with the given email already exists.")
 	}
 
+	tx, err := database.DB().Begin()
+	if err != nil {
+		log.Errorf("Error beginning transaction to register user: %v\n", err)
+		return c.String(http.StatusInternalServerError, "Error registering user.")
+	}
+
 	// register user
-	userId, err := service.RegisterUser(reqBody.FirstName, reqBody.LastName, reqBody.Email, reqBody.Password)
+	userId, err := service.RegisterUser(reqBody.FirstName, reqBody.LastName, reqBody.Email, reqBody.Password, tx)
 	if err != nil {
 		log.Errorf("Error registering user: %v\n", err)
+		database.Rollback(tx, c.Request().URL.Path)
 		return c.String(http.StatusInternalServerError, "Error registering user.")
 	}
 
 	// create entry for an email verification
-	refId, err := service.CreateEmailVerification(userId)
+	refId, err := service.CreateEmailVerification(userId, tx)
 	if err != nil {
 		log.Errorf("Error creating email verificaiton: %v\n", err)
-		return c.String(http.StatusInternalServerError, "Error creating email verification.")
+		database.Rollback(tx, c.Request().URL.Path)
+		return c.String(http.StatusInternalServerError, "Error registering user")
+	}
+
+	// want to commit before sending the email so that we have a record of the email verification
+	err = tx.Commit()
+	if err != nil {
+		log.Errorf("Error committing transaction changes (%s): %v\n", c.Request().URL.Path, err)
+		database.Rollback(tx, c.Request().URL.Path)
+		return c.String(http.StatusInternalServerError, "Error registering user.")
 	}
 
 	// get verify email template
@@ -104,7 +120,7 @@ func handleRegister(c echo.Context) error {
 	}
 
 	log.Info("Request verify email", "func", "handleRegister")
-	emailId, err := service.SendEmail("noreply@juancwu.dev", reqBody.Email, "[Konbini] Verify Your Email", tpl.String())
+	emailId, err := service.SendEmail(env.Values().NOREPLY_EMAIL, reqBody.Email, "[Konbini] Verify Your Email", tpl.String())
 	log.Info("Verify email sent", "id", emailId, "func", "handleRegister")
 
 	_, err = database.DB().Exec("UPDATE email_verifications SET email_sent_at = $1, resend_email_id = $2, status = $3 WHERE verification_id = $4;", time.Now().In(time.UTC), emailId, service.EMAIL_STATUS_SENT, refId)
@@ -117,6 +133,7 @@ func handleRegister(c echo.Context) error {
 
 func handleVerifyEmail(c echo.Context) error {
 	log.Info("GET /auth/verify-email/:refId")
+	routeErrorMessage := "Could not verify email. Please try again later."
 	refId := c.Param("refId")
 	if refId == "" {
 		log.Info("Invalid request to verify email when no ref id was found.")
@@ -126,23 +143,36 @@ func handleVerifyEmail(c echo.Context) error {
 	ev, err := service.GetEmailVerification(refId)
 	if err != nil {
 		log.Errorf("Error verifying email: %v\n", err)
-		return c.String(http.StatusInternalServerError, "Could not verify email. Please try again later.")
+		return c.String(http.StatusInternalServerError, routeErrorMessage)
 	}
 
 	// update the user entry that email has been verified
 	log.Info("Updating user entry to set email_verified...")
-	_, err = database.DB().Exec("UPDATE users SET email_verified = true WHERE id = $1;", ev.UserId)
+	tx, err := database.DB().Begin()
+	if err != nil {
+		log.Errorf("Error begining transaction to verify email: %v\n", err)
+		return c.String(http.StatusInternalServerError, routeErrorMessage)
+	}
+	_, err = tx.Exec("UPDATE users SET email_verified = true WHERE id = $1;", ev.UserId)
 	if err != nil {
 		log.Errorf("Error updating user entry to set email_verified to true: %v\n", err)
-		return c.String(http.StatusInternalServerError, "Could not verify email. Please try again later.")
+		return c.String(http.StatusInternalServerError, routeErrorMessage)
 	}
 
 	// now we can update the email verification status because user entry has been updated
 	log.Info("Updating email verification status...")
-	_, err = database.DB().Exec("UPDATE email_verifications SET status = $1, verified_at = $2 WHERE id = $3;", service.EMAIL_STATUS_VERIFIED, time.Now().In(time.UTC), ev.Id)
+	_, err = tx.Exec("UPDATE email_verifications SET status = $1, verified_at = $2 WHERE id = $3;", service.EMAIL_STATUS_VERIFIED, time.Now().In(time.UTC), ev.Id)
 	if err != nil {
 		// this error doesn't matter that much as long as the user entry has been updated
 		log.Errorf("Error updating email verification entry to set status to verified: %v\n", err)
+		database.Rollback(tx, c.Request().URL.Path)
+		return c.String(http.StatusInternalServerError, routeErrorMessage)
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		log.Errorf("Error committing verify email changes: %v\n", err)
+		return c.String(http.StatusInternalServerError, routeErrorMessage)
 	}
 
 	log.Info("Email verified")

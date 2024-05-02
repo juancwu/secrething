@@ -1,6 +1,7 @@
 package service
 
 import (
+	"database/sql"
 	"time"
 
 	"github.com/charmbracelet/log"
@@ -57,7 +58,7 @@ func SendEmail(from, to, subject, body string) (string, error) {
 	return sent.Id, nil
 }
 
-func CreateEmailVerification(userId int64) (string, error) {
+func CreateEmailVerification(userId int64, tx *sql.Tx) (string, error) {
 	log.Info("Get reference id for email verification")
 	verificationId, err := gonanoid.New(16)
 	if err != nil {
@@ -68,7 +69,7 @@ func CreateEmailVerification(userId int64) (string, error) {
 	log.Info("Creating email verification...")
 	// 24 hours from creation
 	expTime := time.Now().In(time.UTC).Add(time.Hour * 24)
-	res, err := database.DB().
+	res, err := tx.
 		Exec("INSERT INTO email_verifications (verification_id, user_id, expires_at) VALUES ($1, $2, $3);", verificationId, userId, expTime)
 	if err != nil {
 		log.Errorf("Error creating email verification: %v\n", err)

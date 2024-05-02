@@ -1,6 +1,7 @@
 package service
 
 import (
+	"database/sql"
 	"time"
 
 	"github.com/charmbracelet/log"
@@ -48,10 +49,10 @@ func GetUserWithEmail(email string) (*User, error) {
 	return &user, nil
 }
 
-func RegisterUser(firstName, lastName, email, password string) (int64, error) {
+func RegisterUser(firstName, lastName, email, password string, tx *sql.Tx) (int64, error) {
 	log.Info("Registering user with email", email)
 
-	row := database.DB().QueryRow(
+	row := tx.QueryRow(
 		"INSERT INTO users (first_name, last_name, email, password) VALUES ($1, $2, $3, crypt($4, gen_salt($5))) RETURNING id;",
 		firstName, lastName, email, password, env.Values().PASS_ENCRYPT_ALGO)
 	if row.Err() != nil {
