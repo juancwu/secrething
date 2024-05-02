@@ -14,6 +14,7 @@ import (
 	// "github.com/labstack/echo/v4/middleware"
 
 	"github.com/juancwu/konbini/server/database"
+	_ "github.com/juancwu/konbini/server/env"
 	"github.com/juancwu/konbini/server/router"
 )
 
