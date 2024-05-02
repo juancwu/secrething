@@ -9,23 +9,30 @@ import (
 
 	"github.com/juancwu/konbini/server/database"
 	"github.com/juancwu/konbini/server/env"
-	"github.com/juancwu/konbini/server/sql"
 )
-
-type EmailVerification struct {
-	Id        int64
-	RefId     string
-	Status    string // one of "pending" | "opened" | "verified"
-	UserId    int64
-	CreatedAt time.Time
-	UpdatedAt time.Time
-}
 
 const (
-	EMAIL_STATUS_PENDING  = "pending"
-	EMAIL_STATUS_OPENED   = "opened"
-	EMAIL_STATUS_VERIFIED = "verified"
+	EMAIL_STATUS_PENDING  = "PENDING"
+	EMAIL_STATUS_SENT     = "SENT"
+	EMAIL_STATUS_OPENED   = "OPENED"
+	EMAIL_STATUS_FAILED   = "FAILED"
+	EMAIL_STATUS_VERIFIED = "VERIFIED"
 )
+
+type EmailVerificationStatus string
+
+type EmailVerification struct {
+	Id             int64
+	VerificationId string
+	Status         EmailVerificationStatus // one of email status constants
+	UserId         int64
+	ResendEmailId  *string
+	EmailSentAT    *time.Time
+	ExpiresAt      time.Time
+	VerifiedAt     *time.Time
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
 
 func SendEmail(from, to, subject, body string) (string, error) {
 	log.Info("Creating resend client...")
@@ -52,14 +59,17 @@ func SendEmail(from, to, subject, body string) (string, error) {
 
 func CreateEmailVerification(userId int64) (string, error) {
 	log.Info("Get reference id for email verification")
-	refId, err := gonanoid.New(16)
+	verificationId, err := gonanoid.New(16)
 	if err != nil {
 		log.Errorf("Error getting reference id for email verification: %v\n", err)
 		return "", err
 	}
 
 	log.Info("Creating email verification...")
-	res, err := database.DB().Exec(sql.CreateVerificationEmail, refId, userId)
+	// 24 hours from creation
+	expTime := time.Now().In(time.UTC).Add(time.Hour * 24)
+	res, err := database.DB().
+		Exec("INSERT INTO email_verifications (verification_id, user_id, expires_at) VALUES ($1, $2, $3);", verificationId, userId, expTime)
 	if err != nil {
 		log.Errorf("Error creating email verification: %v\n", err)
 		return "", err
@@ -72,12 +82,14 @@ func CreateEmailVerification(userId int64) (string, error) {
 		log.Info("Email verification created.", "count", count)
 	}
 
-	return refId, nil
+	return verificationId, nil
 }
 
 func GetEmailVerification(refId string) (*EmailVerification, error) {
 	log.Info("Get email verification with refId.", "refId", refId)
-	row := database.DB().QueryRow(sql.GetVerificationEmail, refId)
+	row := database.DB().QueryRow(
+		"SELECT id, verification_id, user_id, resend_email_id, status, email_sent_at, expires_at, verified_at, created_at, updated_at FROM email_verifications WHERE verification_id = $1;",
+		refId)
 	if row.Err() != nil {
 		log.Errorf("Error querying email verification: %v\n", row.Err())
 		return nil, row.Err()
@@ -85,7 +97,18 @@ func GetEmailVerification(refId string) (*EmailVerification, error) {
 
 	log.Info("Scanning email verification values...")
 	ev := EmailVerification{}
-	err := row.Scan(&ev.Id, &ev.RefId, &ev.Status, &ev.UserId, &ev.CreatedAt, &ev.UpdatedAt)
+	err := row.Scan(
+		&ev.Id,
+		&ev.VerificationId,
+		&ev.UserId,
+		&ev.ResendEmailId,
+		&ev.Status,
+		&ev.EmailSentAT,
+		&ev.ExpiresAt,
+		&ev.VerifiedAt,
+		&ev.CreatedAt,
+		&ev.UpdatedAt,
+	)
 	if err != nil {
 		log.Errorf("Error scanning email verification values: %v\n", err)
 		return nil, err

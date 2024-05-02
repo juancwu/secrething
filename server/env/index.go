@@ -8,13 +8,14 @@ import (
 )
 
 type Env struct {
-	APP_ENV        string
-	PORT           string
-	DB_URL         string
-	DB_NAME        string
-	RESEND_API_KEY string
-	SERVER_URL     string
-	PGP_SYM_KEY    string
+	APP_ENV           string
+	PORT              string
+	DB_URL            string
+	DB_NAME           string
+	RESEND_API_KEY    string
+	SERVER_URL        string
+	PGP_SYM_KEY       string
+	PASS_ENCRYPT_ALGO string
 }
 
 var values Env
@@ -35,6 +36,7 @@ func init() {
 	values.RESEND_API_KEY = getEnv("RESEND_API_KEY", true)
 	values.SERVER_URL = getEnv("SERVER_URL", true)
 	values.PGP_SYM_KEY = getEnv("PGP_SYM_KEY", true)
+	values.PASS_ENCRYPT_ALGO = getEnv("PASS_ENCRYPT_ALGO", true)
 
 	// optional env
 	values.APP_ENV = getEnv("APP_ENV", false)

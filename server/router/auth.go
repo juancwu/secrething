@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/charmbracelet/log"
 	"github.com/juancwu/konbini/server/database"
@@ -106,6 +107,11 @@ func handleRegister(c echo.Context) error {
 	emailId, err := service.SendEmail("noreply@juancwu.dev", reqBody.Email, "[Konbini] Verify Your Email", tpl.String())
 	log.Info("Verify email sent", "id", emailId, "func", "handleRegister")
 
+	_, err = database.DB().Exec("UPDATE email_verifications SET email_sent_at = $1, resend_email_id = $2, status = $3 WHERE verification_id = $4;", time.Now().In(time.UTC), emailId, service.EMAIL_STATUS_SENT, refId)
+	if err != nil {
+		log.Errorf("Failed to update email verification with sent time and resend email id: %v\n", err)
+	}
+
 	return c.String(http.StatusCreated, "Account registered.")
 }
 
@@ -133,7 +139,7 @@ func handleVerifyEmail(c echo.Context) error {
 
 	// now we can update the email verification status because user entry has been updated
 	log.Info("Updating email verification status...")
-	_, err = database.DB().Exec("UPDATE email_verifications SET status = $1 WHERE id = $2;", service.EMAIL_STATUS_VERIFIED, ev.Id)
+	_, err = database.DB().Exec("UPDATE email_verifications SET status = $1, verified_at = $2 WHERE id = $3;", service.EMAIL_STATUS_VERIFIED, time.Now().In(time.UTC), ev.Id)
 	if err != nil {
 		// this error doesn't matter that much as long as the user entry has been updated
 		log.Errorf("Error updating email verification entry to set status to verified: %v\n", err)
