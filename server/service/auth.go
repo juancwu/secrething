@@ -23,10 +23,10 @@ func GetUserByEmail(email string) (*model.UserModel, error) {
 	return &user, nil
 }
 
-func RegisterUser(firstName, lastName, email, pemPublicKey string) (int64, error) {
+func RegisterUser(firstName, lastName, email string) (int64, error) {
 	log.Info("Registering user with email", email)
 
-	row := database.DB().QueryRow("INSERT INTO users (first_name, last_name, email, pem_public_key) VALUES ($1, $2, $3, $4) RETURNING id;", firstName, lastName, email, pemPublicKey)
+	row := database.DB().QueryRow("INSERT INTO users (first_name, last_name, email) VALUES ($1, $2, $3) RETURNING id;", firstName, lastName, email)
 	if row.Err() != nil {
 		log.Errorf("Error resgitering user: %v\n", row.Err())
 		return 0, row.Err()

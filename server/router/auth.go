@@ -23,10 +23,9 @@ type AuthReqBody struct {
 }
 
 type RegisterReqBody struct {
-	Email        string `json:"email" validate:"required"`
-	FirstName    string `json:"first_name" validate:"required,alpha"`
-	LastName     string `json:"last_name" validate:"required,alpha"`
-	PemPublicKey string `json:"pem_public_key" validate:"required"`
+	Email     string `json:"email" validate:"required"`
+	FirstName string `json:"first_name" validate:"required,alpha"`
+	LastName  string `json:"last_name" validate:"required,alpha"`
 }
 
 type VerifyEmailData struct {
@@ -81,7 +80,7 @@ func handleRegister(c echo.Context) error {
 	}
 
 	// register user
-	userId, err := service.RegisterUser(reqBody.FirstName, reqBody.LastName, reqBody.Email, reqBody.PemPublicKey)
+	userId, err := service.RegisterUser(reqBody.FirstName, reqBody.LastName, reqBody.Email)
 	if err != nil {
 		log.Errorf("Error registering user: %v\n", err)
 		return c.String(http.StatusInternalServerError, "Error registering user.")
