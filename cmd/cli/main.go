@@ -1,7 +1,9 @@
 package main
 
-import "fmt"
+import (
+	"github.com/juancwu/konbini/client/command"
+)
 
 func main() {
-	fmt.Println("cli")
+	command.Execute()
 }
