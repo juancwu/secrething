@@ -127,7 +127,7 @@ func handleRegister(c echo.Context) error {
 		utils.Logger().Errorf("Failed to update email verification with sent time and resend email id: %v\n", err)
 	}
 
-	return c.String(http.StatusCreated, "Account registered.")
+	return c.String(http.StatusCreated, "Account created! Please verify your email to unlock all Konbini services.")
 }
 
 func handleVerifyEmail(c echo.Context) error {
