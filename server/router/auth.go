@@ -207,7 +207,7 @@ func handleStartResetPassword(c echo.Context) error {
 
 	// generate random reset id
 	utils.Logger().Info("Generating reset id...")
-	resetId, err := gonanoid.New(12)
+	resetId, err := gonanoid.Generate("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", 12)
 	if err != nil {
 		utils.Logger().Errorf("Failed to generate reset id: %v\n", err)
 		return c.String(http.StatusInternalServerError, routeErrorMessage)
