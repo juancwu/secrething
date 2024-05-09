@@ -3,15 +3,19 @@ package router
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 
+	"github.com/labstack/echo/v4"
+	gonanoid "github.com/matoous/go-nanoid/v2"
+
 	"github.com/juancwu/konbini/server/database"
 	"github.com/juancwu/konbini/server/env"
+	usermodel "github.com/juancwu/konbini/server/models/user"
 	"github.com/juancwu/konbini/server/service"
 	"github.com/juancwu/konbini/server/templates"
 	"github.com/juancwu/konbini/server/utils"
-	"github.com/labstack/echo/v4"
 )
 
 /*
@@ -36,10 +40,18 @@ type VerifyEmailData struct {
 	URL       string
 }
 
+type ResetPasswordEmailData struct {
+	FirstName string
+	LastName  string
+	ResetId   string
+}
+
 func SetupAuthRoutes(e *echo.Echo) {
 	e.POST("/auth", handleAuth)
 	e.POST("/auth/register", handleRegister)
 	e.GET("/auth/verify-email/:refId", handleVerifyEmail)
+	e.POST("/auth/reset/password", handleStartResetPassword)
+	e.PATCH("/auth/reset/password", handleFinishResetPassword)
 }
 
 func handleAuth(c echo.Context) error {
@@ -176,4 +188,93 @@ func handleVerifyEmail(c echo.Context) error {
 
 	utils.Logger().Info("Email verified")
 	return c.String(http.StatusOK, "Email verified.")
+}
+
+func handleStartResetPassword(c echo.Context) error {
+	routeErrorMessage := "Could not start reset password process. Please try again later."
+
+	// limit read to 1024 bytes or characters, more than enough for a single email
+	utils.Logger().Info("Getting email from request body")
+	bodyReader := io.LimitReader(c.Request().Body, 1024)
+	reqBody, err := io.ReadAll(bodyReader)
+	if err != nil {
+		utils.Logger().Errorf("Failed to read request body: %v\n", err)
+		return c.String(http.StatusInternalServerError, routeErrorMessage)
+	}
+	email := string(reqBody)
+
+	user, err := usermodel.GetByEmail(email)
+
+	// generate random reset id
+	utils.Logger().Info("Generating reset id...")
+	resetId, err := gonanoid.New(12)
+	if err != nil {
+		utils.Logger().Errorf("Failed to generate reset id: %v\n", err)
+		return c.String(http.StatusInternalServerError, routeErrorMessage)
+	}
+	utils.Logger().Infof("Reset id: %s\n", resetId)
+
+	// expires in 1 hour
+	expTime := time.Now().In(time.UTC).Add(time.Hour * 1)
+	utils.Logger().Infof("Expire time reset password: %s\n", expTime.String())
+
+	// transaction
+	utils.Logger().Info("Starting transaction to store reset password record")
+	tx, err := database.DB().Begin()
+	if err != nil {
+		utils.Logger().Errorf("Failed to start transaction to store reset password record: %v\n", err)
+		return c.String(http.StatusInternalServerError, routeErrorMessage)
+	}
+
+	// check if there is another record of the user already, if there is, delete that one
+	utils.Logger().Info("Checking if reset record exists for given user...")
+	var recordId int64 = 0
+	err = database.DB().QueryRow("SELECT id FROM users_passwords_resets WHERE user_id = $1;", user.Id).Scan(&recordId)
+	if err != nil && err.Error() != "sql: no rows in result set" {
+		utils.Logger().Error("Failed to check reset record: %v\n", err)
+		return c.String(http.StatusInternalServerError, routeErrorMessage)
+	}
+
+	if recordId != 0 {
+		utils.Logger().Info("Updating existing password record...")
+		_, err = tx.Exec("UPDATE users_passwords_resets SET reset_id = $1, expires_at = $2 WHERE id = $3;", resetId, expTime, recordId)
+		if err != nil {
+			database.Rollback(tx, "reset password")
+			return c.String(http.StatusInternalServerError, routeErrorMessage)
+		}
+	} else {
+		utils.Logger().Info("Saving new reset password record")
+		_, err = tx.Exec("INSERT INTO users_passwords_resets (user_id, reset_id, expires_at) VALUES ($1, $2, $3);", user.Id, resetId, expTime)
+		if err != nil {
+			utils.Logger().Errorf("Failed to insert password reset link id into db: %v\n", err)
+			database.Rollback(tx, "reset password")
+			return c.String(http.StatusInternalServerError, routeErrorMessage)
+		}
+
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		utils.Logger().Errorf("Failed to commit changes from transcation: %v\n", err)
+		database.Rollback(tx, "reset password")
+		return c.String(http.StatusInternalServerError, routeErrorMessage)
+	}
+	utils.Logger().Info("Reset id saved", "reset_id", resetId)
+
+	// send email with reset id
+	utils.Logger().Info("Generating email template...")
+	var tpl bytes.Buffer
+	err = templates.Render(&tpl, "reset-password.html", ResetPasswordEmailData{FirstName: user.FirstName, LastName: user.LastName, ResetId: resetId})
+	utils.Logger().Info("Sending email with reset id for password reset...")
+	_, err = service.SendEmail(env.Values().NOREPLY_EMAIL, email, "[Konbini] Reset Your Password", tpl.String())
+	if err != nil {
+		utils.Logger().Errorf("Failed to send password reset email: %v\n", err)
+		return c.String(http.StatusInternalServerError, routeErrorMessage)
+	}
+
+	return c.String(http.StatusOK, fmt.Sprintf("Code: %s", resetId))
+}
+
+func handleFinishResetPassword(c echo.Context) error {
+	return c.String(http.StatusNotImplemented, http.StatusText(http.StatusNotImplemented))
 }
