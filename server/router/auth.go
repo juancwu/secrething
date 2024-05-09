@@ -24,10 +24,10 @@ type AuthReqBody struct {
 }
 
 type RegisterReqBody struct {
-	Email     string `json:"email" validate:"required"`
+	Email     string `json:"email" validate:"required,email"`
 	FirstName string `json:"first_name" validate:"required,alpha"`
 	LastName  string `json:"last_name" validate:"required,alpha"`
-	Password  string `json:"password" validate:"required"`
+	Password  string `json:"password" validate:"required,min=12"`
 }
 
 type VerifyEmailData struct {
