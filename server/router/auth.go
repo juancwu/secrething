@@ -24,8 +24,8 @@ import (
 */
 
 type AuthReqBody struct {
-	Email     string `json:"email" validate:"required"`
-	Challenge string `json:"challenge" validate:"required"`
+	Email    string `json:"email" validate:"required"`
+	Password string `json:"challenge" validate:"required"`
 }
 
 type RegisterReqBody struct {
@@ -61,10 +61,12 @@ func handleAuth(c echo.Context) error {
 
 	// bind the incoming request data
 	if err := c.Bind(auth); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+		utils.Logger().Errorf("Error binding request body: %v\n", err)
+		return c.String(http.StatusInternalServerError, "Authentication service down. Please try again later.")
 	}
 	if err := c.Validate(auth); err != nil {
-		return err
+		utils.Logger().Errorf("Authentication request body validation failed: %v\n", err)
+		return c.String(http.StatusBadRequest, "Bad request")
 	}
 
 	return c.JSON(http.StatusOK, auth)
