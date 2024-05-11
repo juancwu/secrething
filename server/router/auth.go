@@ -125,20 +125,21 @@ func handleRegister(c echo.Context) error {
 	}
 
 	// get verify email template
-	var tpl bytes.Buffer
-	err = templates.Render(&tpl, "verify-email.html", VerifyEmailData{FirstName: reqBody.FirstName, LastName: reqBody.LastName, URL: fmt.Sprintf("%s/auth/verify-email/%s", env.Values().SERVER_URL, refId)})
-	if err != nil {
-		utils.Logger().Errorf("Failed to get verify email template: %v - handleRegister\n", err)
-		return c.String(http.StatusInternalServerError, "Error sending verification email.")
-	}
+	if env.Values().APP_ENV == env.PRODUCTION {
+		var tpl bytes.Buffer
+		err = templates.Render(&tpl, "verify-email.html", VerifyEmailData{FirstName: reqBody.FirstName, LastName: reqBody.LastName, URL: fmt.Sprintf("%s/auth/verify-email/%s", env.Values().SERVER_URL, refId)})
+		if err != nil {
+			utils.Logger().Errorf("Failed to get verify email template: %v - handleRegister\n", err)
+			return c.String(http.StatusInternalServerError, "Error sending verification email.")
+		}
 
-	utils.Logger().Info("Request verify email", "func", "handleRegister")
-	emailId, err := service.SendEmail(env.Values().NOREPLY_EMAIL, reqBody.Email, "[Konbini] Verify Your Email", tpl.String())
-	utils.Logger().Info("Verify email sent", "id", emailId, "func", "handleRegister")
-
-	_, err = database.DB().Exec("UPDATE email_verifications SET email_sent_at = $1, resend_email_id = $2, status = $3 WHERE verification_id = $4;", time.Now().In(time.UTC), emailId, service.EMAIL_STATUS_SENT, refId)
-	if err != nil {
-		utils.Logger().Errorf("Failed to update email verification with sent time and resend email id: %v\n", err)
+		utils.Logger().Info("Request verify email", "func", "handleRegister")
+		emailId, err := service.SendEmail(env.Values().NOREPLY_EMAIL, reqBody.Email, "[Konbini] Verify Your Email", tpl.String())
+		utils.Logger().Info("Verify email sent", "id", emailId, "func", "handleRegister")
+		_, err = database.DB().Exec("UPDATE email_verifications SET email_sent_at = $1, resend_email_id = $2, status = $3 WHERE verification_id = $4;", time.Now().In(time.UTC), emailId, service.EMAIL_STATUS_SENT, refId)
+		if err != nil {
+			utils.Logger().Errorf("Failed to update email verification with sent time and resend email id: %v\n", err)
+		}
 	}
 
 	return c.String(http.StatusCreated, "Account created! Please verify your email to unlock all Konbini services.")
@@ -264,14 +265,16 @@ func handleStartResetPassword(c echo.Context) error {
 	utils.Logger().Info("Reset id saved", "reset_id", resetId)
 
 	// send email with reset id
-	utils.Logger().Info("Generating email template...")
-	var tpl bytes.Buffer
-	err = templates.Render(&tpl, "reset-password.html", ResetPasswordEmailData{FirstName: user.FirstName, LastName: user.LastName, ResetId: resetId})
-	utils.Logger().Info("Sending email with reset id for password reset...")
-	_, err = service.SendEmail(env.Values().NOREPLY_EMAIL, email, "[Konbini] Reset Your Password", tpl.String())
-	if err != nil {
-		utils.Logger().Errorf("Failed to send password reset email: %v\n", err)
-		return c.String(http.StatusInternalServerError, routeErrorMessage)
+	if env.Values().APP_ENV == env.PRODUCTION {
+		utils.Logger().Info("Generating email template...")
+		var tpl bytes.Buffer
+		err = templates.Render(&tpl, "reset-password.html", ResetPasswordEmailData{FirstName: user.FirstName, LastName: user.LastName, ResetId: resetId})
+		utils.Logger().Info("Sending email with reset id for password reset...")
+		_, err = service.SendEmail(env.Values().NOREPLY_EMAIL, email, "[Konbini] Reset Your Password", tpl.String())
+		if err != nil {
+			utils.Logger().Errorf("Failed to send password reset email: %v\n", err)
+			return c.String(http.StatusInternalServerError, routeErrorMessage)
+		}
 	}
 
 	return c.String(http.StatusOK, fmt.Sprintf("Code: %s", resetId))
