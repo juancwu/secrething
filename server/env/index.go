@@ -19,10 +19,15 @@ type Env struct {
 	NOREPLY_EMAIL     string
 }
 
+const (
+	PRODUCTION  = "production"
+	DEVELOPMENT = "development"
+)
+
 var values Env
 
 func init() {
-	if os.Getenv("APP_ENV") != "production" {
+	if os.Getenv("APP_ENV") == DEVELOPMENT {
 		if err := godotenv.Load(); err != nil {
 			utils.Logger().Fatalf("Error loading env: %v\n", err)
 		}
