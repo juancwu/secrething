@@ -25,7 +25,7 @@ func GetUserWithEmail(email string) (*usermodel.User, error) {
 	return user, nil
 }
 
-func RegisterUser(firstName, lastName, email, password string, tx *sql.Tx) (int64, error) {
+func RegisterUser(firstName, lastName, email, password string, tx *sql.Tx) (string, error) {
 	utils.Logger().Info("Registering user with email", email)
 
 	row := tx.QueryRow(
@@ -33,14 +33,14 @@ func RegisterUser(firstName, lastName, email, password string, tx *sql.Tx) (int6
 		firstName, lastName, email, password, env.Values().PASS_ENCRYPT_ALGO)
 	if row.Err() != nil {
 		utils.Logger().Errorf("Error resgitering user: %v\n", row.Err())
-		return 0, row.Err()
+		return "", row.Err()
 	}
 
-	var id int64
+	var id string
 	err := row.Scan(&id)
 	if err != nil {
 		utils.Logger().Errorf("Error getting returning user id after insert: %v\n", err)
-		return 0, err
+		return "", err
 	}
 
 	return id, nil

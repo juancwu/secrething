@@ -1,8 +1,8 @@
 -- personal bentos
 CREATE TABLE personal_bentos (
-    id SERIAL PRIMARY KEY NOT NULL,
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     name VARCHAR(50) NOT NULL,
-    owner_id INTEGER,
+    owner_id UUID,
     content BYTEA NOT NULL, -- encrypted
     pub_key BYTEA NOT NULL, -- encrypted
 

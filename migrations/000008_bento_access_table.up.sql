@@ -1,7 +1,7 @@
 CREATE TABLE personal_bento_access (
     id SERIAL PRIMARY KEY NOT NULL,
-    user_id INTEGER NOT NULL,
-    bento_id INTEGER NOT NULL,
+    user_id UUID NOT NULL,
+    bento_id UUID NOT NULL,
     can_write BOOLEAN NOT NULL DEFAULT false,
     can_read BOOLEAN NOT NULL DEFAULT false,
     can_delete BOOLEAN NOT NULL DEFAULT false,

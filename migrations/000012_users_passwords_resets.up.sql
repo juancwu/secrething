@@ -1,6 +1,6 @@
 CREATE TABLE users_passwords_resets (
     id SERIAL PRIMARY KEY NOT NULL,
-    user_id INTEGER NOT NULL,
+    user_id UUID NOT NULL,
     reset_id CHAR(12) NOT NULL,
 
     expires_at TIMESTAMP WITH TIME ZONE NOT NULL,

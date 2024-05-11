@@ -23,10 +23,10 @@ const (
 type EmailVerificationStatus string
 
 type EmailVerification struct {
-	Id             int64
+	Id             string
 	VerificationId string
 	Status         EmailVerificationStatus // one of email status constants
-	UserId         int64
+	UserId         string
 	ResendEmailId  *string
 	EmailSentAT    *time.Time
 	ExpiresAt      time.Time
@@ -58,7 +58,7 @@ func SendEmail(from, to, subject, body string) (string, error) {
 	return sent.Id, nil
 }
 
-func CreateEmailVerification(userId int64, tx *sql.Tx) (string, error) {
+func CreateEmailVerification(userId string, tx *sql.Tx) (string, error) {
 	utils.Logger().Info("Get reference id for email verification")
 	verificationId, err := gonanoid.New(16)
 	if err != nil {

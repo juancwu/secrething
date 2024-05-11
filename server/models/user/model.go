@@ -5,7 +5,7 @@ import (
 )
 
 type User struct {
-	Id            int64
+	Id            string
 	FirstName     string
 	LastName      string
 	Password      string // password is always encrypted when fetched from db

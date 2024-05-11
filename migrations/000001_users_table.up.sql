@@ -1,5 +1,7 @@
+CREATE EXTENSION "uuid-ossp";
+
 CREATE TABLE users (
-    id SERIAL PRIMARY KEY NOT NULl,
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     first_name VARCHAR(50) NOT NULL DEFAULT '',
     last_name VARCHAR(50) NOT NULL DEFAULT '',
     password TEXT NOT NULL,

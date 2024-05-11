@@ -301,7 +301,7 @@ func handleFinishResetPassword(c echo.Context) error {
 	utils.Logger().Infof("Verifiying if code is valid: %s\n", reqBody.ResetId)
 	var (
 		id        int64
-		userId    int64
+		userId    string
 		expiresAt time.Time
 	)
 	err := database.DB().QueryRow("SELECT id, user_id, expires_at FROM users_passwords_resets WHERE reset_id = $1;", reqBody.ResetId).Scan(&id, &userId, &expiresAt)
