@@ -27,7 +27,7 @@ const (
 var values Env
 
 func init() {
-	if os.Getenv("APP_ENV") == DEVELOPMENT {
+	if os.Getenv("APP_ENV") != PRODUCTION {
 		if err := godotenv.Load(); err != nil {
 			utils.Logger().Fatalf("Error loading env: %v\n", err)
 		}
