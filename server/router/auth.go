@@ -2,6 +2,7 @@ package router
 
 import (
 	"bytes"
+	"database/sql"
 	"fmt"
 	"io"
 	"net/http"
@@ -43,7 +44,8 @@ type VerifyEmailData struct {
 type ResetPasswordEmailData struct {
 	FirstName string
 	LastName  string
-	ResetId   string
+	ResetId   string `json:"reset_id" validate:"required,len=12"`
+	Password  string `json:"password" validate:"required,min=12"`
 }
 
 func SetupAuthRoutes(e *echo.Echo) {
@@ -276,5 +278,78 @@ func handleStartResetPassword(c echo.Context) error {
 }
 
 func handleFinishResetPassword(c echo.Context) error {
-	return c.String(http.StatusNotImplemented, http.StatusText(http.StatusNotImplemented))
+	routeErrorMessage := "Could not reset password. Please try again later."
+	// password reset codes are only 12 characters long
+	reqBody := new(ResetPasswordEmailData)
+	utils.Logger().Info("Reading password reset code from request body...")
+	// bind the incoming request data
+	if err := c.Bind(reqBody); err != nil {
+		utils.Logger().Errorf("Error binding request body: %v\n", err)
+		return c.String(http.StatusBadRequest, "Invalid payload")
+	}
+
+	if err := c.Validate(reqBody); err != nil {
+		utils.Logger().Errorf("Error validating request body: %v\n", err)
+		return err
+	}
+
+	utils.Logger().Infof("Verifiying if code is valid: %s\n", reqBody.ResetId)
+	var (
+		id        int64
+		userId    int64
+		expiresAt time.Time
+	)
+	err := database.DB().QueryRow("SELECT id, user_id, expires_at FROM users_passwords_resets WHERE reset_id = $1;", reqBody.ResetId).Scan(&id, &userId, &expiresAt)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			utils.Logger().Error("No row found for given reset code.", "code", reqBody.ResetId)
+			return c.String(http.StatusBadRequest, "Invalid code or expired.")
+		}
+		utils.Logger().Errorf("Failed to get password reset record from db: %v\n", err)
+		return c.String(http.StatusInternalServerError, routeErrorMessage)
+	}
+
+	if time.Now().Before(expiresAt) {
+		utils.Logger().Info("Starting transaction to perform password reset.")
+		tx, err := database.DB().Begin()
+		if err != nil {
+			utils.Logger().Errorf("Failed to start transaction to perform password reset: %v\n", err)
+			return c.String(http.StatusInternalServerError, routeErrorMessage)
+		}
+
+		utils.Logger().Info("Deleting password reset record...")
+		_, err = tx.Exec("DELETE FROM users_passwords_resets WHERE id = $1;", id)
+		if err != nil {
+			utils.Logger().Errorf("Failed to delete password reset record: %v\n", err)
+			database.Rollback(tx, "finish reset password")
+			return c.String(http.StatusInternalServerError, routeErrorMessage)
+		}
+
+		utils.Logger().Info("Setting new password", "user_id", id)
+		_, err = tx.Exec("UPDATE users SET password = crypt($1, gen_salt($2)) WHERE id = $3;", reqBody.Password, env.Values().PASS_ENCRYPT_ALGO, userId)
+		if err != nil {
+			utils.Logger().Errorf("Failed to update password: %v\n", err)
+			database.Rollback(tx, "finish reset password")
+			return c.String(http.StatusInternalServerError, routeErrorMessage)
+		}
+
+		// TODO: add step to revoke all refresh tokens
+
+		err = tx.Commit()
+		if err != nil {
+			utils.Logger().Errorf("Failed to commit password reset changes: %v\n", err)
+			database.Rollback(tx, "finish reset password")
+			return c.String(http.StatusInternalServerError, routeErrorMessage)
+		}
+	} else {
+		utils.Logger().Info("Expired password reset code", "code", reqBody.ResetId)
+		utils.Logger().Info("Removing password reset code...")
+		_, err = database.DB().Exec("DELETE FROM users_passwords_resets WHERE id = $1;", id)
+		if err != nil {
+			utils.Logger().Errorf("Failed to remove expired reset password code: %v\n", err)
+		}
+		return c.String(http.StatusBadRequest, "Invalid code or expired.")
+	}
+
+	return c.String(http.StatusOK, "Password reset done. Please sign-in again on all your devices.")
 }
