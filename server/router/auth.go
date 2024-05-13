@@ -28,6 +28,11 @@ type AuthReqBody struct {
 	Password string `json:"challenge" validate:"required"`
 }
 
+type AuthResBody struct {
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+}
+
 type RegisterReqBody struct {
 	Email     string `json:"email" validate:"required,email"`
 	FirstName string `json:"first_name" validate:"required,alpha"`
@@ -69,7 +74,32 @@ func handleAuth(c echo.Context) error {
 		return c.String(http.StatusBadRequest, "Bad request")
 	}
 
-	return c.JSON(http.StatusOK, auth)
+	// find user
+	utils.Logger().Info("Getting user information for authentication")
+	user, err := usermodel.GetByEmailWithPassword(auth.Email, auth.Password)
+	if err != nil {
+		utils.Logger().Errorf("Failed to get user for authentication: %v\n", err)
+		if err == sql.ErrNoRows {
+			return c.String(http.StatusBadRequest, "Invalid credentials. Make sure you inputted the right email and password.")
+		}
+		return c.String(http.StatusInternalServerError, "Authentication service down. Please try again later.")
+	}
+
+	// generate
+	utils.Logger().Info("Generating access and refresh tokens")
+	accessToken, err := service.GenerateAccessToken(user.Id)
+	if err != nil {
+		utils.Logger().Errorf("Failed to generate access token: %v\n", err)
+		return c.String(http.StatusInternalServerError, "Authentication service down. Please try again later.")
+	}
+
+	refreshToken, err := service.GenerateRefreshToken(user.Id)
+	if err != nil {
+		utils.Logger().Errorf("Failed to generate refresh token: %v\n", err)
+		return c.String(http.StatusInternalServerError, "Authentication service down. Please try again later.")
+	}
+
+	return c.JSON(http.StatusOK, AuthResBody{AccessToken: accessToken, RefreshToken: refreshToken})
 }
 
 func handleRegister(c echo.Context) error {
