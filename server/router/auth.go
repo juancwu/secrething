@@ -133,9 +133,20 @@ func handleRegister(c echo.Context) error {
 	}
 
 	// register user
-	userId, err := service.RegisterUser(reqBody.FirstName, reqBody.LastName, reqBody.Email, reqBody.Password, tx)
+	utils.Logger().Info("Registering user with email", reqBody.Email)
+	row := tx.QueryRow(
+		"INSERT INTO users (first_name, last_name, email, password) VALUES ($1, $2, $3, crypt($4, gen_salt($5))) RETURNING id;",
+		reqBody.FirstName, reqBody.LastName, reqBody.Email, reqBody.Password, env.Values().PASS_ENCRYPT_ALGO)
+	if row.Err() != nil {
+		utils.Logger().Errorf("Error resgitering user: %v\n", row.Err())
+		database.Rollback(tx, c.Request().URL.Path)
+		return c.String(http.StatusInternalServerError, "Error registering user.")
+	}
+
+	var userId string
+	err = row.Scan(&userId)
 	if err != nil {
-		utils.Logger().Errorf("Error registering user: %v\n", err)
+		utils.Logger().Errorf("Error getting returning user id after insert: %v\n", err)
 		database.Rollback(tx, c.Request().URL.Path)
 		return c.String(http.StatusInternalServerError, "Error registering user.")
 	}
