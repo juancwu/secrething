@@ -7,8 +7,6 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 
 	"github.com/juancwu/konbini/server/env"
-	usermodel "github.com/juancwu/konbini/server/models/user"
-	"github.com/juancwu/konbini/server/utils"
 )
 
 type JwtCustomClaims struct {
@@ -21,20 +19,6 @@ const (
 	ACCESS_TOKEN  = "access_token"
 	REFRESH_TOKEN = "refresh_token"
 )
-
-func GetUserWithEmail(email string) (*usermodel.User, error) {
-	user, err := usermodel.GetByEmail(email)
-	if err != nil {
-		if err.Error() == "sql: no rows in result set" {
-			utils.Logger().Info("No user found with email", "email", email)
-			return nil, nil
-		}
-		utils.Logger().Errorf("Error getting user with email: %s, cause: %s\n", email, err)
-		return nil, err
-	}
-
-	return user, nil
-}
 
 func GenerateToken(userId string, tokType string, exp time.Time) (string, error) {
 	claims := JwtCustomClaims{

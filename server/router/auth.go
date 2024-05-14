@@ -115,7 +115,7 @@ func handleRegister(c echo.Context) error {
 		return err
 	}
 
-	user, err := service.GetUserWithEmail(reqBody.Email)
+	user, err := usermodel.GetByEmail(reqBody.Email)
 	if err != nil && err.Error() != "sql: no rows in result set" {
 		utils.Logger().Errorf("Error registering user: %v\n", err)
 		return c.String(http.StatusInternalServerError, "Error registering user.")
