@@ -5,9 +5,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/matoous/go-nanoid/v2"
 
-	"github.com/juancwu/konbini/server/database"
 	"github.com/juancwu/konbini/server/env"
 	usermodel "github.com/juancwu/konbini/server/models/user"
 	"github.com/juancwu/konbini/server/utils"
@@ -36,27 +34,6 @@ func GetUserWithEmail(email string) (*usermodel.User, error) {
 	}
 
 	return user, nil
-}
-
-func CreateResetPasswordRecord(user *usermodel.User) (string, error) {
-	// generate random id for reset password link
-	linkId, err := gonanoid.New(32)
-	if err != nil {
-		utils.Logger().Errorf("Failed to generate random id for reset password link: %v\n", err)
-		return "", err
-	}
-	utils.Logger().Infof("Random reset password link id: %s\n", linkId)
-
-	// store reset password entry to generate a new reset password link that gets sent in the reset password email
-	_, err = database.DB().Exec("INSERT INTO users_passwords_reset (user_id, link_id) VALUES ($1, $2);", user.Id, linkId)
-	if err != nil {
-		utils.Logger().Errorf("Failed to insert password reset link id into db: %v\n", err)
-		return "", err
-	}
-
-	// send the email to reset the password
-
-	return linkId, nil
 }
 
 func GenerateToken(userId string, tokType string, exp time.Time) (string, error) {
