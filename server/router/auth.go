@@ -25,7 +25,7 @@ import (
 
 type AuthReqBody struct {
 	Email    string `json:"email" validate:"required"`
-	Password string `json:"challenge" validate:"required"`
+	Password string `json:"password" validate:"required"`
 }
 
 type AuthResBody struct {

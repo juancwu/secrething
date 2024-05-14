@@ -2,7 +2,6 @@ package usermodel
 
 import (
 	"github.com/juancwu/konbini/server/database"
-	"github.com/juancwu/konbini/server/env"
 	"github.com/juancwu/konbini/server/utils"
 )
 
@@ -34,10 +33,9 @@ func GetByEmailWithPassword(email, password string) (*User, error) {
 	user := User{}
 	err := database.DB().
 		QueryRow(
-			"SELECT id, first_name, last_name, email, email_verified, created_at, updated_at FROM users WHERE email = $1 AND password = crypt($2, gen_salt($3));",
+			"SELECT id, first_name, last_name, email, email_verified, created_at, updated_at FROM users WHERE email = $1 AND password = crypt($2, password);",
 			email,
 			password,
-			env.Values().PASS_ENCRYPT_ALGO,
 		).
 		Scan(
 			&user.Id,
