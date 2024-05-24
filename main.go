@@ -58,6 +58,7 @@ func main() {
 	e.Validator = &ReqValidator{validator: validator.New()}
 
 	router.SetupAuthRoutes(e)
+	router.SetupBentoRoutes(e)
 
 	e.GET("/health", func(c echo.Context) error {
 		return c.String(http.StatusOK, "Konbini is healthy")

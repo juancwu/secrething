@@ -28,11 +28,6 @@ type AuthReqBody struct {
 	Password string `json:"password" validate:"required"`
 }
 
-type AuthResBody struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
-}
-
 type RegisterReqBody struct {
 	Email     string `json:"email" validate:"required,email"`
 	FirstName string `json:"first_name" validate:"required,alpha"`
@@ -93,13 +88,7 @@ func handleAuth(c echo.Context) error {
 		return c.String(http.StatusInternalServerError, "Authentication service down. Please try again later.")
 	}
 
-	refreshToken, err := service.GenerateRefreshToken(user.Id)
-	if err != nil {
-		utils.Logger().Errorf("Failed to generate refresh token: %v\n", err)
-		return c.String(http.StatusInternalServerError, "Authentication service down. Please try again later.")
-	}
-
-	return c.JSON(http.StatusOK, AuthResBody{AccessToken: accessToken, RefreshToken: refreshToken})
+	return c.String(http.StatusOK, accessToken)
 }
 
 func handleRegister(c echo.Context) error {
