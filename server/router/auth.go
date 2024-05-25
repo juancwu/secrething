@@ -192,6 +192,11 @@ func handleVerifyEmail(c echo.Context) error {
 		return c.String(http.StatusInternalServerError, routeErrorMessage)
 	}
 
+	if ev.Status == service.EMAIL_STATUS_VERIFIED {
+		utils.Logger().Info("Re-attempt to verify email.", "user_id", ev.UserId)
+		return c.String(http.StatusBadRequest, "Verification code has been used before.")
+	}
+
 	// update the user entry that email has been verified
 	utils.Logger().Info("Updating user entry to set email_verified...")
 	tx, err := database.DB().Begin()
