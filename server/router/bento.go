@@ -65,5 +65,5 @@ func handleNewPersonalBento(c echo.Context) error {
 	}
 	utils.Logger().Info("New personal bento created.", "user_id", claims.UserId, "bento_id", bentoId)
 
-	return c.JSON(http.StatusOK, c.Get("claims"))
+	return c.String(http.StatusCreated, "Bento created!")
 }
