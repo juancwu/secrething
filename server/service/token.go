@@ -44,7 +44,7 @@ func GenerateRefreshToken(userId string) (string, error) {
 }
 
 func VerifyToken(token string) (*jwt.Token, error) {
-	parsedToken, err := jwt.Parse(token, func(t *jwt.Token) (interface{}, error) {
+	parsedToken, err := jwt.ParseWithClaims(token, &JwtCustomClaims{}, func(t *jwt.Token) (interface{}, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("Unexpected signing method: %v", t.Header["alg"])
 		}
