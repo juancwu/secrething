@@ -23,3 +23,21 @@ func NewPersonalBento(ownerId, name, pubKey, content string) (string, error) {
 	}
 	return id, nil
 }
+
+func GetPersonalBento(uuid string) (*PersonalBento, error) {
+	bento := PersonalBento{}
+	err := database.DB().QueryRow("SELECT id, name, owner_id, content, pub_key, created_at, updated_at FROM personal_bentos WHERE id = $1;", uuid).Scan(
+		&bento.Id,
+		&bento.Name,
+		&bento.OwnerId,
+		&bento.Content,
+		&bento.PubKey,
+		&bento.CreatedAt,
+		&bento.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &bento, nil
+}

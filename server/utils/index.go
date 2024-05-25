@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/charmbracelet/log"
+	"github.com/google/uuid"
 )
 
 var logger *log.Logger
@@ -17,4 +18,9 @@ func init() {
 
 func Logger() *log.Logger {
 	return logger
+}
+
+func IsValidUUIDV4(u string) bool {
+	_, err := uuid.Parse(u)
+	return err == nil
 }

@@ -1,6 +1,8 @@
 package router
 
 import (
+	"database/sql"
+	"encoding/base64"
 	"net/http"
 
 	"github.com/juancwu/konbini/server/middleware"
@@ -13,6 +15,7 @@ import (
 
 func SetupBentoRoutes(e *echo.Echo) {
 	e.POST("/bento/personal/new", handleNewPersonalBento, middleware.JwtAuthMiddleware)
+	e.GET("/bento/personal/:id", handleGetPersonalBento)
 }
 
 type NewPersonalBentoReqBody struct {
@@ -66,4 +69,44 @@ func handleNewPersonalBento(c echo.Context) error {
 	utils.Logger().Info("New personal bento created.", "user_id", claims.UserId, "bento_id", bentoId)
 
 	return c.String(http.StatusCreated, bentoId)
+}
+
+func handleGetPersonalBento(c echo.Context) error {
+	id := c.Param("id")
+	if !utils.IsValidUUIDV4(id) {
+		utils.Logger().Errorf("Invalid uuid when getting personal bento: %s\n", id)
+		return c.String(http.StatusBadRequest, "Invalid uuid.")
+	}
+	bento, err := bentomodel.GetPersonalBento(id)
+	if err != nil {
+		utils.Logger().Errorf("Failed to get personal bento: %v\n", err)
+		if err == sql.ErrNoRows {
+			return c.String(http.StatusNotFound, "Personal bento not found.")
+		}
+
+		return c.String(http.StatusInternalServerError, "Failed to get personal bento.")
+	}
+
+	hashed := c.Request().Header.Get("X-Bento-Hashed")
+	signature := c.Request().Header.Get("X-Bento-Signature")
+
+	decodedHashed, err := base64.StdEncoding.DecodeString(hashed)
+	if err != nil {
+		utils.Logger().Errorf("Failed to decode base64 hashed challenge: %s\n", err)
+		return c.String(http.StatusInternalServerError, "Failed to decode hashed challenge")
+	}
+
+	decodedSignature, err := base64.StdEncoding.DecodeString(signature)
+	if err != nil {
+		utils.Logger().Errorf("Failed to decode base64 signature: %s\n", err)
+		return c.String(http.StatusInternalServerError, "Failed to decode signature")
+	}
+
+	err = service.VerifyBentoSignature(decodedHashed, decodedSignature, bento.PubKey)
+	if err != nil {
+		utils.Logger().Errorf("Failed to verify bento signature: %v\n", err)
+		return c.String(http.StatusUnauthorized, "Invalid signature")
+	}
+
+	return c.JSON(http.StatusOK, bento)
 }
