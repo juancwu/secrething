@@ -16,6 +16,7 @@ import (
 func SetupBentoRoutes(e *echo.Echo) {
 	e.POST("/bento/personal/new", handleNewPersonalBento, middleware.JwtAuthMiddleware)
 	e.GET("/bento/personal/:id", handleGetPersonalBento)
+	e.GET("/bento/personal/list", handleListPersonalBentos, middleware.JwtAuthMiddleware)
 }
 
 type NewPersonalBentoReqBody struct {
@@ -109,4 +110,25 @@ func handleGetPersonalBento(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, bento)
+}
+
+func handleListPersonalBentos(c echo.Context) error {
+	claims, ok := c.Get("claims").(*service.JwtCustomClaims)
+	if !ok {
+		utils.Logger().Errorf("No claims found. Needed to get list of personal bentos.")
+		return c.String(http.StatusUnauthorized, http.StatusText(http.StatusUnauthorized))
+	}
+
+	utils.Logger().Info("Getting list of personal bentos...")
+	bentos, err := bentomodel.ListPersonalBentos(claims.UserId)
+	if err != nil {
+		utils.Logger().Errorf("Failed to get list of personal bentos: %v\n", err)
+		return c.String(http.StatusInternalServerError, "Failed to get list of personal bentos from database.")
+	}
+
+	if bentos == nil {
+		return c.JSON(http.StatusOK, []bentomodel.PersonalBento{})
+	}
+
+	return c.JSON(http.StatusOK, bentos)
 }
