@@ -102,7 +102,7 @@ func handleGetPersonalBento(c echo.Context) error {
 		return c.String(http.StatusInternalServerError, "Failed to decode signature")
 	}
 
-	err = service.VerifyBentoSignature(decodedHashed, decodedSignature, bento.PubKey)
+	err = service.VerifyBentoSignature(decodedHashed, decodedSignature, []byte(bento.PubKey))
 	if err != nil {
 		utils.Logger().Errorf("Failed to verify bento signature: %v\n", err)
 		return c.String(http.StatusUnauthorized, "Invalid signature")

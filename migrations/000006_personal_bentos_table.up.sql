@@ -3,8 +3,8 @@ CREATE TABLE personal_bentos (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     name VARCHAR(50) NOT NULL,
     owner_id UUID,
-    content BYTEA NOT NULL, -- cannot use TEXT cuz may contain null char "\0x00"
-    pub_key BYTEA NOT NULL, -- cannot use TEXT cuz may contain null char "\0x00"
+    content TEXT NOT NULL, -- base64 encoded
+    pub_key TEXT NOT NULL,
 
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
