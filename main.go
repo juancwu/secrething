@@ -61,7 +61,7 @@ func main() {
 	router.SetupBentoRoutes(e)
 
 	e.GET("/health", func(c echo.Context) error {
-		return c.String(http.StatusOK, "Konbini is healthy")
+		return c.String(http.StatusOK, "Konbini is healthy (v0.0.1-beta)")
 	})
 
 	log.Fatal(e.Start(os.Getenv("PORT")))
