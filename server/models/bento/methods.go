@@ -41,3 +41,23 @@ func GetPersonalBento(uuid string) (*PersonalBento, error) {
 
 	return &bento, nil
 }
+
+// IMPORTANT: Only fills out the id, name, created_at and updated_at fields
+func ListPersonalBentos(uid string) ([]PersonalBento, error) {
+	var bentos []PersonalBento
+	rows, err := database.DB().Query("SELECT id, name, created_at, updated_at FROM personal_bentos WHERE owner_id = $1;", uid)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		bento := PersonalBento{}
+		err = rows.Scan(&bento.Id, &bento.Name, &bento.CreatedAt, &bento.UpdatedAt)
+		if err != nil {
+			return nil, err
+		}
+		bentos = append(bentos, bento)
+	}
+
+	return bentos, nil
+}
