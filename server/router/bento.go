@@ -16,7 +16,9 @@ import (
 func SetupBentoRoutes(e *echo.Echo) {
 	e.POST("/bento/personal/new", handleNewPersonalBento, middleware.JwtAuthMiddleware)
 	e.GET("/bento/personal/:id", handleGetPersonalBento)
+	// TODO: update to use challenge headers middleware
 	e.GET("/bento/personal/list", handleListPersonalBentos, middleware.JwtAuthMiddleware)
+	e.DELETE("/bento/personal/:id", handleDeletePersonalBento, middleware.JwtAuthMiddleware)
 }
 
 type NewPersonalBentoReqBody struct {
@@ -72,6 +74,7 @@ func handleNewPersonalBento(c echo.Context) error {
 	return c.String(http.StatusCreated, bentoId)
 }
 
+// TODO: update to use challenge headers middlware
 func handleGetPersonalBento(c echo.Context) error {
 	id := c.Param("id")
 	if !utils.IsValidUUIDV4(id) {
@@ -131,4 +134,56 @@ func handleListPersonalBentos(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, bentos)
+}
+
+func handleDeletePersonalBento(c echo.Context) error {
+	claims, ok := c.Get("claims").(*service.JwtCustomClaims)
+	if !ok {
+		utils.Logger().Errorf("No claims found. Needed to delete bento.")
+		return c.String(http.StatusUnauthorized, http.StatusText(http.StatusUnauthorized))
+	}
+
+	id := c.Param("id")
+	if !utils.IsValidUUIDV4(id) {
+		utils.Logger().Errorf("Invalid uuid when deleting personal bento: %s\n", id)
+		return c.String(http.StatusBadRequest, "Invalid uuid")
+	}
+
+	bento, err := bentomodel.GetPersonalBento(id)
+	if err != nil {
+		utils.Logger().Errorf("Failed to get personal bento: %v\n", err)
+		if err == sql.ErrNoRows {
+			return c.String(http.StatusNotFound, "Personal bento not found.")
+		}
+		return c.String(http.StatusInternalServerError, "Failed to get personal bento.")
+	}
+
+	hashed := c.Request().Header.Get("X-Bento-Hashed")
+	signature := c.Request().Header.Get("X-Bento-Signature")
+
+	decodedHashed, err := base64.StdEncoding.DecodeString(hashed)
+	if err != nil {
+		utils.Logger().Errorf("Failed to decode base64 hashed challenge: %s\n", err)
+		return c.String(http.StatusInternalServerError, "Failed to decode hashed challenge")
+	}
+
+	decodedSignature, err := base64.StdEncoding.DecodeString(signature)
+	if err != nil {
+		utils.Logger().Errorf("Failed to decode base64 signature: %s\n", err)
+		return c.String(http.StatusInternalServerError, "Failed to decode signature")
+	}
+
+	err = service.VerifyBentoSignature(decodedHashed, decodedSignature, []byte(bento.PubKey))
+	if err != nil {
+		utils.Logger().Errorf("Failed to verify bento signature: %v\n", err)
+		return c.String(http.StatusUnauthorized, "Invalid signature")
+	}
+
+	deleted, err := bentomodel.DeletePersonalBento(claims.UserId, bento.Id)
+	if err != nil || !deleted {
+		utils.Logger().Errorf("Failed to delete personal bento: %v\n", err)
+		return c.String(http.StatusInternalServerError, "Failed to delete perosnal bento.")
+	}
+
+	return c.String(http.StatusOK, "Deleted")
 }

@@ -1,6 +1,9 @@
 package bentomodel
 
-import "github.com/juancwu/konbini/server/database"
+import (
+	"github.com/juancwu/konbini/server/database"
+	"github.com/juancwu/konbini/server/utils"
+)
 
 func PersonalBentoExistsWithName(userId, name string) (bool, error) {
 	var exists bool
@@ -60,4 +63,23 @@ func ListPersonalBentos(uid string) ([]PersonalBento, error) {
 	}
 
 	return bentos, nil
+}
+
+func DeletePersonalBento(uid, bid string) (bool, error) {
+	result, err := database.DB().Exec("DELETE FROM personal_bentos WHERE owner_id = $1 AND id = $2;", uid, bid)
+	if err != nil {
+		return false, err
+	}
+
+	n, err := result.RowsAffected()
+	if err != nil {
+		return false, err
+	}
+
+	// shouldn't really happen because the id and owner id should be unique in the database
+	if n > 1 {
+		utils.Logger().Warn("MORE THAN 1 PERSONAL WAS DELETED!!!!", "uid", uid, "bid", bid)
+	}
+
+	return n > 0, nil
 }
