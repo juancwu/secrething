@@ -1,9 +1,10 @@
 name: Deploy Docker Image
 
 on:
+  pull_request:
   push:
-    branches:
-      - 'live'
+    tags:
+      - '*'
 
 jobs:
   docker:
