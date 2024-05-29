@@ -45,13 +45,14 @@ jobs:
           NOREPLY_EMAIL: ${{ secrets.DOCKER_NOREPLY_EMAIL }}
           JWT_SECRET: ${{ secrets.DOCKER_JWT_SECRET }}
           JWT_ISSUER: ${{ secrets.DOCKER_JWT_ISSUER }}
+          APP_VERSION: ${{ github.ref_name }}
         with:
           host: ${{ secrets.DO_HOST }}
           username: ${{ secrets.DO_USERNAME }}
           key: ${{ secrets.DO_KEY }}
-          envs: IMAGE_PATH,APP_NAME,PORT,DB_URL,DB_NAME,RESEND_API_KEY,SERVER_URL,NOREPLY_EMAIL,JWT_SECRET,JWT_ISSUER,PGP_SYM_KEY,PASS_ENCRYPT_ALGO,APP_PORT
+          envs: IMAGE_PATH,APP_NAME,PORT,DB_URL,DB_NAME,RESEND_API_KEY,SERVER_URL,NOREPLY_EMAIL,JWT_SECRET,JWT_ISSUER,PGP_SYM_KEY,PASS_ENCRYPT_ALGO,APP_PORT,APP_VERSION
           script: |
             docker image pull $IMAGE_PATH
             docker container stop $APP_NAME
             docker container rm $APP_NAME
-            docker container run -d --rm --network=host --add-host=host.docker.internal:host-gateway --name $APP_NAME -p $PORT:$PORT -e DB_URL=$DB_URL -e PORT=$APP_PORT -e DB_NAME=$DB_NAME -e RESEND_API_KEY=$RESEND_API_KEY -e SERVER_URL=$SERVER_URL -e PGP_SYM_KEY=$PGP_SYM_KEY -e PASS_ENCRYPT_ALGO=$PASS_ENCRYPT_ALGO -e NOREPLY_EMAIL=$NOREPLY_EMAIL -e JWT_SECRET=$JWT_SECRET -e JWT_ISSUER=$JWT_ISSUER $IMAGE_PATH
+            docker container run -d --rm --network=host --add-host=host.docker.internal:host-gateway --name $APP_NAME -p $PORT:$PORT -e DB_URL=$DB_URL -e PORT=$APP_PORT -e DB_NAME=$DB_NAME -e RESEND_API_KEY=$RESEND_API_KEY -e SERVER_URL=$SERVER_URL -e PGP_SYM_KEY=$PGP_SYM_KEY -e PASS_ENCRYPT_ALGO=$PASS_ENCRYPT_ALGO -e NOREPLY_EMAIL=$NOREPLY_EMAIL -e JWT_SECRET=$JWT_SECRET -e JWT_ISSUER=$JWT_ISSUER -e APP_VERSION=$APP_VERSION $IMAGE_PATH
