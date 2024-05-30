@@ -1,6 +1,8 @@
 package bentomodel
 
 import (
+	"database/sql"
+
 	"github.com/juancwu/konbini/server/database"
 	"github.com/juancwu/konbini/server/utils"
 )
@@ -15,9 +17,9 @@ func PersonalBentoExistsWithName(userId, name string) (bool, error) {
 	return exists, err
 }
 
-func NewPersonalBento(ownerId, name, pubKey, content string) (string, error) {
+func NewPersonalBento(tx *sql.Tx, ownerId, name, pubKey string) (string, error) {
 	var id string
-	row := database.DB().QueryRow("INSERT INTO personal_bentos (owner_id, name, pub_key, content) VALUES ($1, $2, $3, $4) RETURNING id;", ownerId, name, pubKey, content)
+	row := tx.QueryRow("INSERT INTO personal_bentos (owner_id, name, pub_key) VALUES ($1, $2, $3) RETURNING id;", ownerId, name, pubKey)
 	err := row.Scan(
 		&id,
 	)
@@ -29,11 +31,10 @@ func NewPersonalBento(ownerId, name, pubKey, content string) (string, error) {
 
 func GetPersonalBento(uuid string) (*PersonalBento, error) {
 	bento := PersonalBento{}
-	err := database.DB().QueryRow("SELECT id, name, owner_id, content, pub_key, created_at, updated_at FROM personal_bentos WHERE id = $1;", uuid).Scan(
+	err := database.DB().QueryRow("SELECT id, name, owner_id, pub_key, created_at, updated_at FROM personal_bentos WHERE id = $1;", uuid).Scan(
 		&bento.Id,
 		&bento.Name,
 		&bento.OwnerId,
-		&bento.Content,
 		&bento.PubKey,
 		&bento.CreatedAt,
 		&bento.UpdatedAt,

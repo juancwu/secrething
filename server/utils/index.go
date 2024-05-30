@@ -2,8 +2,10 @@ package utils
 
 import (
 	"os"
+	"reflect"
 
 	"github.com/charmbracelet/log"
+	"github.com/go-playground/validator"
 	"github.com/google/uuid"
 )
 
@@ -23,4 +25,19 @@ func Logger() *log.Logger {
 func IsValidUUIDV4(u string) bool {
 	_, err := uuid.Parse(u)
 	return err == nil
+}
+
+func ValidateStringSlice(fl validator.FieldLevel) bool {
+	value := fl.Field()
+	if value.Kind() != reflect.Slice {
+		return false
+	}
+
+	for i := 0; i < value.Len(); i++ {
+		if value.Index(i).Kind() != reflect.String {
+			return false
+		}
+	}
+
+	return true
 }

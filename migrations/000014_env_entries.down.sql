@@ -1,0 +1,2 @@
+DROP TABLE personal_bento_entries;
+DROP TRIGGER IF EXISTS update_personal_bento_entries_updated_at ON personal_bento_entries;

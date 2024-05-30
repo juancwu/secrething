@@ -5,8 +5,10 @@ import (
 	"encoding/base64"
 	"net/http"
 
+	"github.com/juancwu/konbini/server/database"
 	"github.com/juancwu/konbini/server/middleware"
 	bentomodel "github.com/juancwu/konbini/server/models/bento"
+	entrymodel "github.com/juancwu/konbini/server/models/entry"
 	usermodel "github.com/juancwu/konbini/server/models/user"
 	"github.com/juancwu/konbini/server/service"
 	"github.com/juancwu/konbini/server/utils"
@@ -22,9 +24,9 @@ func SetupBentoRoutes(e *echo.Echo) {
 }
 
 type NewPersonalBentoReqBody struct {
-	Name       string `json:"name" validate:"required,min=1"`
-	PublickKey string `json:"public_key" validate:"required,min=1"`
-	Content    string `json:"content" validate:"required"`
+	Name       string   `json:"name" validate:"required,min=1"`
+	PublickKey string   `json:"public_key" validate:"required,min=1"`
+	KeyVals    []string `json:"keyvals" validate:"required,ValidateStringSlice"`
 }
 
 func handleNewPersonalBento(c echo.Context) error {
@@ -64,12 +66,42 @@ func handleNewPersonalBento(c echo.Context) error {
 		return c.String(http.StatusBadRequest, "Another personal bento with the same name already exists. If you wish to replace the bento, please delete it and create a new one.")
 	}
 
-	bentoId, err := bentomodel.NewPersonalBento(claims.UserId, reqBody.Name, reqBody.PublickKey, reqBody.Content)
+	// create a new transaction
+	tx, err := database.DB().Begin()
+	if err != nil {
+		utils.Logger().Errorf("Failed to begin transaction: %v\n", err)
+		return c.String(http.StatusInternalServerError, "Personal bento servide down. Please try again later.")
+	}
+
+	bentoId, err := bentomodel.NewPersonalBento(tx, claims.UserId, reqBody.Name, reqBody.PublickKey)
 	if err != nil {
 		utils.Logger().Errorf("Failed to create new personal bento: %v\n", err)
+		if err := tx.Rollback(); err != nil {
+			utils.Logger().Errorf("Failed to rollback transaction: %v\n", err)
+		}
 		return c.String(http.StatusInternalServerError, "Failed to create personal bento. Please try again later.")
 	}
 	utils.Logger().Info("New personal bento created.", "user_id", claims.UserId, "bento_id", bentoId)
+	utils.Logger().Info("Registering personal bento entries...")
+
+	err = entrymodel.CreateEntries(tx, bentoId, reqBody.KeyVals)
+	if err != nil {
+		utils.Logger().Errorf("Failed to register personal bento entries: %v\n", err)
+		if err := tx.Rollback(); err != nil {
+			utils.Logger().Errorf("Failed to rollback transaction: %v\n", err)
+		}
+		return c.String(http.StatusInternalServerError, "Failed to create personal bento. Please try again later.")
+	}
+	utils.Logger().Info("Personal bento entries registered.", "bento_id", bentoId)
+
+	err = tx.Commit()
+	if err != nil {
+		utils.Logger().Errorf("Failed to commit transaction: %v\n", err)
+		if err := tx.Rollback(); err != nil {
+			utils.Logger().Errorf("Failed to rollback transaction: %v\n", err)
+		}
+		return c.String(http.StatusInternalServerError, "Failed to create personal bento. Please try again later.")
+	}
 
 	return c.String(http.StatusCreated, bentoId)
 }
@@ -90,6 +122,12 @@ func handleGetPersonalBento(c echo.Context) error {
 
 		return c.String(http.StatusInternalServerError, "Failed to get personal bento.")
 	}
+	keyvals, err := entrymodel.GetPersonalBentoEntries(bento.Id)
+	if err != nil && err != sql.ErrNoRows {
+		utils.Logger().Errorf("Failed to get personal bento entries: %v\n", err)
+		return c.String(http.StatusInternalServerError, "Failed to get personal bento.")
+	}
+	bento.KeyVals = keyvals
 
 	hashed := c.Request().Header.Get("X-Bento-Hashed")
 	signature := c.Request().Header.Get("X-Bento-Signature")

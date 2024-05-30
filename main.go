@@ -55,7 +55,9 @@ func main() {
 			return nil
 		},
 	}))
-	e.Validator = &ReqValidator{validator: validator.New()}
+	validate := validator.New()
+	validate.RegisterValidation("ValidateStringSlice", utils.ValidateStringSlice)
+	e.Validator = &ReqValidator{validator: validate}
 
 	router.SetupAuthRoutes(e)
 	router.SetupBentoRoutes(e)
