@@ -20,6 +20,7 @@ func SetupBentoRoutes(e *echo.Echo) {
 	e.GET("/bento/personal/:id", handleGetPersonalBento)
 	e.GET("/bento/personal/list", handleListPersonalBentos, middleware.JwtAuthMiddleware)
 	e.DELETE("/bento/personal/:id", handleDeletePersonalBento, middleware.JwtAuthMiddleware)
+	e.PATCH("/bento/personal/:id", handleUpdatePersonalBento)
 }
 
 type NewPersonalBentoReqBody struct {
@@ -223,4 +224,118 @@ func handleDeletePersonalBento(c echo.Context) error {
 	}
 
 	return c.String(http.StatusOK, "Deleted")
+}
+
+const (
+	UPDATE_ACTION_ADD    = "add"
+	UPDATE_ACTION_DELETE = "delete"
+	UPDATE_ACTION_UPDATE = "update"
+)
+
+type UpdatePersonalBentoAction struct {
+	Method  string `json:"method" validate:"required,oneof=add update delete"`
+	Name    string `json:"name" validate:"required,min=1"`
+	Content string `json:"content" validate:"required"`
+}
+
+type UpdatePersonalBentoReqBody struct {
+	Actions []UpdatePersonalBentoAction `json:"keyvals" validate:"required,dive"`
+}
+
+func handleUpdatePersonalBento(c echo.Context) error {
+	id := c.Param("id")
+	if !utils.IsValidUUIDV4(id) {
+		utils.Logger().Errorf("Invalid uuid when deleting personal bento: %s\n", id)
+		return c.String(http.StatusBadRequest, "Invalid uuid")
+	}
+
+	reqBody := new(UpdatePersonalBentoReqBody)
+	if err := c.Bind(reqBody); err != nil {
+		utils.Logger().Errorf("Failed to bind request body: %v\n", err)
+		return c.String(http.StatusBadRequest, "Bad request")
+	}
+	if err := c.Validate(reqBody); err != nil {
+		utils.Logger().Errorf("Requests body validation failed: %v\n", err)
+		return c.String(http.StatusBadRequest, "Bad request")
+	}
+
+	// TODO: add check to verify if user has permission to perform update actions
+
+	// make sure that the bento actually exists
+	bento, err := bentomodel.GetPersonalBento(id)
+	if err != nil {
+		utils.Logger().Errorf("Failed to get personal bento: %v\n", err)
+		if err == sql.ErrNoRows {
+			return c.String(http.StatusNotFound, "Personal bento not found.")
+		}
+		return c.String(http.StatusInternalServerError, "Failed to get personal bento.")
+	}
+
+	// we still need to authenticate this
+	hashed := c.Request().Header.Get("X-Bento-Hashed")
+	signature := c.Request().Header.Get("X-Bento-Signature")
+
+	decodedHashed, err := base64.StdEncoding.DecodeString(hashed)
+	if err != nil {
+		utils.Logger().Errorf("Failed to decode base64 hashed challenge: %s\n", err)
+		return c.String(http.StatusInternalServerError, "Failed to decode hashed challenge")
+	}
+
+	decodedSignature, err := base64.StdEncoding.DecodeString(signature)
+	if err != nil {
+		utils.Logger().Errorf("Failed to decode base64 signature: %s\n", err)
+		return c.String(http.StatusInternalServerError, "Failed to decode signature")
+	}
+
+	err = service.VerifyBentoSignature(decodedHashed, decodedSignature, []byte(bento.PubKey))
+	if err != nil {
+		utils.Logger().Errorf("Failed to verify bento signature: %v\n", err)
+		return c.String(http.StatusUnauthorized, "Invalid signature")
+	}
+
+	// begin transaction to allow all operations to commit at the same time
+	tx, err := database.DB().Begin()
+	if err != nil {
+		utils.Logger().Errorf("Failed to begin transaction: %v\n", err)
+		return c.String(http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
+	}
+	// TODO: add history record for tracing, this will be a version like implementation
+	for _, action := range reqBody.Actions {
+		switch action.Method {
+		case UPDATE_ACTION_ADD:
+			_, err = tx.Exec("INSERT INTO personal_bento_entries (name, content, personal_bento_id) VALUES ($1, $2, $3);", action.Name, action.Content, bento.Id)
+			if err != nil {
+				utils.Logger().Errorf("Failed to perform 'add' action: %v\n", err)
+				if err := tx.Rollback(); err != nil {
+					utils.Logger().Errorf("Failed to rollback: %v\n", err)
+				}
+				return c.String(http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
+			}
+		case UPDATE_ACTION_DELETE:
+			_, err = tx.Exec("DELETE FROM personal_bento_entries WHERE name = $1 AND personal_bento_id = $2;", action.Name, bento.Id)
+			if err != nil {
+				utils.Logger().Errorf("Failed to perform 'delete' action: %v\n", err)
+				if err := tx.Rollback(); err != nil {
+					utils.Logger().Errorf("Failed to rollback: %v\n", err)
+				}
+				return c.String(http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
+			}
+		case UPDATE_ACTION_UPDATE:
+			_, err = tx.Exec("UPDATE personal_bento_entries SET name = $1, content = $2 WHERE name = $1 AND personal_bento_id = $3", action.Name, action.Content, bento.Id)
+			if err != nil {
+				utils.Logger().Errorf("Failed to perform 'update' action: %v\n", err)
+				if err := tx.Rollback(); err != nil {
+					utils.Logger().Errorf("Failed to rollback: %v\n", err)
+				}
+				return c.String(http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
+			}
+		}
+	}
+	err = tx.Commit()
+	if err != nil {
+		utils.Logger().Errorf("Failed to commit actions: %v\n", err)
+		return c.String(http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
+	}
+
+	return c.String(http.StatusOK, "Updated")
 }
