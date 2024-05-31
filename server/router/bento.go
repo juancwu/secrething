@@ -18,7 +18,6 @@ import (
 func SetupBentoRoutes(e *echo.Echo) {
 	e.POST("/bento/personal/new", handleNewPersonalBento, middleware.JwtAuthMiddleware)
 	e.GET("/bento/personal/:id", handleGetPersonalBento)
-	// TODO: update to use challenge headers middleware
 	e.GET("/bento/personal/list", handleListPersonalBentos, middleware.JwtAuthMiddleware)
 	e.DELETE("/bento/personal/:id", handleDeletePersonalBento, middleware.JwtAuthMiddleware)
 }
