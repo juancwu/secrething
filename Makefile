@@ -1,2 +1,2 @@
 dev:
-	go run ./cmd/server
+	@CI=true air
