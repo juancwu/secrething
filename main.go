@@ -59,7 +59,7 @@ func main() {
 	validate.RegisterValidation("ValidateStringSlice", utils.ValidateStringSlice)
 	e.Validator = &ReqValidator{validator: validate}
 
-	router.SetupAuthRoutes(e)
+	router.SetupAccountRoutes(e)
 	router.SetupBentoRoutes(e)
 
 	e.GET("/health", func(c echo.Context) error {

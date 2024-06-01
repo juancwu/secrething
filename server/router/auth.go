@@ -48,15 +48,15 @@ type ResetPasswordEmailData struct {
 	Password  string `json:"password" validate:"required,min=12"`
 }
 
-func SetupAuthRoutes(e *echo.Echo) {
-	e.POST("/auth", handleAuth)
-	e.POST("/auth/register", handleRegister)
-	e.GET("/auth/verify-email/:refId", handleVerifyEmail)
-	e.POST("/auth/reset/password", handleStartResetPassword)
-	e.PATCH("/auth/reset/password", handleFinishResetPassword)
+func SetupAccountRoutes(e *echo.Echo) {
+	e.POST("/account/login", handleLogin)
+	e.POST("/account/signup", handleSignup)
+	e.GET("/account/verify-email", handleVerifyEmail)
+	e.POST("/account/reset-password", handleStartResetPassword)
+	e.PATCH("/account/password", handleFinishResetPassword)
 }
 
-func handleAuth(c echo.Context) error {
+func handleLogin(c echo.Context) error {
 	auth := new(AuthReqBody)
 
 	// bind the incoming request data
@@ -91,7 +91,7 @@ func handleAuth(c echo.Context) error {
 	return c.String(http.StatusOK, accessToken)
 }
 
-func handleRegister(c echo.Context) error {
+func handleSignup(c echo.Context) error {
 	reqBody := new(RegisterReqBody)
 
 	// bind the incoming request data
@@ -161,13 +161,13 @@ func handleRegister(c echo.Context) error {
 		var tpl bytes.Buffer
 		err = templates.Render(&tpl, "verify-email.html", VerifyEmailData{FirstName: reqBody.FirstName, LastName: reqBody.LastName, URL: fmt.Sprintf("%s/auth/verify-email/%s", env.Values().SERVER_URL, refId)})
 		if err != nil {
-			utils.Logger().Errorf("Failed to get verify email template: %v - handleRegister\n", err)
+			utils.Logger().Errorf("Failed to get verify email template: %v - handleSignup\n", err)
 			return c.String(http.StatusInternalServerError, "Error sending verification email.")
 		}
 
-		utils.Logger().Info("Request verify email", "func", "handleRegister")
+		utils.Logger().Info("Request verify email", "func", "handleSignup")
 		emailId, err := service.SendEmail(env.Values().NOREPLY_EMAIL, reqBody.Email, "[Konbini] Verify Your Email", tpl.String())
-		utils.Logger().Info("Verify email sent", "id", emailId, "func", "handleRegister")
+		utils.Logger().Info("Verify email sent", "id", emailId, "func", "handleSignup")
 		_, err = database.DB().Exec("UPDATE email_verifications SET email_sent_at = $1, resend_email_id = $2, status = $3 WHERE verification_id = $4;", time.Now().In(time.UTC), emailId, service.EMAIL_STATUS_SENT, refId)
 		if err != nil {
 			utils.Logger().Errorf("Failed to update email verification with sent time and resend email id: %v\n", err)
