@@ -48,7 +48,7 @@ type ResetPasswordEmailData struct {
 	Password  string `json:"password" validate:"required,min=12"`
 }
 
-func SetupAccountRoutes(e *echo.Echo) {
+func SetupAccountRoutes(e RouteGroup) {
 	e.POST("/account/login", handleLogin)
 	e.POST("/account/signup", handleSignup)
 	e.GET("/account/verify-email", handleVerifyEmail)

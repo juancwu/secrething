@@ -59,12 +59,13 @@ func main() {
 	validate.RegisterValidation("ValidateStringSlice", utils.ValidateStringSlice)
 	e.Validator = &ReqValidator{validator: validate}
 
-	router.SetupAccountRoutes(e)
-	router.SetupBentoRoutes(e)
-
-	e.GET("/health", func(c echo.Context) error {
+	apiV1Group := e.Group("/api/v1")
+	apiV1Group.GET("/health", func(c echo.Context) error {
 		return c.String(http.StatusOK, fmt.Sprintf("Konbini is healthy (%s)", os.Getenv("APP_VERSION")))
 	})
+
+	router.SetupAccountRoutes(apiV1Group)
+	router.SetupBentoRoutes(apiV1Group)
 
 	log.Fatal(e.Start(os.Getenv("PORT")))
 }

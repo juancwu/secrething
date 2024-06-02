@@ -15,7 +15,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func SetupBentoRoutes(e *echo.Echo) {
+func SetupBentoRoutes(e RouteGroup) {
 	e.POST("/bento/personal/new", handleNewPersonalBento, middleware.JwtAuthMiddleware)
 	e.GET("/bento/personal/:id", handleGetPersonalBento)
 	e.GET("/bento/personal/list", handleListPersonalBentos, middleware.JwtAuthMiddleware)
