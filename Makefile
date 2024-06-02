@@ -1,2 +1,2 @@
 dev:
-	@CI=true air
+	@CI=true APP_VERSION=dev air
