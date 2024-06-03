@@ -8,10 +8,11 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/go-playground/validator"
 	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
+	echomiddleware "github.com/labstack/echo/v4/middleware"
 
 	"github.com/juancwu/konbini/server/database"
 	_ "github.com/juancwu/konbini/server/env"
+	"github.com/juancwu/konbini/server/middleware"
 	"github.com/juancwu/konbini/server/router"
 	"github.com/juancwu/konbini/server/utils"
 )
@@ -37,24 +38,8 @@ func main() {
 	database.Migrate()
 
 	e := echo.New()
-	e.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
-		LogStatus:        true,
-		LogRoutePath:     true,
-		LogMethod:        true,
-		LogError:         true,
-		LogRemoteIP:      true,
-		LogUserAgent:     true,
-		LogContentLength: true,
-		LogResponseSize:  true,
-		LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
-			if v.Error == nil {
-				utils.Logger().Info(fmt.Sprintf("[%s Request]", v.Method), "route", v.RoutePath, "status", v.Status, "remote-ip", v.RemoteIP, "agent", v.UserAgent, "content-length", v.ContentLength, "res-size", v.ResponseSize)
-			} else {
-				utils.Logger().Error(fmt.Sprintf("[%s Request]", v.Method), "route", v.RoutePath, "status", v.Status, "remote-ip", v.RemoteIP, "agent", v.UserAgent, "content-length", v.ContentLength, "res-size", v.ResponseSize, "error", v.Error)
-			}
-			return nil
-		},
-	}))
+	e.Use(echomiddleware.RequestID())
+	e.Use(middleware.Logger())
 	validate := validator.New()
 	validate.RegisterValidation("ValidateStringSlice", utils.ValidateStringSlice)
 	e.Validator = &ReqValidator{validator: validate}
