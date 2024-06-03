@@ -3,6 +3,7 @@ package router
 import (
 	"database/sql"
 	"encoding/base64"
+	"fmt"
 	"net/http"
 
 	"github.com/juancwu/konbini/server/database"
@@ -16,11 +17,89 @@ import (
 )
 
 func SetupBentoRoutes(e RouteGroup) {
+	// DEPRACATED
 	e.POST("/bento/personal/new", handleNewPersonalBento, middleware.JwtAuthMiddleware)
 	e.GET("/bento/personal/:id", handleGetPersonalBento)
 	e.GET("/bento/personal/list", handleListPersonalBentos, middleware.JwtAuthMiddleware)
 	e.DELETE("/bento/personal/:id", handleDeletePersonalBento, middleware.JwtAuthMiddleware)
 	e.PATCH("/bento/personal/:id", handleUpdatePersonalBento)
+
+	// New api routes
+	e.GET("/bento/:id", handleGetBento, middleware.ValidateRequest(
+		middleware.ValidatorOptions{
+			Field:    "id",
+			From:     middleware.VALIDATE_PARAM,
+			Required: true,
+			Validate: func(s string) error {
+				if utils.IsValidUUIDV4(s) {
+					return nil
+				}
+				return fmt.Errorf("The given id is not a proper UUID v4: %s", s)
+			},
+		},
+		// the two following validators do not need to properly validate the values
+		// because we just need to make sure it required so the existence of a non-empty
+		// string is already being taken account for
+		middleware.ValidatorOptions{
+			Field:    "X-Bento-Hashed",
+			From:     middleware.VALIDATE_HEADER,
+			Required: true,
+			Validate: func(s string) error {
+				return nil
+			},
+		},
+		middleware.ValidatorOptions{
+			Field:    "X-Bento-Signature",
+			From:     middleware.VALIDATE_HEADER,
+			Required: true,
+			Validate: func(s string) error {
+				return nil
+			},
+		},
+	))
+}
+
+func handleGetBento(c echo.Context) error {
+	bentoId := c.Param("id")
+	// need to query the bento first to get the public key
+	bento, err := bentomodel.GetPersonalBento(bentoId)
+	if err != nil {
+		utils.Logger().Errorf("Failed to get personal bento: %v\n", err)
+		if err == sql.ErrNoRows {
+			return c.String(http.StatusNotFound, "Personal bento not found.")
+		}
+
+		return c.String(http.StatusInternalServerError, "Failed to get personal bento.")
+	}
+	hashed := c.Request().Header.Get("X-Bento-Hashed")
+	signature := c.Request().Header.Get("X-Bento-Signature")
+
+	decodedHashed, err := base64.StdEncoding.DecodeString(hashed)
+	if err != nil {
+		utils.Logger().Errorf("Failed to decode base64 hashed challenge: %s\n", err)
+		return c.String(http.StatusInternalServerError, "Failed to decode hashed challenge")
+	}
+
+	decodedSignature, err := base64.StdEncoding.DecodeString(signature)
+	if err != nil {
+		utils.Logger().Errorf("Failed to decode base64 signature: %s\n", err)
+		return c.String(http.StatusInternalServerError, "Failed to decode signature")
+	}
+
+	err = service.VerifyBentoSignature(decodedHashed, decodedSignature, []byte(bento.PubKey))
+	if err != nil {
+		utils.Logger().Errorf("Failed to verify bento signature: %v\n", err)
+		return c.String(http.StatusUnauthorized, "Invalid signature")
+	}
+
+	// get the key-value pairs for the bento
+	bento.KeyVals, err = entrymodel.GetPersonalBentoEntries(bento.Id)
+	if err != nil && err != sql.ErrNoRows {
+		utils.Logger().Errorf("Failed to get personal bento entries: %v\n", err)
+		return c.String(http.StatusInternalServerError, "Failed to get personal bento.")
+	}
+
+	return c.JSON(http.StatusOK, bento)
 }
 
 type NewPersonalBentoReqBody struct {
