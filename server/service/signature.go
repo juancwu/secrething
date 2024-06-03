@@ -8,6 +8,7 @@ import (
 	"errors"
 )
 
+// Verifies the given hashed challenge and signature with the given public key
 func VerifyBentoSignature(hashed, signature, pubKeyBytes []byte) error {
 	block, _ := pem.Decode(pubKeyBytes)
 	if block == nil || block.Type != "RSA PUBLIC KEY" {
