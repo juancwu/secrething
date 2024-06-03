@@ -8,7 +8,6 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/go-playground/validator"
 	"github.com/labstack/echo/v4"
-	echomiddleware "github.com/labstack/echo/v4/middleware"
 
 	"github.com/juancwu/konbini/server/database"
 	_ "github.com/juancwu/konbini/server/env"
@@ -38,7 +37,7 @@ func main() {
 	database.Migrate()
 
 	e := echo.New()
-	e.Use(echomiddleware.RequestID())
+	e.Use(middleware.RequestID(32))
 	e.Use(middleware.Logger())
 	validate := validator.New()
 	validate.RegisterValidation("ValidateStringSlice", utils.ValidateStringSlice)
@@ -46,7 +45,7 @@ func main() {
 
 	apiV1Group := e.Group("/api/v1")
 	apiV1Group.GET("/health", func(c echo.Context) error {
-		return c.String(http.StatusOK, fmt.Sprintf("Konbini is healthy (%s)", os.Getenv("APP_VERSION")))
+		return c.String(http.StatusOK, fmt.Sprintf("Konbini is healthy running version: '%s' (request id: %s)", os.Getenv("APP_VERSION"), c.Request().Header.Get(echo.HeaderXRequestID)))
 	})
 
 	router.SetupAccountRoutes(apiV1Group)
