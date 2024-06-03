@@ -14,11 +14,11 @@ func Logger() echo.MiddlewareFunc {
 			}
 			defer logger.Sync()
 			logger.Info("New request",
-				zap.String("Method", c.Request().Method),
-				zap.String("Route", c.Request().URL.Path),
-				zap.String("Request ID", c.Request().Header.Get(echo.HeaderXRequestID)),
-				zap.String("User Agent", c.Request().UserAgent()),
-				zap.String("IP", c.RealIP()),
+				zap.String("method", c.Request().Method),
+				zap.String("path", c.Request().URL.Path),
+				zap.String("request_id", c.Request().Header.Get(echo.HeaderXRequestID)),
+				zap.String("user_agent", c.Request().UserAgent()),
+				zap.String("ip", c.RealIP()),
 			)
 			return next(c)
 		}
