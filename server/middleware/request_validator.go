@@ -58,9 +58,11 @@ func ValidateRequest(validators ...ValidatorOptions) echo.MiddlewareFunc {
 				if value == "" && validator.Required {
 					return c.String(http.StatusBadRequest, fmt.Sprintf("Missing required %s parameter \"%s\"", validator.From, validator.Field))
 				}
-				err = validator.Validate(value)
-				if err != nil {
-					return c.String(http.StatusBadRequest, err.Error())
+				if validator.Validate != nil {
+					err = validator.Validate(value)
+					if err != nil {
+						return c.String(http.StatusBadRequest, err.Error())
+					}
 				}
 			}
 			return next(c)
