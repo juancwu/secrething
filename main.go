@@ -37,6 +37,8 @@ func main() {
 	database.Migrate()
 
 	e := echo.New()
+	e.HideBanner = os.Getenv("APP_ENV") != "development"
+	e.HidePort = os.Getenv("APP_ENV") != "development"
 	e.Use(middleware.RequestID(32))
 	e.Use(middleware.Logger())
 	validate := validator.New()
