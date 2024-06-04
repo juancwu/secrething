@@ -26,15 +26,7 @@ func validateUUID(uuid string) error {
 
 func SetupBentoRoutes(e RouteGroup) {
 	// DEPRACATED
-	e.POST("/bento/personal/new", handleNewPersonalBento, middleware.JwtAuthMiddleware)
-	e.GET("/bento/personal/:id", handleGetPersonalBento, middleware.ValidateRequest(
-		middleware.ValidatorOptions{
-			Field:    "id",
-			From:     middleware.VALIDATE_PARAM,
-			Required: true,
-			Validate: validateUUID,
-		},
-	))
+	e.POST("/bento/prep", handleNewPersonalBento, middleware.JwtAuthMiddleware)
 	e.GET("/bento/personal/list", handleListPersonalBentos, middleware.JwtAuthMiddleware)
 	e.DELETE("/bento/personal/:id", handleDeletePersonalBento, middleware.JwtAuthMiddleware, middleware.ValidateRequest(
 		middleware.ValidatorOptions{
@@ -202,55 +194,6 @@ func handleNewPersonalBento(c echo.Context) error {
 	}
 
 	return c.String(http.StatusCreated, bentoId)
-}
-
-// TODO: update to use challenge headers middlware
-func handleGetPersonalBento(c echo.Context) error {
-	logger, _ := zap.NewProduction()
-	defer logger.Sync()
-	id := c.Param("id")
-	if !utils.IsValidUUIDV4(id) {
-		logger.Error("Invalid uuid when getting personal bento", zap.String("bento_id", id))
-		return c.String(http.StatusBadRequest, "Invalid uuid.")
-	}
-	bento, err := bentomodel.GetPersonalBento(id)
-	if err != nil {
-		logger.Error("Failed to get personal bento", zap.Error(err))
-		if err == sql.ErrNoRows {
-			return c.String(http.StatusNotFound, "Personal bento not found.")
-		}
-
-		return c.String(http.StatusInternalServerError, "Failed to get personal bento.")
-	}
-	keyvals, err := entrymodel.GetPersonalBentoEntries(bento.Id)
-	if err != nil && err != sql.ErrNoRows {
-		logger.Error("Failed to get personal bento entries", zap.Error(err))
-		return c.String(http.StatusInternalServerError, "Failed to get personal bento.")
-	}
-	bento.KeyVals = keyvals
-
-	hashed := c.Request().Header.Get("X-Bento-Hashed")
-	signature := c.Request().Header.Get("X-Bento-Signature")
-
-	decodedHashed, err := base64.StdEncoding.DecodeString(hashed)
-	if err != nil {
-		logger.Error("Failed to decode base64 hashed challenge", zap.Error(err))
-		return c.String(http.StatusInternalServerError, "Failed to decode hashed challenge")
-	}
-
-	decodedSignature, err := base64.StdEncoding.DecodeString(signature)
-	if err != nil {
-		logger.Error("Failed to decode base64 signature", zap.Error(err))
-		return c.String(http.StatusInternalServerError, "Failed to decode signature")
-	}
-
-	err = service.VerifyBentoSignature(decodedHashed, decodedSignature, []byte(bento.PubKey))
-	if err != nil {
-		logger.Error("Failed to verify bento signature", zap.Error(err))
-		return c.String(http.StatusUnauthorized, "Invalid signature")
-	}
-
-	return c.JSON(http.StatusOK, bento)
 }
 
 func handleListPersonalBentos(c echo.Context) error {
