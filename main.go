@@ -22,7 +22,7 @@ type ReqValidator struct {
 
 func (rq *ReqValidator) Validate(i interface{}) error {
 	if err := rq.validator.Struct(i); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+		return err
 	}
 
 	return nil
@@ -52,6 +52,7 @@ func main() {
 
 	router.SetupAccountRoutes(apiV1Group)
 	router.SetupBentoRoutes(apiV1Group)
+	router.SetupChallengeRoutes(apiV1Group)
 
 	log.Fatal(e.Start(os.Getenv("PORT")))
 }

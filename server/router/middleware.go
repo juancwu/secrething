@@ -1,11 +1,11 @@
-package middleware
+package router
 
 import (
 	"fmt"
 	"net/http"
 
-	"github.com/juancwu/konbini/server/utils"
 	"github.com/labstack/echo/v4"
+	"go.uber.org/zap"
 )
 
 const (
@@ -37,6 +37,8 @@ type ValidatorOptions struct {
 func ValidateRequest(validators ...ValidatorOptions) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
+			logger, _ := zap.NewProduction()
+			defer logger.Sync()
 			var err error
 			for _, validator := range validators {
 				var value string
@@ -49,19 +51,19 @@ func ValidateRequest(validators ...ValidatorOptions) echo.MiddlewareFunc {
 					value = c.Request().Header.Get(validator.Field)
 				default:
 					err = fmt.Errorf("Invalid ValidatorOptions.Field value. Expected one of %s, %s, or %s but received %s\n", VALIDATE_QUERY, VALIDATE_PARAM, VALIDATE_HEADER, validator.Field)
-					utils.Logger().Error(err)
-					return c.String(http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
+					logger.Error("Validate request error", zap.Error(err))
+					return writeApiError(c, http.StatusInternalServerError, "internal server error")
 				}
 				if value == "" && !validator.Required {
 					return next(c)
 				}
 				if value == "" && validator.Required {
-					return c.String(http.StatusBadRequest, fmt.Sprintf("Missing required %s parameter \"%s\"", validator.From, validator.Field))
+					return writeApiError(c, http.StatusBadRequest, fmt.Sprintf("Missing required %s parameter \"%s\"", validator.From, validator.Field))
 				}
 				if validator.Validate != nil {
 					err = validator.Validate(value)
 					if err != nil {
-						return c.String(http.StatusBadRequest, err.Error())
+						return writeApiError(c, http.StatusBadRequest, err.Error())
 					}
 				}
 			}

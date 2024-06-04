@@ -3,9 +3,11 @@ package router
 import (
 	"database/sql"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"net/http"
 
+	"github.com/go-playground/validator"
 	"github.com/juancwu/konbini/server/database"
 	"github.com/juancwu/konbini/server/middleware"
 	bentomodel "github.com/juancwu/konbini/server/models/bento"
@@ -25,42 +27,41 @@ func validateUUID(uuid string) error {
 }
 
 func SetupBentoRoutes(e RouteGroup) {
-	// DEPRACATED
-	e.POST("/bento/prep", handleNewPersonalBento, middleware.JwtAuthMiddleware)
-	e.GET("/bento/personal/list", handleListPersonalBentos, middleware.JwtAuthMiddleware)
-	e.DELETE("/bento/personal/:id", handleDeletePersonalBento, middleware.JwtAuthMiddleware, middleware.ValidateRequest(
-		middleware.ValidatorOptions{
+	e.GET("/bento/menu", handleListPersonalBentos, middleware.JwtAuthMiddleware)
+	e.DELETE("/bento/toss/:id", handleDeletePersonalBento, middleware.JwtAuthMiddleware, ValidateRequest(
+		ValidatorOptions{
 			Field:    "id",
-			From:     middleware.VALIDATE_PARAM,
+			From:     VALIDATE_PARAM,
 			Required: true,
 			Validate: validateUUID,
 		},
 	))
-	e.PATCH("/bento/personal/:id", handleUpdatePersonalBento, middleware.ValidateRequest(
-		middleware.ValidatorOptions{
+	e.PATCH("/bento/rebrand/:id", handleRebrandBento, ValidateRequest(
+		ValidatorOptions{
 			Field:    "id",
-			From:     middleware.VALIDATE_PARAM,
+			From:     VALIDATE_PARAM,
 			Required: true,
 			Validate: validateUUID,
 		},
 	))
 
 	// New api routes
-	e.GET("/bento/:id", handleGetBento, middleware.ValidateRequest(
-		middleware.ValidatorOptions{
+	e.POST("/bento/prep", handleNewPersonalBento, middleware.JwtAuthMiddleware)
+	e.GET("/bento/:id", handleGetBento, ValidateRequest(
+		ValidatorOptions{
 			Field:    "id",
-			From:     middleware.VALIDATE_PARAM,
+			From:     VALIDATE_PARAM,
 			Required: true,
 			Validate: validateUUID,
 		},
-		middleware.ValidatorOptions{
+		ValidatorOptions{
 			Field:    "X-Bento-Hashed",
-			From:     middleware.VALIDATE_HEADER,
+			From:     VALIDATE_HEADER,
 			Required: true,
 		},
-		middleware.ValidatorOptions{
+		ValidatorOptions{
 			Field:    "X-Bento-Signature",
-			From:     middleware.VALIDATE_HEADER,
+			From:     VALIDATE_HEADER,
 			Required: true,
 		},
 	))
@@ -274,29 +275,23 @@ const (
 	UPDATE_ACTION_UPDATE = "update"
 )
 
-type UpdatePersonalBentoAction struct {
-	Method  string `json:"method" validate:"required,oneof=add update delete"`
-	Name    string `json:"name" validate:"required,min=1"`
-	Content string `json:"content" validate:"required"`
-}
-
-type UpdatePersonalBentoReqBody struct {
-	Actions []UpdatePersonalBentoAction `json:"keyvals" validate:"required,dive"`
-}
-
-func handleUpdatePersonalBento(c echo.Context) error {
+func handleRebrandBento(c echo.Context) error {
 	logger, _ := zap.NewProduction()
 	defer logger.Sync()
 	id := c.Param("id")
 
-	reqBody := new(UpdatePersonalBentoReqBody)
+	reqBody := new(RebrandBentoRequestBody)
 	if err := c.Bind(reqBody); err != nil {
 		logger.Error("Failed to bind request body", zap.Error(err))
-		return c.String(http.StatusBadRequest, "Bad request")
+		return writeApiError(c, http.StatusBadRequest, "bad request")
 	}
 	if err := c.Validate(reqBody); err != nil {
 		logger.Error("Requests body validation failed", zap.Error(err))
-		return c.String(http.StatusBadRequest, "Bad request")
+		var ve validator.ValidationErrors
+		if errors.As(err, &ve) {
+			return writeApiReqBodyError(c, http.StatusBadRequest, ve)
+		}
+		return writeApiError(c, http.StatusBadRequest, "bad request")
 	}
 
 	// TODO: add check to verify if user has permission to perform update actions
@@ -306,9 +301,9 @@ func handleUpdatePersonalBento(c echo.Context) error {
 	if err != nil {
 		logger.Error("Failed to get personal bento", zap.Error(err))
 		if err == sql.ErrNoRows {
-			return c.String(http.StatusNotFound, "Personal bento not found.")
+			return writeApiError(c, http.StatusNotFound, "Personal bento not found.")
 		}
-		return c.String(http.StatusInternalServerError, "Failed to get personal bento.")
+		return writeApiError(c, http.StatusInternalServerError, "Failed to get personal bento.")
 	}
 
 	// we still need to authenticate this
@@ -318,64 +313,27 @@ func handleUpdatePersonalBento(c echo.Context) error {
 	decodedHashed, err := base64.StdEncoding.DecodeString(hashed)
 	if err != nil {
 		logger.Error("Failed to decode base64 hashed challenge", zap.Error(err))
-		return c.String(http.StatusInternalServerError, "Failed to decode hashed challenge")
+		return writeApiError(c, http.StatusInternalServerError, "Failed to decode hashed challenge")
 	}
 
 	decodedSignature, err := base64.StdEncoding.DecodeString(signature)
 	if err != nil {
 		logger.Error("Failed to decode base64 signature", zap.Error(err))
-		return c.String(http.StatusInternalServerError, "Failed to decode signature")
+		return writeApiError(c, http.StatusInternalServerError, "Failed to decode signature")
 	}
 
 	err = service.VerifyBentoSignature(decodedHashed, decodedSignature, []byte(bento.PubKey))
 	if err != nil {
 		logger.Error("Failed to verify bento signature", zap.Error(err))
-		return c.String(http.StatusUnauthorized, "Invalid signature")
+		return writeApiError(c, http.StatusUnauthorized, "Invalid signature")
 	}
 
-	// begin transaction to allow all operations to commit at the same time
-	tx, err := database.DB().Begin()
+	// update the bento's name
+	_, err = database.DB().Exec("UPDATE personal_bentos SET name = $1 WHERE id = $2;", reqBody.NewName, id)
 	if err != nil {
-		logger.Error("Failed to begin transaction", zap.Error(err))
-		return c.String(http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
-	}
-	// TODO: add history record for tracing, this will be a version like implementation
-	for _, action := range reqBody.Actions {
-		switch action.Method {
-		case UPDATE_ACTION_ADD:
-			_, err = tx.Exec("INSERT INTO personal_bento_entries (name, content, personal_bento_id) VALUES ($1, $2, $3);", action.Name, action.Content, bento.Id)
-			if err != nil {
-				logger.Error("Failed to perform 'add' action", zap.Error(err))
-				if err := tx.Rollback(); err != nil {
-					logger.Error("Failed to rollback", zap.Error(err))
-				}
-				return c.String(http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
-			}
-		case UPDATE_ACTION_DELETE:
-			_, err = tx.Exec("DELETE FROM personal_bento_entries WHERE name = $1 AND personal_bento_id = $2;", action.Name, bento.Id)
-			if err != nil {
-				logger.Error("Failed to perform 'delete' action", zap.Error(err))
-				if err := tx.Rollback(); err != nil {
-					logger.Error("Failed to rollback", zap.Error(err))
-				}
-				return c.String(http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
-			}
-		case UPDATE_ACTION_UPDATE:
-			_, err = tx.Exec("UPDATE personal_bento_entries SET name = $1, content = $2 WHERE name = $1 AND personal_bento_id = $3", action.Name, action.Content, bento.Id)
-			if err != nil {
-				logger.Error("Failed to perform 'update' action", zap.Error(err))
-				if err := tx.Rollback(); err != nil {
-					logger.Error("Failed to rollback", zap.Error(err))
-				}
-				return c.String(http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
-			}
-		}
-	}
-	err = tx.Commit()
-	if err != nil {
-		logger.Error("Failed to commit actions", zap.Error(err))
-		return c.String(http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
+		logger.Error("Failed to update bento's name", zap.Error(err))
+		return writeApiError(c, http.StatusInternalServerError, "internal server error")
 	}
 
-	return c.String(http.StatusOK, "Updated")
+	return writeNoBody(c, http.StatusOK)
 }

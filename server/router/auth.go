@@ -14,7 +14,6 @@ import (
 
 	"github.com/juancwu/konbini/server/database"
 	"github.com/juancwu/konbini/server/env"
-	"github.com/juancwu/konbini/server/middleware"
 	usermodel "github.com/juancwu/konbini/server/models/user"
 	"github.com/juancwu/konbini/server/service"
 	"github.com/juancwu/konbini/server/templates"
@@ -52,10 +51,10 @@ type ResetPasswordEmailData struct {
 func SetupAccountRoutes(e RouteGroup) {
 	e.POST("/account/login", handleLogin)
 	e.POST("/account/signup", handleSignup)
-	e.GET("/account/verify-email", handleVerifyEmail, middleware.ValidateRequest(
-		middleware.ValidatorOptions{
+	e.GET("/account/verify-email", handleVerifyEmail, ValidateRequest(
+		ValidatorOptions{
 			Field:    "code",
-			From:     middleware.VALIDATE_QUERY,
+			From:     VALIDATE_QUERY,
 			Required: true,
 			Validate: func(s string) error {
 				return nil
