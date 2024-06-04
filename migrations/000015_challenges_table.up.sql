@@ -1,7 +1,7 @@
 CREATE TABLE challenges (
     id SERIAL PRIMARY KEY,
-    state VARCHAR(32) NOT NULL UNIQUE,
-    hashed_value VARCHAR(43) NOT NULL,
+    state CHAR(32) NOT NULL UNIQUE,
+    value CHAR(43) NOT NULL,
     user_id UUID NOT NULL,
     
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,

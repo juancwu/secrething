@@ -5,11 +5,9 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"net/http"
-	"net/url"
 	"time"
 
 	"github.com/juancwu/konbini/server/database"
-	"github.com/juancwu/konbini/server/env"
 	"github.com/juancwu/konbini/server/middleware"
 	"github.com/juancwu/konbini/server/service"
 	"github.com/labstack/echo/v4"
@@ -56,18 +54,15 @@ func handleGetChallenge(c echo.Context) error {
 	// get expiration time
 	expiresAt := time.Now().Add(time.Second * 30)
 
-	_, err = database.DB().Exec("INSERT INTO challenges (user_id, state, hashed_value, expires_at) VALUES ($1, $2, $3,  $4);", claims.UserId, state, hashedValue, expiresAt)
+	_, err = database.DB().Exec("INSERT INTO challenges (user_id, state, value, expires_at) VALUES ($1, $2, $3,  $4);", claims.UserId, state, hashedValue, expiresAt)
 	if err != nil {
 		logger.Error("Failed to insert challenge into database", zap.Error(err))
 		return writeApiError(c, http.StatusInternalServerError, "internal server error")
 	}
 
-	baseUrl, _ := url.Parse(env.Values().SERVER_URL)
-	query := baseUrl.Query()
-	query.Add("state", state)
-	query.Add("hashed_value", hashedValue)
-	query.Add("expires_at", expiresAt.String())
-	baseUrl.RawQuery = query.Encode()
-
-	return c.Redirect(http.StatusOK, baseUrl.String())
+	return c.JSON(http.StatusOK, GetChallangeResp{
+		State:     state,
+		Challange: hashedValue,
+		ExpiresAt: expiresAt,
+	})
 }
