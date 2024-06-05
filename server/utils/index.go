@@ -22,9 +22,9 @@ func Logger() *log.Logger {
 	return logger
 }
 
-func IsValidUUIDV4(u string) bool {
+func IsValidUUIDV4(u string) error {
 	_, err := uuid.Parse(u)
-	return err == nil
+	return err
 }
 
 func ValidateStringSlice(fl validator.FieldLevel) bool {

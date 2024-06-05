@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"encoding/base64"
 	"errors"
-	"fmt"
 	"net/http"
 
 	"github.com/go-playground/validator"
@@ -19,13 +18,6 @@ import (
 	"go.uber.org/zap"
 )
 
-func validateUUID(uuid string) error {
-	if utils.IsValidUUIDV4(uuid) {
-		return nil
-	}
-	return fmt.Errorf("The given id is not a proper UUID v4: %s", uuid)
-}
-
 func SetupBentoRoutes(e RouteGroup) {
 	e.GET("/bento/menu", handleMenu, middleware.JwtAuthMiddleware)
 	e.DELETE("/bento/toss/:id", handleTossBento, middleware.JwtAuthMiddleware, ValidateRequest(
@@ -33,7 +25,7 @@ func SetupBentoRoutes(e RouteGroup) {
 			Field:    "id",
 			From:     VALIDATE_PARAM,
 			Required: true,
-			Validate: validateUUID,
+			Validate: utils.IsValidUUIDV4,
 		},
 	))
 	e.PATCH("/bento/rebrand/:id", handleRebrandBento, ValidateRequest(
@@ -41,7 +33,7 @@ func SetupBentoRoutes(e RouteGroup) {
 			Field:    "id",
 			From:     VALIDATE_PARAM,
 			Required: true,
-			Validate: validateUUID,
+			Validate: utils.IsValidUUIDV4,
 		},
 	))
 
@@ -52,7 +44,7 @@ func SetupBentoRoutes(e RouteGroup) {
 			Field:    "id",
 			From:     VALIDATE_PARAM,
 			Required: true,
-			Validate: validateUUID,
+			Validate: utils.IsValidUUIDV4,
 		},
 		ValidatorOptions{
 			Field:    "X-Bento-Hashed",
