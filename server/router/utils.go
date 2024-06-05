@@ -1,10 +1,13 @@
 package router
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/go-playground/validator"
 	"github.com/labstack/echo/v4"
+
+	"github.com/juancwu/konbini/server/utils"
 )
 
 const (
@@ -45,4 +48,11 @@ func writeNoBody(c echo.Context, statusCode int) error {
 	c.Response().Writer.WriteHeader(statusCode)
 	c.Response().Writer.Header().Add(echo.HeaderXRequestID, c.Request().Header.Get(echo.HeaderXRequestID))
 	return nil
+}
+
+func validateUUID(uuid string) error {
+	if utils.IsValidUUIDV4(uuid) {
+		return nil
+	}
+	return fmt.Errorf("The given id is not a proper UUID v4: %s", uuid)
 }
