@@ -11,7 +11,6 @@ import (
 
 	"github.com/juancwu/konbini/server/database"
 	_ "github.com/juancwu/konbini/server/env"
-	"github.com/juancwu/konbini/server/middleware"
 	"github.com/juancwu/konbini/server/router"
 	"github.com/juancwu/konbini/server/utils"
 )
@@ -39,8 +38,8 @@ func main() {
 	e := echo.New()
 	e.HideBanner = true
 	e.HidePort = true
-	e.Use(middleware.RequestID(32))
-	e.Use(middleware.Logger())
+	e.Use(router.RequestID(32))
+	e.Use(router.Logger())
 	validate := validator.New()
 	validate.RegisterValidation("ValidateStringSlice", utils.ValidateStringSlice)
 	e.Validator = &ReqValidator{validator: validate}
@@ -49,10 +48,6 @@ func main() {
 	apiV1Group.GET("/health", func(c echo.Context) error {
 		return c.String(http.StatusOK, fmt.Sprintf("Konbini is healthy running version: '%s' (request id: %s)", os.Getenv("APP_VERSION"), c.Request().Header.Get(echo.HeaderXRequestID)))
 	})
-
-	router.SetupAccountRoutes(apiV1Group)
-	router.SetupBentoRoutes(apiV1Group)
-	router.SetupChallengeRoutes(apiV1Group)
 
 	log.Fatal(e.Start(os.Getenv("PORT")))
 }

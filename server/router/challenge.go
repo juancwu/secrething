@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/juancwu/konbini/server/database"
-	"github.com/juancwu/konbini/server/middleware"
 	"github.com/juancwu/konbini/server/service"
 	"github.com/labstack/echo/v4"
 	gonanoid "github.com/matoous/go-nanoid/v2"
@@ -16,7 +15,7 @@ import (
 )
 
 func SetupChallengeRoutes(e RouteGroup) {
-	e.GET("/challenge", handleGetChallenge, middleware.JwtAuthMiddleware)
+	e.GET("/challenge", handleGetChallenge, JwtAuthMiddleware)
 }
 
 func handleGetChallenge(c echo.Context) error {

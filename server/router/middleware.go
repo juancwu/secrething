@@ -3,9 +3,15 @@ package router
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
+	// package modules
 	"github.com/labstack/echo/v4"
+	gonanoid "github.com/matoous/go-nanoid/v2"
 	"go.uber.org/zap"
+
+	// local modules
+	"github.com/juancwu/konbini/server/service"
 )
 
 const (
@@ -69,5 +75,70 @@ func ValidateRequest(validators ...ValidatorOptions) echo.MiddlewareFunc {
 			}
 			return next(c)
 		}
+	}
+}
+
+// RequestID is a middleware that attaches a randomly generated request id to
+// the request header with echo.HeaderXRequestID as key.
+func RequestID(l int) echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			requestId, err := gonanoid.New(32)
+			if err != nil {
+				logger, _ := zap.NewProduction()
+				defer logger.Sync()
+				logger.Error("Error generating request id", zap.Error(err))
+			}
+			c.Request().Header.Add(echo.HeaderXRequestID, requestId)
+
+			return next(c)
+		}
+	}
+}
+
+// Logger is a middleware that logs basic information of incoming requests.
+// It will log out the method, path and request id.
+func Logger() echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			logger, _ := zap.NewProduction()
+			defer logger.Sync()
+
+			logger.Info(
+				"New incoming request",
+				zap.String("method", c.Request().Method),
+				zap.String("path", c.Request().URL.Path),
+				zap.String("request_id", c.Request().Header.Get(echo.HeaderXRequestID)),
+			)
+
+			return next(c)
+		}
+	}
+}
+
+func JwtAuthMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		authHeader := c.Request().Header.Get("Authorization")
+		if authHeader == "" {
+			return echo.NewHTTPError(http.StatusUnauthorized, "Authorization header is required")
+		}
+
+		parts := strings.Split(authHeader, " ")
+		if len(parts) != 2 || parts[0] != "Bearer" {
+			return echo.NewHTTPError(http.StatusUnauthorized, "Invalid or malformed Bearer token")
+		}
+
+		token, err := service.VerifyToken(parts[1])
+		if err != nil {
+			return echo.NewHTTPError(http.StatusUnauthorized, "Invalid token")
+		}
+
+		if claims, ok := token.Claims.(*service.JwtCustomClaims); ok && token.Valid {
+			c.Set("token", token)
+			c.Set("claims", claims)
+			return next(c)
+		}
+
+		return echo.NewHTTPError(http.StatusUnauthorized, "Invalid token claims")
 	}
 }
