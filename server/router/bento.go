@@ -27,8 +27,8 @@ func validateUUID(uuid string) error {
 }
 
 func SetupBentoRoutes(e RouteGroup) {
-	e.GET("/bento/menu", handleListPersonalBentos, middleware.JwtAuthMiddleware)
-	e.DELETE("/bento/toss/:id", handleDeletePersonalBento, middleware.JwtAuthMiddleware, ValidateRequest(
+	e.GET("/bento/menu", handleMenu, middleware.JwtAuthMiddleware)
+	e.DELETE("/bento/toss/:id", handleTossBento, middleware.JwtAuthMiddleware, ValidateRequest(
 		ValidatorOptions{
 			Field:    "id",
 			From:     VALIDATE_PARAM,
@@ -46,7 +46,7 @@ func SetupBentoRoutes(e RouteGroup) {
 	))
 
 	// New api routes
-	e.POST("/bento/prep", handleNewPersonalBento, middleware.JwtAuthMiddleware)
+	e.POST("/bento/prep", handlePrepBento, middleware.JwtAuthMiddleware)
 	e.GET("/bento/:id", handleGetBento, ValidateRequest(
 		ValidatorOptions{
 			Field:    "id",
@@ -118,7 +118,7 @@ type NewPersonalBentoReqBody struct {
 	KeyVals    []string `json:"keyvals" validate:"required,ValidateStringSlice"`
 }
 
-func handleNewPersonalBento(c echo.Context) error {
+func handlePrepBento(c echo.Context) error {
 	logger, _ := zap.NewProduction()
 	defer logger.Sync()
 	reqBody := new(NewPersonalBentoReqBody)
@@ -197,7 +197,7 @@ func handleNewPersonalBento(c echo.Context) error {
 	return c.String(http.StatusCreated, bentoId)
 }
 
-func handleListPersonalBentos(c echo.Context) error {
+func handleMenu(c echo.Context) error {
 	logger, _ := zap.NewProduction()
 	defer logger.Sync()
 	claims, ok := c.Get("claims").(*service.JwtCustomClaims)
@@ -220,7 +220,7 @@ func handleListPersonalBentos(c echo.Context) error {
 	return c.JSON(http.StatusOK, bentos)
 }
 
-func handleDeletePersonalBento(c echo.Context) error {
+func handleTossBento(c echo.Context) error {
 	logger, _ := zap.NewProduction()
 	defer logger.Sync()
 	claims, ok := c.Get("claims").(*service.JwtCustomClaims)
