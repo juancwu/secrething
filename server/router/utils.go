@@ -35,7 +35,7 @@ func writeApiReqBodyError(c echo.Context, statusCode int, ve validator.Validatio
 		}
 	}
 	return c.JSON(http.StatusBadRequest, ApiReqBodyError{
-		StatusCode: http.StatusBadRequest,
+		StatusCode: statusCode,
 		Errors:     out,
 		RequestId:  c.Request().Header.Get(echo.HeaderXRequestID),
 	})
