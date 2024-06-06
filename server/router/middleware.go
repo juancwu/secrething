@@ -116,6 +116,8 @@ func Logger() echo.MiddlewareFunc {
 	}
 }
 
+// JwtAuthMiddleware is a middleware to verify access tokens that are gotten from logging in.
+// The middleware will attach the claims (JwtCustomClaims) and the original token string.
 func JwtAuthMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		authHeader := c.Request().Header.Get("Authorization")
