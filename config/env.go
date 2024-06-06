@@ -20,6 +20,7 @@ func LoadEnv() error {
 	// check for required environment variables
 	requiredEnvs := []string{
 		"DB_URL",
+		"PORT",
 	}
 	for _, key := range requiredEnvs {
 		val := os.Getenv(key)
