@@ -29,6 +29,9 @@ func main() {
 	}
 
 	e := echo.New()
+	// remove the banner and port logging in production
+	e.HideBanner = os.Getenv("APP_ENV") != config.DEV_ENV
+	e.HidePort = os.Getenv("APP_ENV") != config.DEV_ENV
 	api := e.Group("/api/v1")
 	router.SetupHealthcheckRoutes(api)
 
