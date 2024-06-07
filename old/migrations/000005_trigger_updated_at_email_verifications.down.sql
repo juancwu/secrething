@@ -1,1 +1,0 @@
-DROP TRIGGER IF EXISTS update_email_verifications_updated_at ON email_verifications;

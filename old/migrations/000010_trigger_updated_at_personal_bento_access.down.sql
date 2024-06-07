@@ -1,1 +1,0 @@
-DROP TRIGGER IF EXISTS update_personal_bento_access_updated_at ON personal_bento_access;

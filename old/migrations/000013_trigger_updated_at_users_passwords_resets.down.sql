@@ -1,1 +1,0 @@
-DROP TRIGGER IF EXISTS update_users_passwords_resets_updated_at ON users_passwords_resets;
