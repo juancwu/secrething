@@ -15,7 +15,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// SetupAccountRoutes setups the account related routes.
+// SetupAccountRoutes setups the account related routes. These routes belong to /api/v1
 func SetupAccountRoutes(e RouteGroup) {
 	e.POST("/account/signup", handleSignup, useValidateRequestBody(signupRequest{}))
 }
