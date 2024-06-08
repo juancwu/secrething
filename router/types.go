@@ -17,5 +17,6 @@ type RouteGroup interface {
 // HealthReport is a collection of stats about the backend.
 type HealthReport struct {
 	// DB can be "health" or "unhealthy"
-	DB string `json:"db"`
+	DB      string `json:"db"`
+	Version string `json:"version"`
 }

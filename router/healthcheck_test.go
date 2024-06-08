@@ -15,10 +15,12 @@ import (
 
 func TestGetHealth(t *testing.T) {
 	healthyReport := HealthReport{
-		DB: "healthy",
+		DB:      "healthy",
+		Version: os.Getenv("VERSION"),
 	}
 	unhealthyReport := HealthReport{
-		DB: "unhealthy",
+		DB:      "unhealthy",
+		Version: os.Getenv("VERSION"),
 	}
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
