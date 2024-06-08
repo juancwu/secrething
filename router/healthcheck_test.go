@@ -28,18 +28,17 @@ func TestGetHealthHandler(t *testing.T) {
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 
-	// get response body
-	data, err := io.ReadAll(rec.Body)
-	if err != nil {
-		t.Errorf("Failed to read response body: %v\n", err)
-	}
-
 	// connect to test db
-	err = store.Connect(os.Getenv("DB_URL"))
+	err := store.Connect(os.Getenv("DB_URL"))
 	if err != nil {
 		t.Fatalf("Failed to connect to test database: %v\n", err)
 	}
 	if assert.NoError(t, handleGetHealth(c), "handleGetHealth returned an error.") {
+		// get response body
+		data, err := io.ReadAll(rec.Body)
+		if err != nil {
+			t.Fatalf("Failed to read response body: %v\n", err)
+		}
 		var resBody HealthReport
 		err = json.Unmarshal(data, &resBody)
 		if err != nil {
@@ -56,6 +55,11 @@ func TestGetHealthHandler(t *testing.T) {
 		t.Fatalf("Failed to close database conntection: %v\n", err)
 	}
 	if assert.NoError(t, handleGetHealth(c), "handleGetHealth returned an error.") {
+		// get response body
+		data, err := io.ReadAll(rec.Body)
+		if err != nil {
+			t.Errorf("Failed to read response body: %v\n", err)
+		}
 		var resBody HealthReport
 		err = json.Unmarshal(data, &resBody)
 		if err != nil {
