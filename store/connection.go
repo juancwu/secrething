@@ -4,6 +4,7 @@ import (
 	// builtin modules
 	"context"
 	"database/sql"
+	"errors"
 	"time"
 
 	// package modules
@@ -23,8 +24,16 @@ func Connect(dbUrl string) error {
 	return nil
 }
 
+// Close closes the database connection. Not intended to be used in production, but makes testing easier.
+func Close() error {
+	return db.Close()
+}
+
 // Ping makes sure that connection is still alives. It context.Background and timeouts in 5 seconds.
 func Ping() error {
+	if db == nil {
+		return errors.New("db instance is nil")
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
 

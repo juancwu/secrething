@@ -9,17 +9,17 @@ import (
 
 // SetupHealthcheckRoutes sets the routes for healthcheck
 func SetupHealthcheckRoutes(e RouteGroup) {
-	e.GET("/health", getHealth)
+	e.GET("/health", handleGetHealth)
 }
 
 // GetHealth gets a simple overview of the current health of the backend.
-func getHealth(c echo.Context) error {
+func handleGetHealth(c echo.Context) error {
 	report := HealthReport{
 		DB: "healthy",
 	}
 	err := store.Ping()
 	if err != nil {
-		report.DB = "unhealhty"
+		report.DB = "unhealthy"
 	}
 	return c.JSON(http.StatusOK, report)
 }
