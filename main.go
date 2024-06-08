@@ -4,6 +4,7 @@ import (
 	"os"
 
 	// package modules
+	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
 	"go.uber.org/zap"
 
@@ -12,6 +13,14 @@ import (
 	"github.com/juancwu/konbini/router"
 	"github.com/juancwu/konbini/store"
 )
+
+type customValidator struct {
+	validator *validator.Validate
+}
+
+func (v *customValidator) Validate(i interface{}) error {
+	return v.validator.Struct(i)
+}
 
 func main() {
 	err := config.LoadEnv()
@@ -29,11 +38,13 @@ func main() {
 	}
 
 	e := echo.New()
+	e.Validator = &customValidator{validator: validator.New()}
 	// remove the banner and port logging in production
 	e.HideBanner = os.Getenv("APP_ENV") != config.DEV_ENV
 	e.HidePort = os.Getenv("APP_ENV") != config.DEV_ENV
 	api := e.Group("/api/v1")
 	router.SetupHealthcheckRoutes(api)
+	router.SetupAccountRoutes(api)
 
 	if err := e.Start(":" + os.Getenv("PORT")); err != nil {
 		logger, _ := zap.NewProduction()

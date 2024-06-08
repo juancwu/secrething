@@ -28,6 +28,13 @@ func LoadEnv() error {
 	requiredEnvs := []string{
 		"DB_URL",
 		"PORT",
+		"RESEND_API_KEY",
+		"SERVER_URL",
+		"PGP_SYM_KEY",
+		"PASS_ENCRYPT_ALGO",
+		"NOREPLY_EMAIL",
+		"JWT_SECRET",
+		"JWT_ISSUER",
 	}
 	for _, key := range requiredEnvs {
 		val := os.Getenv(key)

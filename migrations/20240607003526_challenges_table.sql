@@ -15,5 +15,5 @@ CREATE TABLE challenges (
 
 -- +goose Down
 -- +goose StatementBegin
-DROP TABLE challengs;
+DROP TABLE challenges;
 -- +goose StatementEnd

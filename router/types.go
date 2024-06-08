@@ -1,6 +1,8 @@
 package router
 
-import "github.com/labstack/echo/v4"
+import (
+	"github.com/labstack/echo/v4"
+)
 
 // RouterGroup is a simple interface to allow passing a echo.Echo or echo.Group instance.
 // This makes it easier to extend the router with or without nested routes.

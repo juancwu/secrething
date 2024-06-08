@@ -10,7 +10,7 @@ CREATE TYPE email_status AS ENUM (
 
 CREATE TABLE email_verifications (
     id SERIAL PRIMARY KEY NOT NULL,
-    verification_id CHAR(16) UNIQUE NOT NULL,
+    code CHAR(16) UNIQUE NOT NULL,
     user_id UUID NOT NULL,
     resend_email_id TEXT,
     status EMAIL_STATUS NOT NULL DEFAULT 'PENDING',
