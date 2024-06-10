@@ -3,6 +3,7 @@ package router
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"fmt"
 	"net/http"
 	"os"
@@ -18,6 +19,7 @@ import (
 // SetupAccountRoutes setups the account related routes. These routes belong to /api/v1
 func SetupAccountRoutes(e RouteGroup) {
 	e.POST("/account/signup", handleSignup, useValidateRequestBody(signupRequest{}))
+	e.POST("/account/login", handleLogin, useValidateRequestBody(loginRequest{}))
 }
 
 func handleSignup(c echo.Context) error {
@@ -84,6 +86,7 @@ func handleSignup(c echo.Context) error {
 			},
 		)
 	}
+
 	// send verification email using a go routing to not block the response
 	go func() {
 		logger, _ := zap.NewProduction()
@@ -123,4 +126,53 @@ func handleSignup(c echo.Context) error {
 		StatusCode: http.StatusCreated,
 		Message:    "We have sent an email to you. Please verify your email.",
 	})
+}
+
+func handleLogin(c echo.Context) error {
+	requestId := c.Request().Header.Get(echo.HeaderXRequestID)
+	logger, _ := zap.NewProduction()
+	defer logger.Sync()
+
+	body, ok := c.Get("body").(*loginRequest)
+	if !ok {
+		logger.Error("Invalid body type", zap.String("request_id", requestId))
+		return writeApiErrorJSON(c, requestId)
+	}
+
+	user, err := store.GetUserWithPasswordValidation(body.Email, body.Password)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			logger.Error("No user found with given email and password.", zap.String("email", body.Email), zap.String("request_id", requestId))
+			return c.JSON(
+				http.StatusBadRequest,
+				apiResponse{
+					StatusCode: http.StatusBadRequest,
+					Message:    fmt.Sprintf("invalid credentials (%s)", requestId),
+				},
+			)
+		}
+		logger.Error("Failed to get user with email and password.", zap.Error(err), zap.String("request_id", requestId))
+		return writeApiErrorJSON(c, requestId)
+	}
+
+	// get signed jwt to send back to user
+	// should generate two tokens, refresh and access token
+	accessToken, err := utils.GenerateAccessToken(user.Id)
+	if err != nil {
+		logger.Error("Failed to generate access token", zap.Error(err), zap.String("request_id", requestId))
+		return writeApiErrorJSON(c, requestId)
+	}
+	refreshToken, err := utils.GenerateRefreshToken(user.Id)
+	if err != nil {
+		logger.Error("Failed to generate refresh token", zap.Error(err), zap.String("request_id", requestId))
+		return writeApiErrorJSON(c, requestId)
+	}
+
+	return c.JSON(
+		http.StatusOK,
+		loginResponse{
+			AccessToken:  accessToken,
+			RefreshToken: refreshToken,
+		},
+	)
 }

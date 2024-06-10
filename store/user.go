@@ -18,6 +18,7 @@ type User struct {
 	UpdatedAt     time.Time
 }
 
+// UserExists checks if a user with the given email exists in the database or not.
 func UserExists(email string) (bool, error) {
 	var exists bool
 	row := db.QueryRow("SELECT EXISTS (SELECT 1 FROM users WHERE email = $1)", email)
@@ -56,4 +57,45 @@ func CreateUser(email, password string, firstName, lastName *string) (string, er
 	}
 
 	return id, nil
+}
+
+// GetUserWithPasswordValidation tries to match a user with the given email and password.
+// Ideal use of this function is for logging in a user with email and password.
+func GetUserWithPasswordValidation(email, password string) (*User, error) {
+	row := db.QueryRow(
+		`
+        SELECT
+            id,
+            first_name,
+            last_name,
+            email,
+            email_verified,
+            created_at,
+            updated_at
+        FROM users
+        WHERE email = $1 AND password = crypt($2, password);
+        `,
+		email,
+		password,
+	)
+	err := row.Err()
+	if err != nil {
+		return nil, err
+	}
+
+	user := User{}
+	err = row.Scan(
+		&user.Id,
+		&user.FirstName,
+		&user.LastName,
+		&user.Email,
+		&user.EmailVerified,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &user, nil
 }

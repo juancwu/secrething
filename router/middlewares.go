@@ -5,8 +5,10 @@ import (
 	"errors"
 	"net/http"
 	"reflect"
+	"strings"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/juancwu/konbini/utils"
 	"github.com/labstack/echo/v4"
 	"go.uber.org/zap"
 )
@@ -68,6 +70,45 @@ func useValidateRequestBody(i interface{}) echo.MiddlewareFunc {
 			}
 
 			c.Set("body", body)
+			return next(c)
+		}
+	}
+}
+
+// useJwtAuth is a middleware that protects the route to require a valid jwt token.
+func useJwtAuth(accepted utils.JwtTokenType) echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			// setup
+			logger, _ := zap.NewProduction()
+			defer logger.Sync()
+			requestId := c.Request().Header.Get(echo.HeaderXRequestID)
+
+			// validate auth header
+			authHeaderString := c.Request().Header.Get(echo.HeaderAuthorization)
+			parts := strings.Split(authHeaderString, " ")
+			if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
+				logger.Error("Authotization header is not bearer token type", zap.String("request_id", requestId))
+				return c.String(http.StatusUnauthorized, http.StatusText(http.StatusUnauthorized))
+			}
+
+			// validate token
+			token, err := utils.VerifyJWT(parts[1])
+			if err != nil {
+				logger.Error("JWT auth token validation failed", zap.Error(err), zap.String("request_id", requestId))
+				return c.String(http.StatusUnauthorized, http.StatusText(http.StatusUnauthorized))
+			}
+
+			// verify that token type is access token
+			claims := token.Claims.(*utils.JwtAuthClaims)
+			if claims.TokenType != accepted {
+				logger.Error("Invalid jwt type", zap.String("expected", string(accepted)), zap.String("received", string(claims.TokenType)), zap.String("request_id", requestId))
+				return c.String(http.StatusUnauthorized, "The jwt provided is not a valid access token.")
+			}
+
+			// store token claims in context
+			c.Set("claims", token.Claims)
+
 			return next(c)
 		}
 	}
