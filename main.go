@@ -10,6 +10,7 @@ import (
 
 	// custom modules
 	"github.com/juancwu/konbini/config"
+	"github.com/juancwu/konbini/middleware"
 	"github.com/juancwu/konbini/router"
 	"github.com/juancwu/konbini/store"
 )
@@ -38,6 +39,7 @@ func main() {
 	}
 
 	e := echo.New()
+	e.Use(middleware.UseRequestId())
 	e.Validator = &customValidator{validator: validator.New()}
 	// remove the banner and port logging in production
 	e.HideBanner = os.Getenv("APP_ENV") != config.DEV_ENV
