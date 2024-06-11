@@ -203,7 +203,7 @@ func handleNewToken(c echo.Context) error {
 	// verify the token
 	token, err := utils.VerifyJWT(refrestTokenString)
 	if err != nil {
-		if err == jwt.ErrTokenExpired {
+		if err.Error() == fmt.Sprintf("%s: %s", jwt.ErrTokenInvalidClaims.Error(), jwt.ErrTokenExpired.Error()) {
 			return c.JSON(
 				http.StatusBadRequest,
 				apiResponse{
