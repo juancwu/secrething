@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/juancwu/konbini/store"
 	"github.com/juancwu/konbini/utils"
 	"github.com/juancwu/konbini/views"
@@ -16,10 +17,15 @@ import (
 	"go.uber.org/zap"
 )
 
+const (
+	HeaderXRefreshToken string = "X-Refresh-Token"
+)
+
 // SetupAccountRoutes setups the account related routes. These routes belong to /api/v1
 func SetupAccountRoutes(e RouteGroup) {
 	e.POST("/account/signup", handleSignup, useValidateRequestBody(signupRequest{}))
 	e.POST("/account/login", handleLogin, useValidateRequestBody(loginRequest{}))
+	e.GET("/account/new-token", handleNewToken)
 }
 
 func handleSignup(c echo.Context) error {
@@ -173,6 +179,56 @@ func handleLogin(c echo.Context) error {
 		loginResponse{
 			AccessToken:  accessToken,
 			RefreshToken: refreshToken,
+		},
+	)
+}
+
+// handleNewToken handles when generating a new access token using a refresh token.
+func handleNewToken(c echo.Context) error {
+	requestId := c.Request().Header.Get(echo.HeaderXRequestID)
+	logger, _ := zap.NewProduction()
+	defer logger.Sync()
+
+	refrestTokenString := c.Request().Header.Get(HeaderXRefreshToken)
+	if refrestTokenString == "" {
+		return c.JSON(
+			http.StatusBadRequest,
+			apiResponse{
+				StatusCode: http.StatusBadRequest,
+				Message:    "Missing required header 'X-Refresh-Token'",
+			},
+		)
+	}
+
+	// verify the token
+	token, err := utils.VerifyJWT(refrestTokenString)
+	if err != nil {
+		if err == jwt.ErrTokenExpired {
+			return c.JSON(
+				http.StatusBadRequest,
+				apiResponse{
+					StatusCode: http.StatusBadRequest,
+					Message:    "Refresh token expired. Login again to get a new one.",
+				},
+			)
+		}
+		logger.Error("Failed to verify refresh token.", zap.Error(err), zap.String("request_id", requestId))
+		return writeApiErrorJSON(c, requestId)
+
+	}
+
+	// generate a new access token
+	claims := token.Claims.(*utils.JwtAuthClaims)
+	accessToken, err := utils.GenerateAccessToken(claims.ID)
+	if err != nil {
+		logger.Error("Failed to generate a new access token.", zap.Error(err), zap.String("request_id", requestId))
+		return writeApiErrorJSON(c, requestId)
+	}
+
+	return c.JSON(
+		http.StatusCreated,
+		newTokenResponse{
+			AccessToken: accessToken,
 		},
 	)
 }
