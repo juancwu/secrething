@@ -11,11 +11,11 @@ func UseRequestId() echo.MiddlewareFunc {
 		return func(c echo.Context) error {
 			logger, _ := zap.NewProduction()
 			defer logger.Sync()
-			requestId, err := gonanoid.New(16)
+			requestId, err := gonanoid.New(32)
 			if err != nil {
 				logger.Error("Failed to generate request id", zap.Error(err))
 			} else {
-				c.Set(echo.HeaderXRequestID, requestId)
+				c.Request().Header.Add(echo.HeaderXRequestID, requestId)
 			}
 			return next(c)
 		}
