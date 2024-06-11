@@ -47,6 +47,7 @@ func main() {
 	api := e.Group("/api/v1")
 	router.SetupHealthcheckRoutes(api)
 	router.SetupAccountRoutes(api)
+	router.SetupBentoRoutes(api)
 
 	if err := e.Start(":" + os.Getenv("PORT")); err != nil {
 		logger, _ := zap.NewProduction()

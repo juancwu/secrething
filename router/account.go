@@ -163,12 +163,12 @@ func handleLogin(c echo.Context) error {
 
 	// get signed jwt to send back to user
 	// should generate two tokens, refresh and access token
-	accessToken, err := utils.GenerateAccessToken(user.Id)
+	accessToken, err := generateAccessToken(user.Id)
 	if err != nil {
 		logger.Error("Failed to generate access token", zap.Error(err), zap.String("request_id", requestId))
 		return writeApiErrorJSON(c, requestId)
 	}
-	refreshToken, err := utils.GenerateRefreshToken(user.Id)
+	refreshToken, err := generateRefreshToken(user.Id)
 	if err != nil {
 		logger.Error("Failed to generate refresh token", zap.Error(err), zap.String("request_id", requestId))
 		return writeApiErrorJSON(c, requestId)
@@ -201,7 +201,7 @@ func handleNewToken(c echo.Context) error {
 	}
 
 	// verify the token
-	token, err := utils.VerifyJWT(refrestTokenString)
+	token, err := verifyJWT(refrestTokenString)
 	if err != nil {
 		if err.Error() == fmt.Sprintf("%s: %s", jwt.ErrTokenInvalidClaims.Error(), jwt.ErrTokenExpired.Error()) {
 			return c.JSON(
@@ -212,14 +212,14 @@ func handleNewToken(c echo.Context) error {
 				},
 			)
 		}
-		logger.Error("Failed to verify refresh token.", zap.Error(err), zap.String("request_id", requestId))
+		logger.Error("Failed to verify refresh token.", zap.Error(err), zap.String(echo.HeaderXRequestID, requestId))
 		return writeApiErrorJSON(c, requestId)
 
 	}
 
 	// generate a new access token
-	claims := token.Claims.(*utils.JwtAuthClaims)
-	accessToken, err := utils.GenerateAccessToken(claims.ID)
+	claims := token.Claims.(*jwtAuthClaims)
+	accessToken, err := generateAccessToken(claims.ID)
 	if err != nil {
 		logger.Error("Failed to generate a new access token.", zap.Error(err), zap.String("request_id", requestId))
 		return writeApiErrorJSON(c, requestId)

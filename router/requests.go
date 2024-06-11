@@ -9,7 +9,15 @@ type signupRequest struct {
 	Password  string  `json:"password" validate:"required,min=12"`
 }
 
+// loginRequest represents the request body when logging in.
 type loginRequest struct {
 	Email    string `json:"email" validate:"required,email"`
 	Password string `json:"password" validate:"required"`
+}
+
+// prepBentoRequest represents the request body when prepping a new bento.
+type prepBentoRequest struct {
+	Name string `json:"name"`
+	// base64 encoded public key
+	PubKey string `json:"pub_key"`
 }

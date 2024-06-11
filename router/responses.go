@@ -18,3 +18,8 @@ type loginResponse struct {
 type newTokenResponse struct {
 	AccessToken string `json:"access_token"`
 }
+
+// prepBentoResponse represents the json body that is sent back when a new bento gets prep.
+type prepBentoResponse struct {
+	BentoId string `json:"bento_id"`
+}
