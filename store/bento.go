@@ -15,25 +15,84 @@ type Bento struct {
 	UpdatedAt time.Time
 }
 
+const (
+	// Description on the permissions with their corresponding integer value.
+	// Note that permissions aggregate to as you go down the permissions list.
+	// How to read the permissions:
+	// A permission integer value is of at most 4 numeric places -> xxxx
+	// where each place represents share,delete,write,read respectively.
+	// At any given place, if the value is 7, then its given ALL permissions of said place.
+	// Giving write:all (0077) permissions to a user also gives read:all (0007) permissions.
+	// Now the why use integer values instead of a more readable string version.
+	// Reason: saves space in the database if we store a SMALLINT that is of 2 bytes.
+	// read:all 0007 - read all
+	BENTO_READ_ALL = 7
+	// write:all 0077 - write all
+	BENTO_WRITE_ALL = 77
+	// write:name 0017 - change bento name
+	BENTO_WRITE_NAME = 17
+	// write:ingridient:key 0027 - change bento ingridient key
+	BENTO_WRITE_INGRIDIENT_KEY = 27
+	// delete:all 0777 - can delete the entire bento
+	BENTO_DELETE_ALL = 777
+	// delete:ingridients 0177 - can only delete ingridients but not the entire bento
+	BENTO_DELETE_INGRIDIENTS = 177
+	// admin:all 7777 - can share everything and super admin access to the bento
+	BENTO_ADMIN_ALL = 7777
+	// share:read:all 1777 - can share bento with read access
+	BENTO_SHARE_READ_ALL = 1777
+	// share:write:all 2777 - can share with read/write access
+	BENTO_SHARE_WRITE_ALL = 2777
+	// share:write:name 3777 - can share with read/write but only to bento's name access
+	BENTO_SHARE_WRITE_NAME = 3777
+	// share:write:ingridient:key 4777 - can share with write access to individual ingridient key name
+	BENTO_SHARE_WRITE_INGRIDIENT_KEY = 4777
+	// share:delete:all 5777 - can share with delete access
+	BENTO_SHARE_DELETE_ALL = 5777
+	// share:delete:ingridients 6777 - can share with delete ingridients access
+	BENTO_SHARE_DELETE_INGRIDIENTS = 6777
+)
+
 // PrepBento creates a new bento in the bentos table but does not create new entries (ingridients).
 func PrepBento(name, ownerId, pubKey string) (string, error) {
-	var id string
-	row := db.QueryRow(
+	tx, err := db.Begin()
+	if err != nil {
+		return "", err
+	}
+
+	var bentoId string
+	row := tx.QueryRow(
 		"INSERT INTO bentos (name, owner_id, pub_key) VALUES ($1, $2, pgp_sym_encrypt($3, $4)) RETURNING id;",
 		name,
 		ownerId,
 		pubKey,
 		os.Getenv("PGP_SYM_KEY"),
 	)
-	err := row.Err()
+	err = row.Err()
+	if err != nil {
+		return "", err
+	}
+	err = row.Scan(&bentoId)
 	if err != nil {
 		return "", err
 	}
 
-	err = row.Scan(&id)
+	// should create a bento user permission entry to normalize the access to bento features
+	_, err = tx.Exec(
+		"INSERT INTO bento_user_permissions (user_id, bento_id, permissions) VALUES ($1, $2, $3);",
+		ownerId,
+		bentoId,
+		BENTO_ADMIN_ALL,
+	)
 	if err != nil {
 		return "", err
 	}
 
-	return id, nil
+	err = tx.Commit()
+	if err != nil {
+		tx.Rollback()
+		return "", err
+	}
+
+	return bentoId, nil
 }
