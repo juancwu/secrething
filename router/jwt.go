@@ -1,11 +1,14 @@
 package router
 
 import (
+	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/labstack/echo/v4"
 )
 
 // jwtTokenType represents the type of a jwt, which can be of the values JWT_ACCESS_TOKEN or JWT_REFRESH_TOKEN.
@@ -70,4 +73,23 @@ func verifyJWT(token string) (*jwt.Token, error) {
 		return []byte(os.Getenv("JWT_SECRET")), nil
 	})
 	return parsedToken, err
+}
+
+// useJWT is a helper function that extracts the jwt in the request authorization header and validates the token.
+// Explicitly calling this method makes it easier to spot what is actually going on in each route handler.
+func useJWT(c echo.Context, acceptedType jwtTokenType) (*jwtAuthClaims, error) {
+	authHeaderString := c.Request().Header.Get(echo.HeaderAuthorization)
+	parts := strings.Split(authHeaderString, " ")
+	if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
+		return nil, errors.New("Invalid authorization header.")
+	}
+	token, err := verifyJWT(parts[1])
+	if err != nil {
+		return nil, err
+	}
+	claims, ok := token.Claims.(*jwtAuthClaims)
+	if !ok {
+		return nil, errors.New("Invalid jwt casting type.")
+	}
+	return claims, nil
 }

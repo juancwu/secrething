@@ -1,15 +1,14 @@
 -- +goose Up
 -- +goose StatementBegin
 CREATE TABLE challenges (
-    id SERIAL PRIMARY KEY,
-    state CHAR(32) NOT NULL UNIQUE,
-    value CHAR(43) NOT NULL,
-    user_id UUID NOT NULL,
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    challenge CHAR(64) NOT NULL, -- hex encoded
+    bento_id UUID NOT NULL,
 
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
 
-    CONSTRAINT fk_challenge_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE
+    CONSTRAINT fk_challenge_bento FOREIGN KEY (bento_id) REFERENCES bentos(id) ON DELETE CASCADE
 );
 -- +goose StatementEnd
 

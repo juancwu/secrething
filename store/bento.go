@@ -3,14 +3,18 @@ package store
 import (
 	"os"
 	"time"
+
+	"go.uber.org/zap"
 )
 
 // Bento represents a row in the bentos table.
 type Bento struct {
-	Id        string
-	Name      string
-	OwnerId   string
-	PubKey    []byte
+	Id      string
+	Name    string
+	OwnerId string
+	PubKey  []byte
+	// IsShared is not an official column in the database but it should be filled in when querying a bento
+	IsShared  bool
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
@@ -95,4 +99,68 @@ func PrepBento(name, ownerId, pubKey string) (string, error) {
 	}
 
 	return bentoId, nil
+}
+
+// AddIngridient adds a new ingridient entry for a bento.
+// This function does not check write permissions.
+func AddIngridient(bentoId, key, value string) error {
+	_, err := db.Exec(
+		"INSERT INTO bento_ingridients (key, value, bento_id) VALUES ($1, $2, $3);",
+		key,
+		value,
+		bentoId,
+	)
+	return err
+}
+
+// GetBento retrieves a bento with the given id. It will try to retrieve both owned and shared bentos.
+func GetBento(bentoId string) (*Bento, error) {
+	zap.L().Info("getting bento", zap.String("bento_id", bentoId))
+	row := db.QueryRow(
+		`
+        SELECT
+            id,
+            name,
+            owner_id,
+            pub_key,
+            created_at,
+            updated_at,
+            false as is_shared
+        FROM bentos
+        WHERE id = $1
+        UNION
+        SELECT
+            b.id,
+            b.name,
+            b.owner_id,
+            b.pub_key,
+            b.created_at,
+            b.updated_at,
+            true as is_shared
+        FROM bentos as b
+        JOIN shared_bentos as sb ON sb.shared_bento_id = b.id
+        WHERE sb.shared_bento_id = $1;
+        `,
+		bentoId,
+	)
+	err := row.Err()
+	if err != nil {
+		return nil, err
+	}
+
+	bento := Bento{}
+	err = row.Scan(
+		&bento.Id,
+		&bento.Name,
+		&bento.OwnerId,
+		&bento.PubKey,
+		&bento.CreatedAt,
+		&bento.UpdatedAt,
+		&bento.IsShared,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &bento, nil
 }

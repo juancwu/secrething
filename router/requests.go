@@ -21,3 +21,11 @@ type prepBentoRequest struct {
 	// base64 encoded public key
 	PubKey string `json:"pub_key"`
 }
+
+// addIngridientRequest represents the request body when adding a new ingridien (secret) to an existing bento.
+type addIngridientRequest struct {
+	Key             string `json:"key"`
+	Value           string `json:"value"`
+	BentoId         string `json:"bento_id"`
+	SignedChallenge string `json:"signed_challenge"`
+}

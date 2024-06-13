@@ -23,3 +23,9 @@ type newTokenResponse struct {
 type prepBentoResponse struct {
 	BentoId string `json:"bento_id"`
 }
+
+// getChallengeResponse represents the json body that is sent back when getting a new challenge.
+type getChallengeResponse struct {
+	ChallengeId string `json:"challenge_id"`
+	Challenge   string `json:"challenge"`
+}

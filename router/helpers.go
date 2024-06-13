@@ -24,3 +24,7 @@ func writeApiErrorJSON(c echo.Context, requestId string) error {
 		},
 	)
 }
+
+func verifySignedChallenge(challenge, signature, pubKey string) error {
+	return nil
+}
