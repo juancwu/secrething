@@ -34,7 +34,7 @@ func UserExists(email string) (bool, error) {
 }
 
 // CreateUser inserts a new user into the database and returns the newly created user's id.
-func CreateUser(email, password string, firstName, lastName *string) (string, error) {
+func CreateUser(email, password, firstName, lastName string) (string, error) {
 	row := db.QueryRow(
 		"INSERT INTO users (email, first_name, last_name, password) VALUES ($1, $2, $3, crypt($4, gen_salt($5))) RETURNING id;",
 		email,

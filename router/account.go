@@ -107,7 +107,7 @@ func handleSignup(c echo.Context) error {
 
 		// try to send email first
 		var html bytes.Buffer
-		err = views.VerifyEmail(*body.FirstName, fmt.Sprintf("%s/api/v1/account/verify-email?code=%s", os.Getenv("SERVER_URL"), code)).Render(context.Background(), &html)
+		err = views.VerifyEmail(body.FirstName, fmt.Sprintf("%s/api/v1/account/verify-email?code=%s", os.Getenv("SERVER_URL"), code)).Render(context.Background(), &html)
 		if err != nil {
 			logger.Error("Failed to render email verification view on new user created.", zap.Error(err))
 			return

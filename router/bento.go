@@ -165,6 +165,7 @@ func handleGetBento(c echo.Context) error {
 			},
 		)
 	}
+	zap.L().Sugar().Info(bento)
 
 	// get the hashed challenge
 	challenge, err := store.GetChallenge(challengeId)
