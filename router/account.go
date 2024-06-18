@@ -161,6 +161,17 @@ func handleLogin(c echo.Context) error {
 		return writeApiErrorJSON(c, requestId)
 	}
 
+	if !user.EmailVerified {
+		logger.Error("User login attempt when email has not been verified.", zap.String("email", user.Email), zap.String("request_id", requestId))
+		return c.JSON(
+			http.StatusBadRequest,
+			apiResponse{
+				StatusCode: http.StatusBadRequest,
+				Message:    "Please verify your email before logging in.",
+			},
+		)
+	}
+
 	// get signed jwt to send back to user
 	// should generate two tokens, refresh and access token
 	accessToken, err := generateAccessToken(user.Id)
