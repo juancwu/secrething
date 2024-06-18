@@ -61,6 +61,7 @@ func CreateUser(email, password, firstName, lastName string) (string, error) {
 
 // GetUserWithPasswordValidation tries to match a user with the given email and password.
 // Ideal use of this function is for logging in a user with email and password.
+// NOTE: This function will only return no if password matches for account with email and the email has been verified.
 func GetUserWithPasswordValidation(email, password string) (*User, error) {
 	row := db.QueryRow(
 		`
