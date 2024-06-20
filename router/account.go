@@ -94,39 +94,7 @@ func handleSignup(c echo.Context) error {
 	}
 
 	// send verification email using a go routing to not block the response
-	go func() {
-		logger, _ := zap.NewProduction()
-		defer logger.Sync()
-
-		// generate code
-		code, err := gonanoid.New(store.EMAIL_VERIFICATION_CODE_LEN)
-		if err != nil {
-			logger.Error("Failed to generate email verification code on new user created.", zap.Error(err))
-			return
-		}
-
-		// try to send email first
-		var html bytes.Buffer
-		err = views.VerifyEmail(body.FirstName, fmt.Sprintf("%s/api/v1/account/verify-email?code=%s", os.Getenv("SERVER_URL"), code)).Render(context.Background(), &html)
-		if err != nil {
-			logger.Error("Failed to render email verification view on new user created.", zap.Error(err))
-			return
-		}
-
-		// send email
-		emailId, err := utils.SendEmail(os.Getenv("NOREPLY_EMAIL"), []string{body.Email}, "[Konbini] Verify Your Email", html.String())
-		if err != nil {
-			logger.Error("Failed to send email verification on new user created.", zap.Error(err))
-			return
-		}
-
-		// save the email verification in the database
-		err = store.CreateEmailVerification(code, userId, emailId)
-		if err != nil {
-			logger.Error("Failed to save email verification in database on new user created.", zap.Error(err))
-			return
-		}
-	}()
+	go sendVerificationEmail(body.Email, body.FirstName, userId)
 
 	return c.JSON(http.StatusCreated, apiResponse{
 		StatusCode: http.StatusCreated,
@@ -242,4 +210,39 @@ func handleNewToken(c echo.Context) error {
 			AccessToken: accessToken,
 		},
 	)
+}
+
+// sendVerificationEmail is a helper function that sends a verification email.
+func sendVerificationEmail(email string, firstName string, userId string) {
+	logger, _ := zap.NewProduction()
+	defer logger.Sync()
+
+	// generate code
+	code, err := gonanoid.New(store.EMAIL_VERIFICATION_CODE_LEN)
+	if err != nil {
+		logger.Error("Failed to generate email verification code on new user created.", zap.Error(err))
+		return
+	}
+
+	// try to send email first
+	var html bytes.Buffer
+	err = views.VerifyEmail(firstName, fmt.Sprintf("%s/api/v1/account/verify-email?code=%s", os.Getenv("SERVER_URL"), code)).Render(context.Background(), &html)
+	if err != nil {
+		logger.Error("Failed to render email verification view on new user created.", zap.Error(err))
+		return
+	}
+
+	// send email
+	emailId, err := utils.SendEmail(os.Getenv("NOREPLY_EMAIL"), []string{email}, "[Konbini] Verify Your Email", html.String())
+	if err != nil {
+		logger.Error("Failed to send email verification on new user created.", zap.Error(err))
+		return
+	}
+
+	// save the email verification in the database
+	err = store.CreateEmailVerification(code, userId, emailId)
+	if err != nil {
+		logger.Error("Failed to save email verification in database on new user created.", zap.Error(err))
+		return
+	}
 }

@@ -100,3 +100,29 @@ func GetUserWithPasswordValidation(email, password string) (*User, error) {
 
 	return &user, nil
 }
+
+// GetUserWithEmail retrieves a user with the given email.
+// It will return an error if no row was found.
+func GetUserWithEmail(email string) (*User, error) {
+	row := db.QueryRow("SELECT id, email, first_name, last_name, email_verified, created_at, updated_at FROM users WHERE email = $1;", email)
+	err := row.Err()
+	if err != nil {
+		return nil, err
+	}
+
+	user := User{}
+	err = row.Scan(
+		&user.Id,
+		&user.Email,
+		&user.FirstName,
+		&user.LastName,
+		&user.EmailVerified,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &user, nil
+}
