@@ -5,7 +5,7 @@ TEST_DB_HOST_PORT ?= 55432
 TEST_DB_URL ?= postgres://postgres:$(TEST_DB_PASSWORD)@localhost:$(TEST_DB_HOST_PORT)/postgres?sslmode=disable 
 
 dev:
-	@APP_VERSION=dev APP_ENV=development air
+	@VERSION=dev APP_ENV=development air
 up:
 	@goose -dir ./migrations postgres "postgres://konbini:konbini@localhost:5432/konbini?sslmode=disable" up
 down:
