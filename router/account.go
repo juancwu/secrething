@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
+	"net/mail"
 	"os"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -26,6 +27,7 @@ func SetupAccountRoutes(e RouteGroup) {
 	e.POST("/account/signup", handleSignup, useValidateRequestBody(signupRequest{}))
 	e.POST("/account/login", handleLogin, useValidateRequestBody(loginRequest{}))
 	e.GET("/account/new-token", handleNewToken)
+	e.GET("/account/send-verification-email", handleSendVerificationEmail)
 }
 
 func handleSignup(c echo.Context) error {
@@ -208,6 +210,49 @@ func handleNewToken(c echo.Context) error {
 		http.StatusCreated,
 		newTokenResponse{
 			AccessToken: accessToken,
+		},
+	)
+}
+
+func handleSendVerificationEmail(c echo.Context) error {
+	requestId := c.Request().Header.Get(echo.HeaderXRequestID)
+	email := c.QueryParam("email")
+	if email == "" {
+		return c.JSON(
+			http.StatusBadRequest,
+			apiResponse{
+				StatusCode: http.StatusBadRequest,
+				Message:    "Missing required query parameter 'email'.",
+			},
+		)
+	}
+
+	_, err := mail.ParseAddress(email)
+	if err != nil {
+		zap.L().Error("Failed to parse email address", zap.String("email", email), zap.Error(err), zap.String("request_id", requestId))
+		return c.JSON(
+			http.StatusBadRequest,
+			apiResponse{
+				StatusCode: http.StatusBadRequest,
+				Message:    "Invalid email address was provided.",
+			},
+		)
+	}
+
+	user, err := store.GetUserWithEmail(email)
+	if err != nil {
+		zap.L().Error("Failed to get user id with email", zap.String("email", email), zap.String("request_id", requestId), zap.Error(err))
+		return writeApiErrorJSON(c, requestId)
+	}
+
+	// send new email
+	go sendVerificationEmail(user.Email, user.FirstName, user.Id)
+
+	return c.JSON(
+		http.StatusOK,
+		apiResponse{
+			StatusCode: http.StatusOK,
+			Message:    "Verification email scheduled to send. You should receive an email from us shortly.",
 		},
 	)
 }
