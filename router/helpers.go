@@ -25,6 +25,10 @@ func writeApiErrorJSON(c echo.Context, requestId string) error {
 	)
 }
 
+func writeUnauthorized(c echo.Context, requestId string) error {
+	return c.JSON(http.StatusUnauthorized, apiResponse{StatusCode: http.StatusUnauthorized, Message: fmt.Sprintf("unauthorized (%s)", requestId)})
+}
+
 func verifySignedChallenge(challenge, signature, pubKey string) error {
 	return nil
 }

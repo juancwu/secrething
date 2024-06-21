@@ -2,6 +2,7 @@
 package store
 
 import (
+	"database/sql"
 	"os"
 	"time"
 )
@@ -125,4 +126,38 @@ func GetUserWithEmail(email string) (*User, error) {
 	}
 
 	return &user, nil
+}
+
+func GetUserWithId(id string) (*User, error) {
+	row := db.QueryRow("SELECT id, email, first_name, last_name, email_verified, created_at, updated_at FROM users WHERE id = $1;", id)
+	err := row.Err()
+	if err != nil {
+		return nil, err
+	}
+
+	user := User{}
+	err = row.Scan(
+		&user.Id,
+		&user.Email,
+		&user.FirstName,
+		&user.LastName,
+		&user.EmailVerified,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &user, nil
+}
+
+// SetUserEmailVerifiedStatus updates the email_verified column of a user in the database.
+func SetUserEmailVerifiedStatus(tx *sql.Tx, id string, status bool) error {
+	_, err := tx.Exec(
+		"UPDATE users SET email_verified = $1 WHERE id = $2;",
+		status,
+		id,
+	)
+	return err
 }

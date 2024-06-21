@@ -54,3 +54,8 @@ func Ping() error {
 		}
 	}
 }
+
+// StartTx begins a new transaction
+func StartTx() (*sql.Tx, error) {
+	return db.Begin()
+}

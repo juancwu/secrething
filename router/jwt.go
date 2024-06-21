@@ -33,6 +33,12 @@ const (
 	JWT_REFRESH_TOKEN_EXP int64 = 604800000000000
 )
 
+// A collection of errors
+var (
+	errInvalidJwtType    = errors.New("Invalid jwt casting type.")
+	errInvalidAuthHeader = errors.New("Invalid authorization header.")
+)
+
 // generateToken is a helper function to generate a signed jwt.
 // It will not decide for itself when a token should expire and what type of jwt it is.
 func generateToken(userId string, tokType jwtTokenType, exp time.Time) (string, error) {
@@ -81,7 +87,7 @@ func useJWT(c echo.Context, acceptedType jwtTokenType) (*jwtAuthClaims, error) {
 	authHeaderString := c.Request().Header.Get(echo.HeaderAuthorization)
 	parts := strings.Split(authHeaderString, " ")
 	if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
-		return nil, errors.New("Invalid authorization header.")
+		return nil, errInvalidAuthHeader
 	}
 	token, err := verifyJWT(parts[1])
 	if err != nil {
@@ -89,7 +95,7 @@ func useJWT(c echo.Context, acceptedType jwtTokenType) (*jwtAuthClaims, error) {
 	}
 	claims, ok := token.Claims.(*jwtAuthClaims)
 	if !ok {
-		return nil, errors.New("Invalid jwt casting type.")
+		return nil, errInvalidJwtType
 	}
 	return claims, nil
 }

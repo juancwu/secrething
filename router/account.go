@@ -6,8 +6,8 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
-	"net/mail"
 	"os"
+	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/juancwu/konbini/store"
@@ -28,6 +28,7 @@ func SetupAccountRoutes(e RouteGroup) {
 	e.POST("/account/login", handleLogin, useValidateRequestBody(loginRequest{}))
 	e.GET("/account/new-token", handleNewToken)
 	e.GET("/account/send-verification-email", handleSendVerificationEmail)
+	e.GET("/account/verify-email", handleVerifyEmail)
 }
 
 func handleSignup(c echo.Context) error {
@@ -215,34 +216,35 @@ func handleNewToken(c echo.Context) error {
 }
 
 func handleSendVerificationEmail(c echo.Context) error {
+	logger, _ := zap.NewProduction()
+	defer logger.Sync()
 	requestId := c.Request().Header.Get(echo.HeaderXRequestID)
-	email := c.QueryParam("email")
-	if email == "" {
-		return c.JSON(
-			http.StatusBadRequest,
-			apiResponse{
-				StatusCode: http.StatusBadRequest,
-				Message:    "Missing required query parameter 'email'.",
-			},
-		)
+
+	claims, err := useJWT(c, JWT_ACCESS_TOKEN_TYPE)
+	if err != nil {
+		logger.Error("Failed to validate jwt.", zap.Error(err), zap.String(echo.HeaderXRequestID, requestId))
+		return writeUnauthorized(c, requestId)
 	}
 
-	_, err := mail.ParseAddress(email)
+	user, err := store.GetUserWithId(claims.UserId)
 	if err != nil {
-		zap.L().Error("Failed to parse email address", zap.String("email", email), zap.Error(err), zap.String("request_id", requestId))
-		return c.JSON(
-			http.StatusBadRequest,
-			apiResponse{
-				StatusCode: http.StatusBadRequest,
-				Message:    "Invalid email address was provided.",
-			},
-		)
-	}
-
-	user, err := store.GetUserWithEmail(email)
-	if err != nil {
-		zap.L().Error("Failed to get user id with email", zap.String("email", email), zap.String("request_id", requestId), zap.Error(err))
+		logger.Error("Failed to get user id with email", zap.String("user_id", claims.UserId), zap.String("request_id", requestId), zap.Error(err))
 		return writeApiErrorJSON(c, requestId)
+	}
+
+	if user.EmailVerified {
+		return c.JSON(
+			http.StatusOK,
+			apiResponse{
+				StatusCode: http.StatusOK,
+				Message:    "User email has already been verified.",
+			},
+		)
+	}
+
+	_, err = store.DeleteAllEmailVerificationFromUser(user.Id)
+	if err != nil {
+		logger.Error("Failed to delete all existing email verifications linked to requesting user.")
 	}
 
 	// send new email
@@ -257,13 +259,113 @@ func handleSendVerificationEmail(c echo.Context) error {
 	)
 }
 
+func handleVerifyEmail(c echo.Context) error {
+	logger, _ := zap.NewProduction()
+	defer logger.Sync()
+	requestId := c.Request().Header.Get(echo.HeaderXRequestID)
+	code := c.QueryParam("code")
+	if code == "" {
+		return c.JSON(
+			http.StatusBadRequest,
+			apiResponse{
+				StatusCode: http.StatusBadRequest,
+				Message:    "Missing required query parameter 'code'.",
+			},
+		)
+	}
+	now := time.Now()
+
+	// get email verification record in database with code
+	emailVerification, err := store.GetEmailVerificationWithCode(code)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return c.JSON(
+				http.StatusNotFound,
+				apiResponse{
+					StatusCode: http.StatusNotFound,
+					Message:    "Code does not exists. Please get a new code.",
+				},
+			)
+		}
+		logger.Error("Failed to get email verification record.", zap.Error(err), zap.String(echo.HeaderXRequestID, requestId))
+		return writeApiErrorJSON(c, requestId)
+	}
+
+	if now.After(emailVerification.ExpiresAt) {
+		go func() {
+			logger, _ := zap.NewProduction()
+			defer logger.Sync()
+			logger.Info("Updating expired email verification status.", zap.Int64("email_verification_id", emailVerification.Id), zap.String(echo.HeaderXRequestID, requestId))
+			err := store.DeleteEmailVerification(emailVerification.Id)
+			if err != nil {
+				logger.Error("Failed to update expired email verification status.", zap.Error(err), zap.String(echo.HeaderXRequestID, requestId))
+				return
+			}
+		}()
+		return c.JSON(
+			http.StatusBadRequest,
+			apiResponse{
+				StatusCode: http.StatusBadRequest,
+				Message:    "Code has expired. Please get a new email verification with a new code.",
+			},
+		)
+	}
+
+	tx, err := store.StartTx()
+	if err != nil {
+		logger.Error("Failed to start transaction to update email verification status.", zap.Error(err), zap.String(echo.HeaderXRequestID, requestId))
+		return writeApiErrorJSON(c, requestId)
+	}
+
+	// delete the record because there is no need to keep it anymore
+	err = store.DeleteEmailVerificationTx(tx, emailVerification.Id)
+	if err != nil {
+		logger.Error("Failed to delete email verification.", zap.Error(err), zap.String(echo.HeaderXRequestID, requestId))
+		go func() {
+			err := tx.Rollback()
+			if err != nil {
+				logger.Error("Failed to rollback transaction.", zap.Error(err), zap.String(echo.HeaderXRequestID, requestId))
+			}
+		}()
+		return writeApiErrorJSON(c, requestId)
+	}
+
+	err = store.SetUserEmailVerifiedStatus(tx, emailVerification.UserId, true)
+	if err != nil {
+		logger.Error("Failed to update user email verified status.", zap.Error(err), zap.String(echo.HeaderXRequestID, requestId))
+		go func(tx *sql.Tx, requestId string) {
+			err := tx.Rollback()
+			if err != nil {
+				logger.Error("Failed to rollback transaction.", zap.Error(err), zap.String(echo.HeaderXRequestID, requestId))
+			}
+		}(tx, requestId)
+		return writeApiErrorJSON(c, requestId)
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		logger.Error("Failed to commit transaction changes.", zap.Error(err), zap.String(echo.HeaderXRequestID, requestId))
+		return writeApiErrorJSON(c, requestId)
+	}
+
+	return c.JSON(
+		http.StatusOK,
+		apiResponse{
+			StatusCode: http.StatusOK,
+			Message:    "Thanks for verifying your email.",
+		},
+	)
+}
+
+// From here on, all code are just helper functions but not route handlers.
+
 // sendVerificationEmail is a helper function that sends a verification email.
 func sendVerificationEmail(email string, firstName string, userId string) {
 	logger, _ := zap.NewProduction()
 	defer logger.Sync()
 
 	// generate code
-	code, err := gonanoid.New(store.EMAIL_VERIFICATION_CODE_LEN)
+	code, err := gonanoid.Generate(store.EMAIL_VERIFICATION_CODE_CHR_POOL, store.EMAIL_VERIFICATION_CODE_LEN)
 	if err != nil {
 		logger.Error("Failed to generate email verification code on new user created.", zap.Error(err))
 		return
@@ -277,17 +379,17 @@ func sendVerificationEmail(email string, firstName string, userId string) {
 		return
 	}
 
-	// send email
-	emailId, err := utils.SendEmail(os.Getenv("NOREPLY_EMAIL"), []string{email}, "[Konbini] Verify Your Email", html.String())
+	// save the email verification in the database
+	_, err = store.CreateEmailVerification(code, userId)
 	if err != nil {
-		logger.Error("Failed to send email verification on new user created.", zap.Error(err))
+		logger.Error("Failed to save email verification in database on new user created.", zap.Error(err))
 		return
 	}
 
-	// save the email verification in the database
-	err = store.CreateEmailVerification(code, userId, emailId)
+	// send email
+	_, err = utils.SendEmail(os.Getenv("NOREPLY_EMAIL"), []string{email}, "[Konbini] Verify Your Email", html.String())
 	if err != nil {
-		logger.Error("Failed to save email verification in database on new user created.", zap.Error(err))
+		logger.Error("Failed to send email verification on new user created.", zap.Error(err))
 		return
 	}
 }
