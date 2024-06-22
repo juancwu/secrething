@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
+	"net/mail"
 	"os"
 	"time"
 
@@ -29,6 +30,7 @@ func SetupAccountRoutes(e RouteGroup) {
 	e.GET("/account/new-token", handleNewToken)
 	e.GET("/account/send-verification-email", handleSendVerificationEmail)
 	e.GET("/account/verify-email", handleVerifyEmail)
+	e.POST("/account/reset-password", handleResetPassword)
 }
 
 func handleSignup(c echo.Context) error {
@@ -357,6 +359,94 @@ func handleVerifyEmail(c echo.Context) error {
 	)
 }
 
+func handleResetPassword(c echo.Context) error {
+	logger, _ := zap.NewProduction()
+	defer logger.Sync()
+
+	requestId := c.Request().Header.Get(echo.HeaderXRequestID)
+
+	email := c.QueryParam("email")
+	if email == "" {
+		return c.JSON(
+			http.StatusBadRequest,
+			apiResponse{
+				StatusCode: http.StatusBadRequest,
+				Message:    "Missing required query parameter 'email'.",
+				RequestId:  requestId,
+			},
+		)
+	}
+	_, err := mail.ParseAddress(email)
+	if err != nil {
+		logger.Error("Failed to parse email.", zap.Error(err), zap.String(echo.HeaderXRequestID, requestId), zap.String("email", email))
+		return c.JSON(
+			http.StatusBadRequest,
+			apiResponse{
+				StatusCode: http.StatusBadRequest,
+				Message:    "Make sure the provided email is a valid email.",
+				RequestId:  requestId,
+			},
+		)
+	}
+
+	user, err := store.GetUserWithEmail(email)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return c.JSON(
+				http.StatusBadRequest,
+				apiResponse{
+					StatusCode: http.StatusBadRequest,
+					Message:    "No account with the given email.",
+					RequestId:  requestId,
+				},
+			)
+		}
+		logger.Error("Failed to get user with email.", zap.Error(err), zap.String(echo.HeaderXRequestID, requestId), zap.String("email", email))
+		return err
+	}
+
+	exists, err := store.ExistsPasswordResetForUser(user.Id)
+	if err != nil {
+		logger.Error("Failed to check if user already has reset code in database.", zap.Error(err), zap.String(echo.HeaderXRequestID, requestId), zap.String("uid", user.Id))
+		return writeApiErrorJSON(c, requestId)
+	}
+
+	if exists {
+		// delete existing record
+		err = store.DeletePasswordResetByUserId(user.Id)
+		if err != nil {
+			logger.Error("Failed to delete password reset code record from database.", zap.Error(err), zap.String(echo.HeaderXRequestID, requestId), zap.String("uid", user.Id))
+			return writeApiErrorJSON(c, requestId)
+		}
+	}
+
+	// create a new reset code
+	resetCode, err := gonanoid.Generate(store.EMAIL_VERIFICATION_CODE_CHR_POOL, 6)
+	if err != nil {
+		logger.Error("Failed to generate reset code.", zap.Error(err), zap.String(echo.HeaderXRequestID, requestId))
+		return writeApiErrorJSON(c, requestId)
+	}
+
+	// expires in 1 minute
+	expiresAt := time.Now().Add(time.Minute)
+
+	// store the new reset code in db
+	_, err = store.SavePasswordResetCode(resetCode, user.Id, expiresAt)
+	if err != nil {
+		logger.Error("Failed to save reset code.", zap.Error(err), zap.String(echo.HeaderXRequestID, requestId))
+		return writeApiErrorJSON(c, requestId)
+	}
+
+	return c.JSON(
+		http.StatusOK,
+		apiResponse{
+			StatusCode: http.StatusOK,
+			Message:    "A code has been sent to your email.",
+			RequestId:  requestId,
+		},
+	)
+}
+
 // From here on, all code are just helper functions but not route handlers.
 
 // sendVerificationEmail is a helper function that sends a verification email.
@@ -392,4 +482,8 @@ func sendVerificationEmail(email string, firstName string, userId string) {
 		logger.Error("Failed to send email verification on new user created.", zap.Error(err))
 		return
 	}
+}
+
+// sendPasswordResetEmail is a helper function that sends a password reset email.
+func sendPasswordResetEmail(email, firstName, resetCode string) {
 }

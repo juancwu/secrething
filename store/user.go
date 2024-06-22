@@ -161,3 +161,37 @@ func SetUserEmailVerifiedStatus(tx *sql.Tx, id string, status bool) error {
 	)
 	return err
 }
+
+// SavePasswordResetCode stores a password reset code into the database.
+func SavePasswordResetCode(resetCode, userId string, expiresAt time.Time) (int64, error) {
+	row := db.QueryRow("INSERT INTO password_resets (reset_code, user_id, expires_at) VALUES ($1, $2, $3) RETURNING id;", resetCode, userId, expiresAt)
+	err := row.Err()
+	if err != nil {
+		return 0, err
+	}
+	var id int64
+	err = row.Scan(&id)
+	if err != nil {
+		return 0, err
+	}
+	return id, nil
+}
+
+// ExistsPasswordResetForUser checks is there is already an existing password reset record in the
+// database for the given user. Only one should exists at a time per user. It returns false if error.
+func ExistsPasswordResetForUser(uid string) (bool, error) {
+	row := db.QueryRow("SELECT EXISTS (SELECT 1 FROM password_resets WHERE user_id = $1);", uid)
+	err := row.Err()
+	if err != nil {
+		return false, err
+	}
+	var exists bool
+	err = row.Scan(&exists)
+	return exists, nil
+}
+
+// DeletePasswordResetByUserId removes all password reset records in the database with the given user id.
+func DeletePasswordResetByUserId(uid string) error {
+	_, err := db.Exec("DELETE FROM password_resets WHERE user_id = $1;", uid)
+	return err
+}

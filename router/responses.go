@@ -2,8 +2,9 @@ package router
 
 // apiResponse is a generic json response for all APIs
 type apiResponse struct {
-	StatusCode int `json:"status_code"`
-	Message    any `json:"message"`
+	StatusCode int    `json:"status_code"`
+	Message    any    `json:"message"`
+	RequestId  string `json:"request_id"`
 }
 
 // loginResponse represents the json body that is sent back when

@@ -1,6 +1,6 @@
 -- +goose Up
 -- +goose StatementBegin
-CREATE TABLE users_passwords_resets (
+CREATE TABLE password_resets (
     id SERIAL PRIMARY KEY NOT NULL,
     user_id UUID NOT NULL,
     reset_code CHAR(6) NOT NULL,
@@ -19,5 +19,5 @@ CREATE TABLE users_passwords_resets (
 
 -- +goose Down
 -- +goose StatementBegin
-DROP TABLE users_passwords_resets;
+DROP TABLE password_resets;
 -- +goose StatementEnd

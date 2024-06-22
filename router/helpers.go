@@ -20,7 +20,8 @@ func writeApiErrorJSON(c echo.Context, requestId string) error {
 		http.StatusInternalServerError,
 		apiResponse{
 			StatusCode: http.StatusInternalServerError,
-			Message:    fmt.Sprintf("internal server error (%s)", requestId),
+			Message:    "internal server error",
+			RequestId:  requestId,
 		},
 	)
 }
