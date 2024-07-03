@@ -1,19 +1,14 @@
 package router
 
 import (
-	"bytes"
-	"context"
 	"database/sql"
 	"fmt"
 	"net/http"
 	"net/mail"
-	"os"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/juancwu/konbini/store"
-	"github.com/juancwu/konbini/utils"
-	"github.com/juancwu/konbini/views"
 	"github.com/labstack/echo/v4"
 	gonanoid "github.com/matoous/go-nanoid/v2"
 	"go.uber.org/zap"
@@ -30,7 +25,7 @@ func SetupAccountRoutes(e RouteGroup) {
 	e.GET("/account/new-token", handleNewToken)
 	e.GET("/account/send-verification-email", handleSendVerificationEmail)
 	e.GET("/account/verify-email", handleVerifyEmail)
-	e.POST("/account/reset-password", handleResetPassword)
+	e.GET("/account/reset-password", handleResetPassword)
 }
 
 func handleSignup(c echo.Context) error {
@@ -437,6 +432,9 @@ func handleResetPassword(c echo.Context) error {
 		return writeApiErrorJSON(c, requestId)
 	}
 
+	logger.Info("Scheduled to send reset password email.", zap.String(echo.HeaderXRequestID, requestId))
+	go sendPasswordResetEmail(user.Email, user.FirstName, resetCode)
+
 	return c.JSON(
 		http.StatusOK,
 		apiResponse{
@@ -445,45 +443,4 @@ func handleResetPassword(c echo.Context) error {
 			RequestId:  requestId,
 		},
 	)
-}
-
-// From here on, all code are just helper functions but not route handlers.
-
-// sendVerificationEmail is a helper function that sends a verification email.
-func sendVerificationEmail(email string, firstName string, userId string) {
-	logger, _ := zap.NewProduction()
-	defer logger.Sync()
-
-	// generate code
-	code, err := gonanoid.Generate(store.EMAIL_VERIFICATION_CODE_CHR_POOL, store.EMAIL_VERIFICATION_CODE_LEN)
-	if err != nil {
-		logger.Error("Failed to generate email verification code on new user created.", zap.Error(err))
-		return
-	}
-
-	// try to send email first
-	var html bytes.Buffer
-	err = views.VerifyEmail(firstName, fmt.Sprintf("%s/api/v1/account/verify-email?code=%s", os.Getenv("SERVER_URL"), code)).Render(context.Background(), &html)
-	if err != nil {
-		logger.Error("Failed to render email verification view on new user created.", zap.Error(err))
-		return
-	}
-
-	// save the email verification in the database
-	_, err = store.CreateEmailVerification(code, userId)
-	if err != nil {
-		logger.Error("Failed to save email verification in database on new user created.", zap.Error(err))
-		return
-	}
-
-	// send email
-	_, err = utils.SendEmail(os.Getenv("NOREPLY_EMAIL"), []string{email}, "[Konbini] Verify Your Email", html.String())
-	if err != nil {
-		logger.Error("Failed to send email verification on new user created.", zap.Error(err))
-		return
-	}
-}
-
-// sendPasswordResetEmail is a helper function that sends a password reset email.
-func sendPasswordResetEmail(email, firstName, resetCode string) {
 }
