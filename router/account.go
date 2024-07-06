@@ -26,6 +26,7 @@ func SetupAccountRoutes(e RouteGroup) {
 	e.GET("/account/send-verification-email", handleSendVerificationEmail)
 	e.GET("/account/verify-email", handleVerifyEmail)
 	e.GET("/account/reset-password", handleResetPassword)
+	e.PATCH("/account/reset-password", handlePostResetPassword, useValidateRequestBody(postResetPasswordRequest{}))
 }
 
 func handleSignup(c echo.Context) error {
@@ -440,6 +441,102 @@ func handleResetPassword(c echo.Context) error {
 		apiResponse{
 			StatusCode: http.StatusOK,
 			Message:    "A code has been sent to your email.",
+			RequestId:  requestId,
+		},
+	)
+}
+
+func handlePostResetPassword(c echo.Context) error {
+	requestId := c.Request().Header.Get(echo.HeaderXRequestID)
+	logger, _ := zap.NewProduction()
+
+	body, ok := c.Get("body").(*postResetPasswordRequest)
+	if !ok {
+		logger.Error("Invalid body type", zap.String(echo.HeaderXRequestID, requestId))
+		return writeApiErrorJSON(c, requestId)
+	}
+
+	user, err := store.GetUserWithEmail(body.Email)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return c.JSON(
+				http.StatusNotFound,
+				apiResponse{
+					StatusCode: http.StatusNotFound,
+					Message:    "User with given email not found.",
+					RequestId:  requestId,
+				},
+			)
+		}
+		logger.Error("Failed to get user with email.", zap.Error(err), zap.String(echo.HeaderXRequestID, requestId))
+		return writeApiErrorJSON(c, requestId)
+	}
+
+	pr, err := store.GetPasswordResetForUser(user.Id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return c.JSON(
+				http.StatusBadRequest,
+				apiResponse{
+					StatusCode: http.StatusBadRequest,
+					Message:    "Invalid code.",
+					RequestId:  requestId,
+				},
+			)
+		}
+		logger.Error("Failed to get password reset record.", zap.Error(err), zap.String(echo.HeaderXRequestID, requestId))
+		return writeApiErrorJSON(c, requestId)
+	}
+
+	now := time.Now()
+	if now.After(pr.ExpiresAt) {
+		// delete the expired code
+		return c.JSON(
+			http.StatusBadRequest,
+			apiResponse{
+				StatusCode: http.StatusBadRequest,
+				Message:    "Invalid code.",
+				RequestId:  requestId,
+			},
+		)
+	}
+
+	if pr.ResetCode != body.ResetCode {
+		r, err := store.DeletePasswordReset(pr.Id)
+		if err != nil {
+			logger.Error("Failed to delete password reset record.", zap.Error(err), zap.String(echo.HeaderXRequestID, requestId), zap.Int64("pr_id", pr.Id))
+			return writeApiErrorJSON(c, requestId)
+		}
+		n, err := r.RowsAffected()
+		if err != nil {
+			logger.Error("Failed to get the count of affected rows after deleting password record.", zap.Error(err), zap.String(echo.HeaderXRequestID, requestId))
+		} else if n > 1 {
+			logger.Warn("More than one password reset record were deleted.", zap.String(echo.HeaderXRequestID, requestId))
+		}
+		return c.JSON(
+			http.StatusBadRequest,
+			apiResponse{
+				StatusCode: http.StatusBadRequest,
+				Message:    "Invalid code.",
+				RequestId:  requestId,
+			},
+		)
+	}
+
+	// use a transaction to continue the password update and deletion of password reset code
+	tx, err := store.StartTx()
+	if err != nil {
+		logger.Error("Failed to start transaction.", zap.Error(err), zap.String(echo.HeaderXRequestID, requestId))
+		return writeApiErrorJSON(c, requestId)
+	}
+
+	// TODO: complete
+
+	return c.JSON(
+		http.StatusOK,
+		apiResponse{
+			StatusCode: http.StatusOK,
+			Message:    "Password successfully updated.",
 			RequestId:  requestId,
 		},
 	)

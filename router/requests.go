@@ -29,3 +29,10 @@ type addIngridientRequest struct {
 	BentoId         string `json:"bento_id"`
 	SignedChallenge string `json:"signed_challenge"`
 }
+
+// postResetPasswordRequest represents the request body to finish a reset password process.
+type postResetPasswordRequest struct {
+	Email       string `json:"email" validate:"required,email"`
+	NewPassword string `json:"new_password" validate:"required,min=12"`
+	ResetCode   string `json:"reset_code" validate:"required,len=6"`
+}
