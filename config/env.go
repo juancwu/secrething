@@ -33,6 +33,7 @@ func LoadEnv() error {
 		"PGP_SYM_KEY",
 		"PASS_ENCRYPT_ALGO",
 		"NOREPLY_EMAIL",
+		"DONOTREPLY_EMAIL",
 		"JWT_SECRET",
 		"JWT_ISSUER",
 	}
