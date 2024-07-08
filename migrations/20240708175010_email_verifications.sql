@@ -7,7 +7,7 @@ CREATE TABLE email_verifications (
     expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT unique_user_code UNIQUE (code, user_id),
+    CONSTRAINT unique_code UNIQUE (code),
     CONSTRAINT fk_user_id FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 -- +goose StatementEnd
