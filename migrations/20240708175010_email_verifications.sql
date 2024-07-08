@@ -2,7 +2,7 @@
 -- +goose StatementBegin
 CREATE TABLE email_verifications (
     id SERIAL NOT NULL PRIMARY KEY,
-    code CHAR(6) NOT NULL,
+    code CHAR(20) NOT NULL,
     user_id UUID NOT NULL,
     expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,

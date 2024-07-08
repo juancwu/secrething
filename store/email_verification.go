@@ -8,7 +8,7 @@ import (
 
 const (
 	EMAIL_VERIFICATION_CODE_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"
-	EMAIL_VERIFICATION_CODE_LENGTH   = 6
+	EMAIL_VERIFICATION_CODE_LENGTH   = 20
 )
 
 // EmailVerification represents an email verification record in the database.
