@@ -1,0 +1,9 @@
+package email
+
+templ verificationEmailTempl(name, url string) {
+	<div>
+		<p>Hi { name }, thanks for joining the Konbini community.</p>
+		<p>Verify your email to start managing your project secrets with Konbini.</p>
+		<a href={ templ.SafeURL(url) }>Verify</a>
+	</div>
+}
