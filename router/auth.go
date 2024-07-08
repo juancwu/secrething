@@ -59,26 +59,31 @@ func handleSignup(c echo.Context) error {
 	log.Info().Str("email", user.Email).Str("user_id", user.Id).Msg("New user created.")
 
 	// try to send email verification
-	log.Info().Str(echo.HeaderXRequestID, requestId).Msg("Creating email verification.")
-	ev, err := store.NewEmailVerification(user.Id)
-	if err != nil {
-		log.Error().Err(err).Str(echo.HeaderXRequestID, requestId).Msg("Failed to create email verification.")
-	} else {
-		url := fmt.Sprintf("%s/auth/email/verify?code=%s", os.Getenv("SERVER_URL"), ev.Code)
-		html, err := email.RenderVerifiationEmail(user.Name, url)
+	go func() {
+		log.Info().Str(echo.HeaderXRequestID, requestId).Msg("Creating email verification.")
+		_, err := store.DeleteEmailVerificationWithUserId(user.Id)
 		if err != nil {
-			log.Error().Err(err).Str(echo.HeaderXRequestID, requestId).Msg("Failed to render email verification html.")
+			log.Error().Err(err).Str(echo.HeaderXRequestID, requestId).Msg("Failed to delete email verification code with user id. This is a step to prevent unique constraint issues when inserting a new row.")
+		}
+		// try to create a new email verification anyways
+		ev, err := store.NewEmailVerification(user.Id)
+		if err != nil {
+			log.Error().Err(err).Str(echo.HeaderXRequestID, requestId).Msg("Failed to create email verification.")
 		} else {
-			go func() {
+			url := fmt.Sprintf("%s/auth/email/verify?code=%s", os.Getenv("SERVER_URL"), ev.Code)
+			html, err := email.RenderVerifiationEmail(user.Name, url)
+			if err != nil {
+				log.Error().Err(err).Str(echo.HeaderXRequestID, requestId).Msg("Failed to render email verification html.")
+			} else {
 				sent, err := email.Send("Verify Your Email", os.Getenv("DONOTREPLY_EMAIL"), []string{user.Email}, html)
 				if err != nil {
 					log.Error().Err(err).Str(echo.HeaderXRequestID, requestId).Msg("Failed to send verification email on user created.")
 					return
 				}
 				log.Info().Str("email", user.Email).Str("resend_id", sent.Id).Str(echo.HeaderXRequestID, requestId).Msg("Verification email sent.")
-			}()
+			}
 		}
-	}
+	}()
 
 	return c.JSON(
 		http.StatusCreated,

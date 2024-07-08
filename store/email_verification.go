@@ -43,3 +43,9 @@ func NewEmailVerification(userId string) (*EmailVerification, error) {
 	}
 	return &ev, nil
 }
+
+// DeleteEmailVerificationWithUserId tries to removes any email verification code that has the given user id.
+// IMPORTANT: this method does not use a transaction so deletion are UNSAFE.
+func DeleteEmailVerificationWithUserId(uid string) (sql.Result, error) {
+	return db.Exec("DELETE FROM email_verifications WHERE user_id = $1;", uid)
+}
