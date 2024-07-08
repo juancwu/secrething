@@ -38,6 +38,10 @@ func main() {
 	validate.RegisterValidation("password", validatePassword)
 	cv := customValidator{validator: validate}
 	e.Validator = &cv
+
+	// routers
+	router.SetupAuthRouter(e)
+
 	// start echo
 	err = e.Start(":" + os.Getenv("PORT"))
 	if err != nil {
