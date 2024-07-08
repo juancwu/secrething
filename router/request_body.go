@@ -11,6 +11,10 @@ var reqBodyValidationMsgs = map[string]string{
 	"signupReqBody.Name.min":          "Name must be at least 3 characters long",
 	"signupReqBody.Name.max":          "Name must not be longer than 30 characters",
 	"signupReqBody.Name.alpha":        "Name must only include alphabet characters",
+
+	// resendVerificationEmailReqBody messages
+	"resendVerificationEmailReqBody.Email.required": "Missing email in request body",
+	"resendVerificationEmailReqBody.Email.email":    "Invalid email provided",
 }
 
 // signupReqBody represents the request body that is expected when handling a signup request.
@@ -18,4 +22,9 @@ type signupReqBody struct {
 	Email    string `json:"email" validate:"required,email"`
 	Password string `json:"password" validate:"required,password"`
 	Name     string `json:"name" validate:"required,min=3,max=30,alpha"`
+}
+
+// resendVerificationEmailReqBody represents the request body that is expected when handling a resend ev request.
+type resendVerificationEmailReqBody struct {
+	Email string `json:"email" validate:"required,email"`
 }
