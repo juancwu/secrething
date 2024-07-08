@@ -1,6 +1,7 @@
 package store
 
 import (
+	"database/sql"
 	"time"
 
 	gonanoid "github.com/matoous/go-nanoid/v2"
@@ -18,6 +19,17 @@ type EmailVerification struct {
 	UserId    string
 	ExpiresAt time.Time
 	CreatedAt time.Time
+}
+
+// Delete removes the email verification from the database.
+// You must call tx.Commit for the deletion to take effect.
+func (ev *EmailVerification) Delete(tx *sql.Tx) (sql.Result, error) {
+	return tx.Exec("Delete FROM email_verifications WHERE id = $1;", ev.Id)
+}
+
+// Update is not implemented, but its defined to satisfy the Model interface.
+func (ev *EmailVerification) Update(tx *sql.Tx) (sql.Result, error) {
+	return nil, nil
 }
 
 // NewEmailVerification creates a new email verification record.
@@ -38,6 +50,27 @@ func NewEmailVerification(userId string) (*EmailVerification, error) {
 		ExpiresAt: expiresAt,
 	}
 	err = row.Scan(&ev.Id, &ev.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return &ev, nil
+}
+
+// GetEmailVerificationWithCode tries to retrieves an email verification record from the database with the given code.
+func GetEmailVerificationWithCode(code string) (*EmailVerification, error) {
+	row := db.QueryRow("SELECT id, code, user_id, expires_at, created_at FROM email_verifications WHERE code = $1;", code)
+	err := row.Err()
+	if err != nil {
+		return nil, err
+	}
+	ev := EmailVerification{}
+	err = row.Scan(
+		&ev.Id,
+		&ev.Code,
+		&ev.UserId,
+		&ev.ExpiresAt,
+		&ev.CreatedAt,
+	)
 	if err != nil {
 		return nil, err
 	}

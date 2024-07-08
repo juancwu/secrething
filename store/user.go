@@ -1,6 +1,7 @@
 package store
 
 import (
+	"database/sql"
 	"os"
 	"time"
 )
@@ -14,6 +15,22 @@ type User struct {
 	EmailVerified bool
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
+}
+
+// Delete removes a user from the database using the id.
+//
+// You must call tx.Commit for it to take effect.
+func (u *User) Delete(tx *sql.Tx) (sql.Result, error) {
+	return tx.Exec("DELETE FROM users WHERE id = $1;", u.Id)
+}
+
+// Update updates the user in the database with the current field values of the struct.
+//
+// This does not update the Id, CreatedAt, and UpdatedAt fields.
+//
+// You must call tx.Commit for it to take effect.
+func (u *User) Update(tx *sql.Tx) (sql.Result, error) {
+	return tx.Exec("UPDATE users SET email = $1, password = $2, name = $3, email_verified = $4 WHERE id = $5;", u.Email, u.Password, u.Name, u.EmailVerified, u.Id)
 }
 
 // NewUser creates a new user with the given information.
@@ -54,4 +71,28 @@ func ExistsUserWithEmail(email string) (bool, error) {
 		return false, err
 	}
 	return exists, nil
+}
+
+// GetUserWithId retrieves a user with the given id.
+// An error is returned if nothing is found.
+func GetUserWithId(id string) (*User, error) {
+	row := db.QueryRow("SELECT id, email, password, name, email_verified, created_at, updated_at FROM users WHERE id = $1;", id)
+	err := row.Err()
+	if err != nil {
+		return nil, err
+	}
+	user := User{}
+	err = row.Scan(
+		&user.Id,
+		&user.Email,
+		&user.Password,
+		&user.Name,
+		&user.EmailVerified,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
 }
