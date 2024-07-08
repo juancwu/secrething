@@ -96,3 +96,26 @@ func GetUserWithId(id string) (*User, error) {
 	}
 	return &user, nil
 }
+
+// GetUserWithEmail retrieves a user in the database with the given email.
+func GetUserWithEmail(email string) (*User, error) {
+	row := db.QueryRow("SELECT id, email, password, name, email_verified, created_at, updated_at FROM users WHERE email = $1;", email)
+	err := row.Err()
+	if err != nil {
+		return nil, err
+	}
+	user := User{}
+	err = row.Scan(
+		&user.Id,
+		&user.Email,
+		&user.Password,
+		&user.Name,
+		&user.EmailVerified,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
