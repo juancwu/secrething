@@ -35,6 +35,7 @@ func main() {
 	e := echo.New()
 
 	e.Use(middleware.RequestId())
+	e.Use(middleware.Logger())
 
 	e.HTTPErrorHandler = router.ErrHandler
 
