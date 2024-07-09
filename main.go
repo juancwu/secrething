@@ -5,6 +5,7 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	"github.com/juancwu/konbini/config"
+	"github.com/juancwu/konbini/middleware"
 	"github.com/juancwu/konbini/router"
 	"github.com/juancwu/konbini/store"
 	"github.com/labstack/echo/v4"
@@ -32,6 +33,9 @@ func main() {
 
 	// setup echo
 	e := echo.New()
+
+	e.Use(middleware.RequestId())
+
 	e.HTTPErrorHandler = router.ErrHandler
 
 	validate := validator.New()
