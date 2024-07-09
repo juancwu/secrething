@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/juancwu/konbini/jwt"
 	"github.com/juancwu/konbini/store"
 	"github.com/labstack/echo/v4"
 	"github.com/rs/zerolog/log"
@@ -15,6 +16,7 @@ import (
 func SetupAuthRouter(e RouterGroup) {
 	// sessions related routes
 	e.POST("/auth/signup", handleSignup)
+	e.POST("/auth/signin", handleSignin)
 
 	// email related routes
 	e.GET("/auth/email/verify", handleVerifyEmail)
@@ -70,6 +72,58 @@ func handleSignup(c echo.Context) error {
 		http.StatusCreated,
 		map[string]string{
 			"message": "Successfully signed up! Please check your email to verify it.",
+		},
+	)
+}
+
+// handleSignin handles incoming request to signin.
+// An access token and a refresh token will be generated and send back to the client.
+func handleSignin(c echo.Context) error {
+	requestId := c.Request().Header.Get(echo.HeaderXRequestID)
+	body := new(signinReqBody)
+
+	log.Info().Str(echo.HeaderXRequestID, requestId).Msg("Binding signin request body.")
+	err := c.Bind(body)
+	if err != nil {
+		c.Set(err_msg_logger_key, "Failed to bind signup request body.")
+		return err
+	}
+
+	log.Info().Str(echo.HeaderXRequestID, requestId).Msg("Validating signin request body.")
+	err = c.Validate(body)
+	if err != nil {
+		c.Set(err_msg_logger_key, "Error when validating signin request body.")
+		return err
+	}
+
+	user, err := store.GetUserWithEmailAndPassword(body.Email, body.Password)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			c.Set(err_msg_logger_key, "No user match with given email and password.")
+			c.Set(public_err_msg_key, "Invalid credentials. Please double check they are right.")
+			return echo.NewHTTPError(http.StatusBadRequest)
+		}
+		c.Set(err_msg_logger_key, "Failed to match user with email and password.")
+		return err
+	}
+
+	at, err := jwt.GenerateAccessToken(user.Id)
+	if err != nil {
+		c.Set(err_msg_logger_key, "Failed to generate access token.")
+		return err
+	}
+
+	rt, err := jwt.GenerateRefreshToken(user.Id)
+	if err != nil {
+		c.Set(err_msg_logger_key, "Failed to generate refresh token.")
+		return err
+	}
+
+	return c.JSON(
+		http.StatusOK,
+		map[string]string{
+			"access_token":  at,
+			"refresh_token": rt,
 		},
 	)
 }

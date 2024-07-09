@@ -119,3 +119,31 @@ func GetUserWithEmail(email string) (*User, error) {
 	}
 	return &user, nil
 }
+
+// GetUserWithEmailAndPassword tries to match a user with the given email and password.
+// Usage for signining a user. Its better to use psql to match the password in the query.
+func GetUserWithEmailAndPassword(email, password string) (*User, error) {
+	row := db.QueryRow(
+		"SELECT id, email, password, name, email_verified, created_at, updated_at FROM users WHERE email = $1 AND password = crypt($2, password);",
+		email,
+		password,
+	)
+	err := row.Err()
+	if err != nil {
+		return nil, err
+	}
+	user := User{}
+	err = row.Scan(
+		&user.Id,
+		&user.Email,
+		&user.Password,
+		&user.Name,
+		&user.EmailVerified,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}

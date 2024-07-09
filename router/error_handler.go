@@ -48,12 +48,13 @@ func ErrHandler(err error, c echo.Context) {
 		code = he.Code
 	} else if errs, ok := err.(validator.ValidationErrors); ok {
 		// format the validation error message
+		body.Message = "Invalid Request Body"
 		errMsgs := make([]string, len(errs))
 		for i, err := range errs {
 			field := fmt.Sprintf("%s.%s", err.StructNamespace(), err.Tag())
 			msg, exists := reqBodyValidationMsgs[field]
 			if !exists {
-				msg = fmt.Sprintf("Validation failed on the '%s' filed.", err.Tag())
+				msg = fmt.Sprintf("Validation failed on the '%s' failed.", err.Tag())
 			}
 			errMsgs[i] = msg
 		}
