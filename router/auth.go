@@ -119,13 +119,7 @@ func handleSignin(c echo.Context) error {
 		return err
 	}
 
-	return c.JSON(
-		http.StatusOK,
-		map[string]string{
-			"access_token":  at,
-			"refresh_token": rt,
-		},
-	)
+	return writeJSON(http.StatusOK, c, map[string]string{"access_token": at, "refresh_token": rt})
 }
 
 // handleVerifyEmail handles incoming request to verify an email of a user.
