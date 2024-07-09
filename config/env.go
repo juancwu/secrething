@@ -34,7 +34,10 @@ func LoadEnv() error {
 		"PASS_ENCRYPT_ALGO",
 		"NOREPLY_EMAIL",
 		"DONOTREPLY_EMAIL",
-		"JWT_SECRET",
+		"JWT_ACCESS_TOKEN_TYPE",
+		"JWT_REFRESH_TOKEN_TYPE",
+		"JWT_ACCESS_TOKEN_SECRET",
+		"JWT_REFRESH_TOKEN_SECRET",
 		"JWT_ISSUER",
 	}
 	for _, key := range requiredEnvs {
