@@ -18,8 +18,8 @@ func writeJSON(status int, c echo.Context, i interface{}) error {
 		return err
 	}
 	c.Response().Header().Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	c.Response().Header().Set(echo.HeaderContentLength, strconv.Itoa(len(payload)))
 	c.Response().WriteHeader(status)
-	n, err := c.Response().Write(payload)
-	c.Response().Header().Set(echo.HeaderContentLength, strconv.Itoa(n))
+	_, err = c.Response().Write(payload)
 	return err
 }
