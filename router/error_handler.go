@@ -27,6 +27,8 @@ type errorResponseBody struct {
 // Use an echo.HTTPError if there is a need to return a status code other than 500.
 // Normal errors will be handled using a 500 and generic internal server error message..
 func ErrHandler(err error, c echo.Context) {
+	code := http.StatusInternalServerError
+
 	publicErrMsg, ok := c.Get(public_err_msg_key).(string)
 	if !ok || publicErrMsg == "" {
 		publicErrMsg = "internal server error"
@@ -42,11 +44,13 @@ func ErrHandler(err error, c echo.Context) {
 		RequestId: requestId,
 	}
 
-	code := http.StatusInternalServerError
-
-	if he, ok := err.(*echo.HTTPError); ok {
+	switch err.(type) {
+	case *echo.HTTPError:
+		he := err.(*echo.HTTPError)
 		code = he.Code
-	} else if errs, ok := err.(validator.ValidationErrors); ok {
+		body.Message = http.StatusText(code)
+	case validator.ValidationErrors:
+		errs := err.(validator.ValidationErrors)
 		// format the validation error message
 		body.Message = "Invalid Request Body"
 		errMsgs := make([]string, len(errs))
@@ -69,8 +73,9 @@ func ErrHandler(err error, c echo.Context) {
 
 	log.Error().Err(err).Str(echo.HeaderXRequestID, requestId).Int("status_code", code).Msg(errMsg)
 
-	c.JSON(
+	writeJSON(
 		code,
+		c,
 		body,
 	)
 }
