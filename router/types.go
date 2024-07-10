@@ -8,3 +8,8 @@ type RouterGroup interface {
 	PATCH(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
 	DELETE(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
 }
+
+// basicRespBody represents a basic JSON response body that only has a "message" field.
+type basicRespBody struct {
+	Msg string `json:"message"`
+}
