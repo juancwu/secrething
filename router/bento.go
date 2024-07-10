@@ -92,6 +92,12 @@ func handleDeleteBento(c echo.Context) error {
 
 	requestId := c.Request().Header.Get(echo.HeaderXRequestID)
 
+	claims, ok := c.Get(middleware.JWT_CLAIMS).(*jwt.JwtClaims)
+	if !ok {
+		c.Set(err_msg_logger_key, "Failed to cast jwt claims.")
+		return echo.NewHTTPError(http.StatusInternalServerError)
+	}
+
 	bento, err := store.GetBentoWithId(bentoId)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -101,6 +107,12 @@ func handleDeleteBento(c echo.Context) error {
 		}
 		c.Set(err_msg_logger_key, "Failed to get bento to delete.")
 		return err
+	}
+
+	// verify if the requesting user is the owner of the bento
+	if bento.OwnerId != claims.UserId {
+		c.Set(err_msg_logger_key, "Requesting user does not own bento. Aborting deletion.")
+		return echo.NewHTTPError(http.StatusUnauthorized)
 	}
 
 	tx, err := store.StartTx()
