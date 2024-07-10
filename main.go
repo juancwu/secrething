@@ -46,6 +46,7 @@ func main() {
 
 	// routers
 	router.SetupAuthRouter(e)
+	router.SetupBentoRoutes(e)
 
 	// start echo
 	err = e.Start(":" + os.Getenv("PORT"))

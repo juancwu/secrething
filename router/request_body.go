@@ -20,6 +20,13 @@ var reqBodyValidationMsgs = map[string]string{
 	// resendVerificationEmailReqBody messages
 	"resendVerificationEmailReqBody.Email.required": "Missing email in request body",
 	"resendVerificationEmailReqBody.Email.email":    "Invalid email provided",
+
+	// new bento messages
+	"newBentoReqBody.Name.required":   "Missing name in request body",
+	"newBentoReqBody.Name.min":        "Bento body name must longer than 3 and shorter than 15 characters",
+	"newBentoReqBody.Name.max":        "Bento body name must longer than 3 and shorter than 15 characters",
+	"newBentoReqBody.Name.ascii":      "Bento name can only contain printable ASCII characters",
+	"newBentoReqBody.PubKey.required": "Missing pub_key missing in request body",
 }
 
 // signupReqBody represents the request body that is expected when handling a signup request.
@@ -40,4 +47,10 @@ type signinReqBody struct {
 // resendVerificationEmailReqBody represents the request body that is expected when handling a resend ev request.
 type resendVerificationEmailReqBody struct {
 	Email string `json:"email" validate:"required,email"`
+}
+
+// newBentoReqBody represents the request body that is expected when handling a new bento requets.
+type newBentoReqBody struct {
+	Name   string `json:"name" validate:"required,min=3,max=50,ascii"`
+	PubKey string `json:"pub_key" validate:"required"`
 }
