@@ -32,36 +32,54 @@ func handleSignup(c echo.Context) error {
 	log.Info().Msg("Binding signup request body.")
 	err := c.Bind(body)
 	if err != nil {
-		c.Set(err_msg_logger_key, "Failed to bind signup request body.")
-		return err
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Msg:       "Failed to bind signup request body.",
+			Err:       err,
+			RequestId: requestId,
+		}
 	}
 
 	log.Info().Msg("Validating signup request body.")
 	err = c.Validate(body)
 	if err != nil {
-		c.Set(err_msg_logger_key, "Error when validating signup request body.")
-		return err
+		return apiError{
+			Code:      http.StatusBadRequest,
+			Msg:       "Error when validating signup request body.",
+			Err:       err,
+			RequestId: requestId,
+		}
 	}
 
 	log.Info().Msg("Checking for existing user with same email before creating a new user.")
 	exists, err := store.ExistsUserWithEmail(body.Email)
 	if err != nil {
-		c.Set(err_msg_logger_key, "Error when checking for existing user with email.")
-		return err
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Msg:       "Error when checking for existing user with email.",
+			Err:       err,
+			RequestId: requestId,
+		}
 	}
 
 	if exists {
-		log.Info().Msg("Existing user with the same email found. Abort user creation.")
-		c.Set(err_msg_logger_key, "Abort new user creation due to duplication.")
-		c.Set(public_err_msg_key, "User with the given email already exists. If you forgot your password, please reset your password.")
-		return echo.NewHTTPError(http.StatusBadRequest)
+		return apiError{
+			Code:      http.StatusBadRequest,
+			Msg:       "Existing user with the same email found. Abort user creation.",
+			PublicMsg: "User with the given email already exists. If you forgot your password, please reset your password.",
+			RequestId: requestId,
+		}
 	}
 
 	log.Info().Str(echo.HeaderXRequestID, requestId).Msg("Creating new user.")
 	user, err := store.NewUser(body.Email, body.Password, body.Name)
 	if err != nil {
-		c.Set(err_msg_logger_key, "Failed to create new user.")
-		return err
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Msg:       "Failed to create new user.",
+			Err:       err,
+			RequestId: requestId,
+		}
 	}
 	log.Info().Str("email", user.Email).Str("user_id", user.Id).Msg("New user created.")
 
@@ -85,38 +103,61 @@ func handleSignin(c echo.Context) error {
 	log.Info().Str(echo.HeaderXRequestID, requestId).Msg("Binding signin request body.")
 	err := c.Bind(body)
 	if err != nil {
-		c.Set(err_msg_logger_key, "Failed to bind signup request body.")
-		return err
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Msg:       "Failed to bind signup request body.",
+			Err:       err,
+			RequestId: requestId,
+		}
 	}
 
 	log.Info().Str(echo.HeaderXRequestID, requestId).Msg("Validating signin request body.")
 	err = c.Validate(body)
 	if err != nil {
-		c.Set(err_msg_logger_key, "Error when validating signin request body.")
-		return err
+		return apiError{
+			Code: http.StatusBadRequest,
+			Msg:  "Error when validating signin request body.",
+			Err:  err,
+		}
 	}
 
 	user, err := store.GetUserWithEmailAndPassword(body.Email, body.Password)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			c.Set(err_msg_logger_key, "No user match with given email and password.")
-			c.Set(public_err_msg_key, "Invalid credentials. Please double check they are right.")
-			return echo.NewHTTPError(http.StatusBadRequest)
+			return apiError{
+				Code:      http.StatusBadRequest,
+				Msg:       "No user match with given email and password.",
+				PublicMsg: "Invalid credentials. Please double check they are right.",
+				Err:       err,
+				RequestId: requestId,
+			}
 		}
-		c.Set(err_msg_logger_key, "Failed to match user with email and password.")
-		return err
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Msg:       "Failed to match user with email and password.",
+			Err:       err,
+			RequestId: requestId,
+		}
 	}
 
 	at, err := jwt.GenerateAccessToken(user.Id)
 	if err != nil {
-		c.Set(err_msg_logger_key, "Failed to generate access token.")
-		return err
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Msg:       "Failed to generate access token.",
+			Err:       err,
+			RequestId: requestId,
+		}
 	}
 
 	rt, err := jwt.GenerateRefreshToken(user.Id)
 	if err != nil {
-		c.Set(err_msg_logger_key, "Failed to generate refresh token.")
-		return err
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Msg:       "Failed to generate refresh token.",
+			Err:       err,
+			RequestId: requestId,
+		}
 	}
 
 	return writeJSON(http.StatusOK, c, map[string]string{"access_token": at, "refresh_token": rt})
@@ -127,9 +168,12 @@ func handleVerifyEmail(c echo.Context) error {
 	requestId := c.Request().Header.Get(echo.HeaderXRequestID)
 	code := c.QueryParam("code")
 	if code == "" {
-		c.Set(public_err_msg_key, "Invalid request. Missing code query parameter.")
-		c.Set(err_msg_logger_key, "Invalid request. Missing code query parameter.")
-		return echo.NewHTTPError(http.StatusBadRequest)
+		return apiError{
+			Code:      http.StatusBadRequest,
+			Msg:       "Invalid request. Missing code query parameter.",
+			PublicMsg: "Invalid request. Missing code query parameter.",
+			RequestId: requestId,
+		}
 	}
 
 	log.Info().Str(echo.HeaderXRequestID, requestId).Msg("Get email verification based on code.")
@@ -137,11 +181,20 @@ func handleVerifyEmail(c echo.Context) error {
 	ev, err := store.GetEmailVerificationWithCode(code)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			c.Set(public_err_msg_key, "Invalid code. Please get a new code.")
-			return echo.NewHTTPError(http.StatusBadRequest)
+			return apiError{
+				Code:      http.StatusBadRequest,
+				Msg:       "No code found",
+				PublicMsg: "Invalid code. Please get a new code.",
+				Err:       err,
+				RequestId: requestId,
+			}
 		}
-		c.Set(err_msg_logger_key, "Failed to get email verification with code.")
-		return err
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Msg:       "Failed to get email verification with code.",
+			Err:       err,
+			RequestId: requestId,
+		}
 	}
 
 	now := time.Now()
@@ -170,27 +223,41 @@ func handleVerifyEmail(c echo.Context) error {
 				log.Info().Str(echo.HeaderXRequestID, requestId).Int64("email_verification_code_id", ev.Id).Msg("Expired code deleted.")
 			}
 		}()
-		c.Set(public_err_msg_key, "Invalid code. Please get a new code.")
-		c.Set(err_msg_logger_key, "Email verification code expired.")
-		return echo.NewHTTPError(http.StatusBadRequest)
+		return apiError{
+			Code:      http.StatusBadRequest,
+			Msg:       "Email verification code expired.",
+			PublicMsg: "Invalid code. Please get a new code.",
+			RequestId: requestId,
+		}
 	}
 
 	user, err := store.GetUserWithId(ev.UserId)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			c.Set(public_err_msg_key, "Invalid code.")
-			c.Set(err_msg_logger_key, "Code has a user id that does not exists anymore. Check migrations if a proper cascade has been set.")
-			log.Error().Err(errors.New("Code has invalid user id.")).Str(echo.HeaderXRequestID, requestId).Int64("email_verification_code_id", ev.Id).Msg("Invalid user id in email verification record.")
-			return echo.NewHTTPError(http.StatusBadRequest)
+			return apiError{
+				Code:      http.StatusBadRequest,
+				Msg:       "Code has a user id that does not exists anymore. Check migrations if a proper cascade has been set.",
+				PublicMsg: "Invalid code.",
+				RequestId: requestId,
+			}
 		}
-		return err
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Msg:       "Failed to get user",
+			Err:       err,
+			RequestId: requestId,
+		}
 	}
 
 	log.Info().Str(echo.HeaderXRequestID, requestId).Msg("Start transaction to update user.")
 	tx, err := store.StartTx()
 	if err != nil {
-		c.Set(err_msg_logger_key, "Failed to start transaction to update user.")
-		return err
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Msg:       "Failed to start transaction to update user.",
+			Err:       err,
+			RequestId: requestId,
+		}
 	}
 
 	log.Info().Str(echo.HeaderXRequestID, requestId).Msg("Setting user email verified to true.")
@@ -202,8 +269,12 @@ func handleVerifyEmail(c echo.Context) error {
 		if rollbackErr != nil {
 			log.Error().Err(rollbackErr).Str(echo.HeaderXRequestID, requestId).Str("user_id", user.Id).Msg("Failed to rollback after failing to update user.")
 		}
-		c.Set(err_msg_logger_key, "Failed to update user.")
-		return err
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Msg:       "Failed to update user.",
+			Err:       err,
+			RequestId: requestId,
+		}
 	}
 	n, _ := res.RowsAffected()
 	if n < 1 {
@@ -214,8 +285,12 @@ func handleVerifyEmail(c echo.Context) error {
 		log.Warn().Str(echo.HeaderXRequestID, requestId).Str("user_id", user.Id).Msgf("Multiple users where updated when trying to update one user. Count: %d. Will rollback.", n)
 		err = tx.Rollback()
 		if err != nil {
-			c.Set(err_msg_logger_key, "Failed to rollback on multiple users updated on email verification process.")
-			return err
+			return apiError{
+				Code:      http.StatusInternalServerError,
+				Msg:       "Failed to rollback on multiple users updated on email verification process.",
+				Err:       err,
+				RequestId: requestId,
+			}
 		}
 	}
 	log.Info().Str(echo.HeaderXRequestID, requestId).Str("user_id", user.Id).Bool("email_verified", user.EmailVerified).Msg("User updated.")
@@ -224,8 +299,12 @@ func handleVerifyEmail(c echo.Context) error {
 	log.Info().Str(echo.HeaderXRequestID, requestId).Int64("email_verification_code", ev.Id).Msg("Delete used email verification code.")
 	res, err = ev.Delete(tx)
 	if err != nil {
-		c.Set(err_msg_logger_key, "Failed to delete used email verification code.")
-		return err
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Msg:       "Failed to delete used email verification code.",
+			Err:       err,
+			RequestId: requestId,
+		}
 	}
 	n, _ = res.RowsAffected()
 	if n < 1 {
@@ -236,16 +315,24 @@ func handleVerifyEmail(c echo.Context) error {
 		log.Warn().Str(echo.HeaderXRequestID, requestId).Int64("email_verification_code_id", ev.Id).Msgf("Multiple email verifications where deleted when trying to delete one. Count: %d. Will rollback.", n)
 		err = tx.Rollback()
 		if err != nil {
-			c.Set(err_msg_logger_key, "Failed to rollback on multiple deleted email verifications on email verification process.")
-			return err
+			return apiError{
+				Code:      http.StatusInternalServerError,
+				Msg:       "Failed to rollback on multiple deleted email verifications on email verification process.",
+				Err:       err,
+				RequestId: requestId,
+			}
 		}
 	}
 
 	log.Info().Str(echo.HeaderXRequestID, requestId).Msg("Committing changes in transaction.")
 	err = tx.Commit()
 	if err != nil {
-		c.Set(err_msg_logger_key, "Failed to commit changes in transaction.")
-		return err
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Msg:       "Failed to commit changes in transaction.",
+			Err:       err,
+			RequestId: requestId,
+		}
 	}
 
 	return c.JSON(
@@ -264,34 +351,54 @@ func handleResendVerificationEmail(c echo.Context) error {
 	log.Info().Str(echo.HeaderXRequestID, requestId).Msg("Binding resend verification email body.")
 	err := c.Bind(body)
 	if err != nil {
-		c.Set(err_msg_logger_key, "Failed to bind signup request body.")
-		return err
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Msg:       "Failed to bind signup request body.",
+			Err:       err,
+			RequestId: requestId,
+		}
 	}
 
 	log.Info().Str(echo.HeaderXRequestID, requestId).Msg("Validating resend verification email body.")
 	err = c.Validate(body)
 	if err != nil {
-		c.Set(err_msg_logger_key, "Error when validating resend verificiation email body.")
-		return err
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Msg:       "Error when validating resend verificiation email body.",
+			Err:       err,
+			RequestId: requestId,
+		}
 	}
 
 	// get user
 	user, err := store.GetUserWithEmail(body.Email)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			c.Set(public_err_msg_key, "No user found with the given email.")
-			c.Set(err_msg_logger_key, "No user found.")
-			return echo.NewHTTPError(http.StatusBadRequest)
+			return apiError{
+				Code:      http.StatusBadRequest,
+				Msg:       "No user found.",
+				PublicMsg: "No user found with the given email.",
+				Err:       err,
+				RequestId: requestId,
+			}
 		}
-		c.Set(err_msg_logger_key, "Failed to get user with email")
-		return err
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Msg:       "Failed to get user with email",
+			Err:       err,
+			RequestId: requestId,
+		}
 	}
 
 	if user.EmailVerified {
 		err = errors.New("User's email has already been verified.")
-		c.Set(public_err_msg_key, err.Error())
-		c.Set(err_msg_logger_key, err.Error())
-		return echo.NewHTTPError(http.StatusBadRequest)
+		return apiError{
+			Code:      http.StatusBadRequest,
+			Msg:       err.Error(),
+			PublicMsg: err.Error(),
+			Err:       err,
+			RequestId: requestId,
+		}
 	}
 
 	// send the new email
