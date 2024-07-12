@@ -12,12 +12,12 @@ import (
 // apiError represents a way to define a custom apiError that ErrHandler can identify and use.
 type apiError struct {
 	// Code is the http response status code.
-	Code int
+	Code int `json:"-"`
 	// Err is the original error. This gets log by ErrHandler.
 	// This field can also be a validator.ValidationErrs.
-	Err error
+	Err error `json:"-"`
 	// Msg is the internal message that gets log.
-	Msg string
+	Msg string `json:"-"`
 
 	// Errs is a string that gets send back to the client after ValidationErrs is processed. This field will be in the json response if not empty.
 	Errs []string `json:"errors,omitempty"`
@@ -41,9 +41,8 @@ func ErrHandler(err error, c echo.Context) {
 		he := err.(*echo.HTTPError)
 		log.Error().Err(he).Msg("Echo HTTPError")
 		writeJSON(he.Code, c, map[string]string{"message": http.StatusText(http.StatusInternalServerError)})
-	case *apiError:
-		e := err.(*apiError)
-		var code int
+	case apiError:
+		e := err.(apiError)
 		if e.Code == 0 {
 			e.Code = http.StatusInternalServerError
 		}
@@ -70,10 +69,10 @@ func ErrHandler(err error, c echo.Context) {
 		log.Error().
 			Err(e.Err).
 			Str(echo.HeaderXRequestID, e.RequestId).
-			Int("status_code", code).
+			Int("status_code", e.Code).
 			Msg(e.Msg)
 
-		writeJSON(code, c, e)
+		writeJSON(e.Code, c, e)
 	default:
 		log.Error().Msg("Standard error encountered. Somewhere in route code is returning standard error.")
 		c.NoContent(http.StatusInternalServerError)
