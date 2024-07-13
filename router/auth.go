@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/juancwu/konbini/jwt"
@@ -17,6 +18,7 @@ func SetupAuthRouter(e RouterGroup) {
 	// sessions related routes
 	e.POST("/auth/signup", handleSignup)
 	e.POST("/auth/signin", handleSignin)
+	e.PATCH("/auth/refresh", handleRefresh)
 
 	// email related routes
 	e.GET("/auth/email/verify", handleVerifyEmail)
@@ -410,4 +412,73 @@ func handleResendVerificationEmail(c echo.Context) error {
 			"message": "New verification email sent.",
 		},
 	)
+}
+
+// handleRefresh handles incoming requests for a new access token without using credentials but client must provide a valid refresh token.
+func handleRefresh(c echo.Context) error {
+	requestId := c.Request().Header.Get(echo.HeaderXRequestID)
+	authHeader := c.Request().Header.Get(echo.HeaderAuthorization)
+	if authHeader == "" {
+		return apiError{
+			Code:      http.StatusUnauthorized,
+			Msg:       "Missing authorization header.",
+			PublicMsg: http.StatusText(http.StatusUnauthorized),
+			RequestId: requestId,
+		}
+	}
+	parts := strings.Split(authHeader, " ")
+	if len(parts) < 2 || strings.ToLower(parts[0]) != "bearer" {
+		return apiError{
+			Code:      http.StatusUnauthorized,
+			Msg:       "Invalid authorization header type.",
+			PublicMsg: http.StatusText(http.StatusUnauthorized),
+			RequestId: requestId,
+		}
+	}
+	token, err := jwt.VerifyRefreshToken(parts[1])
+	if err != nil {
+		return apiError{
+			Code:      http.StatusUnauthorized,
+			Err:       err,
+			Msg:       "Failed to verify refresh token.",
+			PublicMsg: http.StatusText(http.StatusUnauthorized),
+			RequestId: requestId,
+		}
+	}
+	claims, ok := token.Claims.(*jwt.JwtClaims)
+	if !ok {
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Msg:       "Failed to cast jwt.JwtClaims",
+			RequestId: requestId,
+		}
+	}
+	user, err := store.GetUserWithId(claims.UserId)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return apiError{
+				Code:      http.StatusUnauthorized,
+				Err:       err,
+				Msg:       "Failed to get user.",
+				RequestId: requestId,
+			}
+		}
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Err:       err,
+			Msg:       "Failed to get user.",
+			RequestId: requestId,
+		}
+	}
+	// create new access token
+	at, err := jwt.GenerateAccessToken(user.Id)
+	if err != nil {
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Err:       err,
+			Msg:       "Failed to generate access token.",
+			RequestId: requestId,
+		}
+	}
+	return writeJSON(http.StatusOK, c, map[string]string{"access_token": at})
 }
