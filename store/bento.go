@@ -1,7 +1,14 @@
 package store
 
 import (
+	"crypto"
+	"crypto/rsa"
+	"crypto/sha256"
+	"crypto/x509"
 	"database/sql"
+	"encoding/hex"
+	"encoding/pem"
+	"errors"
 	"time"
 )
 
@@ -20,6 +27,33 @@ type Bento struct {
 // You must call tx.Commit for it to take effect.
 func (b *Bento) Delete(tx *sql.Tx) (sql.Result, error) {
 	return tx.Exec("DELETE FROM bentos WHERE id = $1;", b.Id)
+}
+
+// VerifySignature verifies the given hex encoded signature with the given challenge.
+func (b *Bento) VerifySignature(signature string, challenge string) error {
+	// decode signature
+	decodedSignature, err := hex.DecodeString(signature)
+	if err != nil {
+		return err
+	}
+	// hashed challenge
+	decodedChallenge, err := hex.DecodeString(challenge)
+	if err != nil {
+		return err
+	}
+	hashed := sha256.Sum256(decodedChallenge)
+	// decode pem encoded public key
+	block, _ := pem.Decode([]byte(b.PubKey))
+	key, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		return err
+	}
+	pubKey, ok := key.(*rsa.PublicKey)
+	if !ok {
+		return errors.New("Invalid public key.")
+	}
+	// verify signature
+	return rsa.VerifyPKCS1v15(pubKey, crypto.SHA256, hashed[:], decodedSignature)
 }
 
 // NewBento will create and save a new bento into the database with the given information.

@@ -16,8 +16,59 @@ import (
 
 // SetupBentoRoutes setups the routes for bento services.
 func SetupBentoRoutes(e RouterGroup) {
+	e.GET("/bento/:bentoId", handleGetBento)
 	e.POST("/bento/prepare", handleNewBento, middleware.Protect())
 	e.DELETE("/bento/delete/:bentoId", handleDeleteBento, middleware.Protect())
+}
+
+// handleGetBento handles incoming requests to get an existing bento.
+func handleGetBento(c echo.Context) error {
+	requestId := c.Request().Header.Get(echo.HeaderXRequestID)
+	signature := c.QueryParam("signature")
+	challenge := c.QueryParam("challenge")
+	bentoId := c.Param("bentoId")
+
+	if bentoId == "" || !util.IsValidUUIDv4(bentoId) {
+		return c.NoContent(http.StatusNotFound)
+	}
+
+	if signature == "" {
+		return apiError{
+			Code:      http.StatusBadRequest,
+			RequestId: requestId,
+			Msg:       "Missing requried query parameter 'signature'",
+			PublicMsg: "Missing requried query parameter 'signature'. It should be hex encoded.",
+		}
+	}
+
+	if challenge == "" {
+		return apiError{
+			Code:      http.StatusBadRequest,
+			RequestId: requestId,
+			Msg:       "Missing requried query parameter 'challenge'",
+			PublicMsg: "Missing requried query parameter 'challenge'. It should be hex encoded.",
+		}
+	}
+
+	// get bento
+	bento, err := store.GetBentoWithId(bentoId)
+	if err != nil {
+		return c.NoContent(http.StatusNotFound)
+	}
+
+	// verify signature
+	err = bento.VerifySignature(signature, challenge)
+	if err != nil {
+		return apiError{
+			Code:      http.StatusBadRequest,
+			Msg:       "Invalid signature.",
+			PublicMsg: "Invalid signature.",
+			Err:       err,
+			RequestId: requestId,
+		}
+	}
+
+	return nil
 }
 
 // handleNewBento handles incoming requests to create a new bento. This route must be protected so that no anonymous client can access the api.
@@ -42,6 +93,7 @@ func handleNewBento(c echo.Context) error {
 		return apiError{
 			Code:      http.StatusBadRequest,
 			Msg:       "Error when validating new bento request body.",
+			PublicMsg: "Invalid request body",
 			RequestId: requestId,
 			Err:       err,
 		}
