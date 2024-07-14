@@ -3,6 +3,8 @@ package router
 import (
 	"fmt"
 	"net/http"
+	"regexp"
+	"strings"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
@@ -52,11 +54,28 @@ func ErrHandler(err error, c echo.Context) {
 				e.PublicMsg = "Invalid request body. Please fix the issues."
 			}
 			e.Errs = make([]string, len(ve))
+			re, err := regexp.Compile(`\[(\d+)\]`)
+			if err != nil {
+				log.Error().Err(err).Str(echo.HeaderXRequestID, e.RequestId).Msg("Failed to compile regex.")
+				re = nil
+			}
 			for i, err := range ve {
 				field := fmt.Sprintf("%s.%s", err.StructNamespace(), err.Tag())
+				var sliceIndeces []string
+				if re != nil {
+					matches := re.FindAllStringSubmatch(field, -1)
+					for _, m := range matches {
+						sliceIndeces = append(sliceIndeces, m[1])
+					}
+					field = re.ReplaceAllString(field, "")
+				}
+				log.Info().Msg(field)
 				msg, exists := reqBodyValidationMsgs[field]
 				if !exists {
 					msg = fmt.Sprintf("Validation failed on the '%s' failed.", err.Tag())
+				}
+				if len(sliceIndeces) > 0 {
+					msg = fmt.Sprintf("%s (index path: %s)", msg, strings.Join(sliceIndeces, "->"))
 				}
 				e.Errs[i] = msg
 			}
