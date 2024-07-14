@@ -22,11 +22,14 @@ var reqBodyValidationMsgs = map[string]string{
 	"resendVerificationEmailReqBody.Email.email":    "Invalid email provided",
 
 	// new bento messages
-	"newBentoReqBody.Name.required":   "Missing name in request body",
-	"newBentoReqBody.Name.min":        "Bento body name must longer than 3 and shorter than 15 characters",
-	"newBentoReqBody.Name.max":        "Bento body name must longer than 3 and shorter than 15 characters",
-	"newBentoReqBody.Name.ascii":      "Bento name can only contain printable ASCII characters",
-	"newBentoReqBody.PubKey.required": "Missing pub_key missing in request body",
+	"newBentoReqBody.Name.required":               "Missing name in request body",
+	"newBentoReqBody.Name.min":                    "Bento body name must longer than 3 and shorter than 15 characters",
+	"newBentoReqBody.Name.max":                    "Bento body name must longer than 3 and shorter than 15 characters",
+	"newBentoReqBody.Name.ascii":                  "Bento name can only contain printable ASCII characters",
+	"newBentoReqBody.PubKey.required":             "Missing pub_key missing in request body",
+	"newBentoReqBody.Ingridients.Name.required":   "Missing ingridient name.",
+	"newBentoReqBody.Ingridients.Name.printascii": "Ingridient name can only contain printable ascii characters.",
+	"newBentoReqBody.Ingridients.Value.required":  "Missing ingridient value.",
 }
 
 // signupReqBody represents the request body that is expected when handling a signup request.
@@ -53,4 +56,10 @@ type resendVerificationEmailReqBody struct {
 type newBentoReqBody struct {
 	Name   string `json:"name" validate:"required,min=3,max=50,ascii"`
 	PubKey string `json:"pub_key" validate:"required"`
+}
+
+// Ingridient is used in the addIngridientsReqBody.
+type Ingridient struct {
+	Name  string `json:"name" validate:"required,printascii"`
+	Value string `json:"value" validate:"required"`
 }

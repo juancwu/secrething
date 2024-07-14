@@ -147,6 +147,26 @@ func handleNewBento(c echo.Context) error {
 	}
 	log.Info().Str(echo.HeaderXRequestID, requestId).Str("bento_name", bento.Name).Str("bento_id", bento.Id).Msg("New bento created.")
 
+	if body.Ingridients != nil && len(body.Ingridients) > 0 {
+		log.Info().Str(echo.HeaderXRequestID, requestId).Msg("Trying to add ingridients.")
+		entries := make([]store.BentoEntry, len(body.Ingridients))
+		for i, ingridient := range body.Ingridients {
+			entries[i] = store.NewBentoEntry(ingridient.Name, ingridient.Value, bento.Id)
+		}
+		if err := store.SaveBentoEntryBatch(entries); err != nil {
+			return apiError{
+				Code:      http.StatusOK,
+				Err:       err,
+				Msg:       "Failed to add ingridients in the same request to prepare bento.",
+				PublicMsg: "New bento created, but ingridients were not able to be added.",
+				RequestId: requestId,
+			}
+		}
+		return writeJSON(http.StatusCreated, c, map[string]string{
+			"message": "New bento created and ingridients added.",
+		})
+	}
+
 	return writeJSON(http.StatusCreated, c, map[string]string{
 		"message": "New bento created! Start add ingridients to your bento.",
 	})
