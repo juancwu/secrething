@@ -16,9 +16,10 @@ import (
 
 // SetupBentoRoutes setups the routes for bento services.
 func SetupBentoRoutes(e RouterGroup) {
-	e.GET("/bento/:bentoId", handleGetBento)
+	e.GET("/bento/order/:bentoId", handleGetBento)
 	e.POST("/bento/prepare", handleNewBento, middleware.Protect())
 	e.DELETE("/bento/delete/:bentoId", handleDeleteBento, middleware.Protect())
+	e.POST("/bento/add/ingridients", handleAddIngridients)
 }
 
 // handleGetBento handles incoming requests to get an existing bento.
@@ -163,12 +164,14 @@ func handleNewBento(c echo.Context) error {
 			}
 		}
 		return writeJSON(http.StatusCreated, c, map[string]string{
-			"message": "New bento created and ingridients added.",
+			"message":  "New bento created and ingridients added.",
+			"bento_id": bento.Id,
 		})
 	}
 
 	return writeJSON(http.StatusCreated, c, map[string]string{
-		"message": "New bento created! Start add ingridients to your bento.",
+		"message":  "New bento created! Start add ingridients to your bento.",
+		"bento_id": bento.Id,
 	})
 }
 
@@ -255,4 +258,60 @@ func handleDeleteBento(c echo.Context) error {
 			Msg: "Bento deleted.",
 		},
 	)
+}
+
+// handleAddIngridients handles incoming requests to add a new ingridient (entry) to a bento
+func handleAddIngridients(c echo.Context) error {
+	requestId := c.Request().Header.Get(echo.HeaderXRequestID)
+	body := new(addIngridientsReqBody)
+	if err := readRequestBody(c, body); err != nil {
+		return apiError{
+			Code:      http.StatusBadRequest,
+			Err:       err,
+			Msg:       "Failed to read request body.",
+			PublicMsg: "Invalid body.",
+			RequestId: requestId,
+		}
+	}
+	bento, err := store.GetBentoWithId(body.BentoId)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return apiError{
+				Code:      http.StatusNotFound,
+				Err:       err,
+				Msg:       "Bento not found.",
+				PublicMsg: "Bento not found.",
+				RequestId: requestId,
+			}
+		}
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Err:       err,
+			RequestId: requestId,
+		}
+	}
+	// verify challenge and signature
+	if err := bento.VerifySignature(body.Signature, body.Challenge); err != nil {
+		return apiError{
+			Code:      http.StatusForbidden,
+			Msg:       "Invalid signature.",
+			PublicMsg: "Invalid signature.",
+			Err:       err,
+			RequestId: requestId,
+		}
+	}
+	entries := make([]store.BentoEntry, len(body.Ingridients))
+	for i := 0; i < len(body.Ingridients); i++ {
+		entries[i] = store.NewBentoEntry(body.Ingridients[i].Name, body.Ingridients[i].Value, bento.Id)
+	}
+	err = store.SaveBentoEntryBatch(entries)
+	if err != nil {
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Err:       err,
+			Msg:       "Failed to save batch of entries.",
+			RequestId: requestId,
+		}
+	}
+	return writeJSON(http.StatusOK, c, map[string]string{"message": "Ingridients added."})
 }

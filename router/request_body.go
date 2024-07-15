@@ -30,6 +30,17 @@ var reqBodyValidationMsgs = map[string]string{
 	"newBentoReqBody.Ingridients.Name.required":   "Missing ingridient name.",
 	"newBentoReqBody.Ingridients.Name.printascii": "Ingridient name can only contain printable ascii characters.",
 	"newBentoReqBody.Ingridients.Value.required":  "Missing ingridient value.",
+
+	// add ingridients messages
+	"addIngridientsReqBody.Ingridients.required":        "Missing ingridients in request body.",
+	"addIngridientsReqBody.Ingridients.gt":              "You must provide at least one Ingridient.",
+	"addIngridientsReqBody.BentoId.required":            "Missing bento id in request body.",
+	"addIngridientsReqBody.BentoId.uuid":                "Invalid uuid for bento id.",
+	"addIngridientsReqBody.Challenge.required":          "Missing challenge in request body.",
+	"addIngridientsReqBody.Signature.required":          "Missing signature in request body.",
+	"addIngridientsReqBody.Ingridients.Name.required":   "Missing ingridient name.",
+	"addIngridientsReqBody.Ingridients.Name.printascii": "Ingridient name can only contain printable ascii characters.",
+	"addIngridientsReqBody.Ingridients.Value.required":  "Missing ingridient value.",
 }
 
 // signupReqBody represents the request body that is expected when handling a signup request.
@@ -54,8 +65,17 @@ type resendVerificationEmailReqBody struct {
 
 // newBentoReqBody represents the request body that is expected when handling a new bento requets.
 type newBentoReqBody struct {
-	Name   string `json:"name" validate:"required,min=3,max=50,ascii"`
-	PubKey string `json:"pub_key" validate:"required"`
+	Name        string       `json:"name" validate:"required,min=3,max=50,ascii"`
+	PubKey      string       `json:"pub_key" validate:"required"`
+	Ingridients []Ingridient `json:"ingridients,omitempty" validate:"omitnil,dive"`
+}
+
+// addIngridientsReqBody represents the request body that is expected when handling adding a new Ingridient to a prepared bento.
+type addIngridientsReqBody struct {
+	BentoId     string       `json:"bento_id" validate:"required,uuid4"`
+	Ingridients []Ingridient `json:"ingridients" validate:"required,gt=0,dive"`
+	Challenge   string       `json:"challenge" validate:"required"`
+	Signature   string       `json:"signature" validate:"required"`
 }
 
 // Ingridient is used in the addIngridientsReqBody.
