@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/labstack/echo/v4"
+	"github.com/rs/zerolog/log"
 )
 
 // writeJSON is a helper function that writes json to the client.
@@ -22,4 +23,18 @@ func writeJSON(status int, c echo.Context, i interface{}) error {
 	c.Response().WriteHeader(status)
 	_, err = c.Response().Write(payload)
 	return err
+}
+
+// readRequestBody reads a request body and validates it.
+func readRequestBody(c echo.Context, body interface{}) error {
+	requestId := c.Request().Header.Get(echo.HeaderXRequestID)
+	log.Info().Str(echo.HeaderXRequestID, requestId).Msg("Binding request body.")
+	if err := c.Bind(body); err != nil {
+		return err
+	}
+	log.Info().Str(echo.HeaderXRequestID, requestId).Msg("Validating request body.")
+	if err := c.Validate(body); err != nil {
+		return err
+	}
+	return nil
 }
