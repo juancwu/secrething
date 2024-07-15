@@ -18,5 +18,5 @@ FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
 -- +goose Down
 -- +goose StatementBegin
 DROP TRIGGER IF EXISTS update_bento_entries_updated_at ON bento_entries;
-DRO; TABLE bento_entries;
+DROP TABLE bento_entries;
 -- +goose StatementEnd
