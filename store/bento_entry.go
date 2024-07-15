@@ -62,3 +62,29 @@ func SaveBentoEntryBatch(entries []BentoEntry) error {
 	}
 	return nil
 }
+
+// GetEntriesForBento will get all the entries for a given bento.
+func GetEntriesForBento(bentoId string) ([]BentoEntry, error) {
+	rows, err := db.Query("SELECT id, name, value, bento_id, created_at, updated_at FROM bento_entries WHERE bento_id = $1;", bentoId)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	entries := []BentoEntry{}
+	for rows.Next() {
+		entry := BentoEntry{}
+		err = rows.Scan(
+			&entry.Id,
+			&entry.Name,
+			&entry.Value,
+			&entry.BentoId,
+			&entry.CreatedAt,
+			&entry.UpdatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		entries = append(entries, entry)
+	}
+	return entries, nil
+}

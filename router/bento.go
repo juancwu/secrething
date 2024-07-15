@@ -16,14 +16,14 @@ import (
 
 // SetupBentoRoutes setups the routes for bento services.
 func SetupBentoRoutes(e RouterGroup) {
-	e.GET("/bento/order/:bentoId", handleGetBento)
+	e.GET("/bento/order/:bentoId", handleOrderBento)
 	e.POST("/bento/prepare", handleNewBento, middleware.Protect())
 	e.DELETE("/bento/delete/:bentoId", handleDeleteBento, middleware.Protect())
 	e.POST("/bento/add/ingridients", handleAddIngridients)
 }
 
-// handleGetBento handles incoming requests to get an existing bento.
-func handleGetBento(c echo.Context) error {
+// handleOrderBento handles incoming requests to get an existing bento.
+func handleOrderBento(c echo.Context) error {
 	requestId := c.Request().Header.Get(echo.HeaderXRequestID)
 	signature := c.QueryParam("signature")
 	challenge := c.QueryParam("challenge")
@@ -69,7 +69,30 @@ func handleGetBento(c echo.Context) error {
 		}
 	}
 
-	return nil
+	entries, err := store.GetEntriesForBento(bento.Id)
+	if err != nil {
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Err:       err,
+			Msg:       "Failed to get entries for bento.",
+			RequestId: requestId,
+		}
+	}
+
+	ingridients := make([]Ingridient, len(entries))
+	for i, e := range entries {
+		ingridients[i] = Ingridient{
+			Name:  e.Name,
+			Value: e.Value,
+		}
+	}
+
+	resBody := map[string]any{
+		"message":     "Here is your bento order.",
+		"ingridients": ingridients,
+	}
+
+	return writeJSON(http.StatusOK, c, resBody)
 }
 
 // handleNewBento handles incoming requests to create a new bento. This route must be protected so that no anonymous client can access the api.
