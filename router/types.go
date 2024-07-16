@@ -13,3 +13,8 @@ type RouterGroup interface {
 type basicRespBody struct {
 	Msg string `json:"message"`
 }
+
+// healthReport represents the report after doing a healthcheck on the server.
+type healthReport struct {
+	Database bool `json:"database"`
+}
