@@ -18,7 +18,7 @@ import (
 func SetupBentoRoutes(e RouterGroup) {
 	e.GET("/bento/order/:bentoId", handleOrderBento)
 	e.POST("/bento/prepare", handleNewBento, middleware.Protect())
-	e.DELETE("/bento/delete/:bentoId", handleDeleteBento, middleware.Protect())
+	e.DELETE("/bento/throw/:bentoId", handleThrowBento, middleware.Protect())
 	e.POST("/bento/add/ingridients", handleAddIngridients)
 }
 
@@ -198,11 +198,13 @@ func handleNewBento(c echo.Context) error {
 	})
 }
 
-// handleDeleteBento handles incoming requests to delete a bento
-func handleDeleteBento(c echo.Context) error {
+// handleThrowBento handles incoming requests to delete a bento from the database.
+func handleThrowBento(c echo.Context) error {
 	bentoId := c.Param("bentoId")
 	if bentoId == "" || !util.IsValidUUIDv4(bentoId) {
-		return c.NoContent(http.StatusNotFound)
+		return writeJSON(http.StatusNotFound, c, basicRespBody{
+			Msg: http.StatusText(http.StatusNotFound),
+		})
 	}
 
 	requestId := c.Request().Header.Get(echo.HeaderXRequestID)
@@ -219,7 +221,6 @@ func handleDeleteBento(c echo.Context) error {
 	bento, err := store.GetBentoWithId(bentoId)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return c.NoContent(http.StatusNotFound)
 		}
 		return apiError{
 			Code:      http.StatusInternalServerError,
