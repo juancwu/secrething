@@ -4,15 +4,20 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY main.go ./
-COPY ./server ./server
+COPY validator.go ./
+COPY ./router ./router
+COPY ./store ./store
+COPY ./config ./config
+COPY ./email ./email
+COPY ./jwt ./jwt
+COPY ./middleware ./middleware
+COPY ./util ./util
 
 RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o konbini
 
 FROM alpine as runner
 WORKDIR /go
 COPY --from=builder /app/konbini ./
-COPY ./migrations ./migrations
-COPY ./server/templates ./server/templates
 
 EXPOSE 3000
 
