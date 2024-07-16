@@ -24,3 +24,4 @@ go.work
 tmp
 *.pem
 .konbini.yaml
+.miconfig.prod.yaml
