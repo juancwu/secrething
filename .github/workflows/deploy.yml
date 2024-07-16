@@ -1,58 +1,72 @@
 name: Deploy Docker Image
-
 on:
   pull_request:
   push:
     tags:
       - 'v*'
-
 jobs:
-  docker:
+  migrate:
     runs-on: ubuntu-latest
     steps:
-      -
-        name: Set up QEMU
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.22.0
+      - name: Install Goose
+        run: go install github.com/pressly/goose/v3/cmd/goose@latest
+      - name: Run migrations
+        env:
+          DB_URL: ${{ secrets.HOST_DB_URL }}
+        run: goose -dir ./migrations postgres "$DB_URL" up
+  docker:
+    runs-on: ubuntu-latest
+    needs: migrate
+    steps:
+      - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
-      -
-        name: Set up Docker Buildx
+      - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      -
-        name: Login to Docker Hub
+      - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_TOKEN }}
-      -
-        name: Build and push
+      - name: Build and push
         uses: docker/build-push-action@v5
         with:
           push: true
           tags: ${{ secrets.DOCKER_USERNAME}}/${{ secrets.DOCKER_REPOSITORY }}:latest
-
       - name: Deploy to DO
         uses: appleboy/ssh-action@v1.0.3
         env:
+          # docker related envs
           IMAGE_PATH: ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKER_REPOSITORY }}:latest
-          APP_NAME: ${{ secrets.DOCKER_REPOSITORY }}
-          PORT: ${{ secrets.DOCKER_PORT }}
-          APP_PORT: ${{ secrets.DOCKER_APP_PORT }}
-          DB_URL: ${{ secrets.DOCKER_DB_URL }}
-          DB_NAME: ${{ secrets.DOCKER_DB_NAME }}
-          RESEND_API_KEY: ${{ secrets.DOCKER_RESEND_API_KEY }}
-          SERVER_URL: ${{ secrets.DOCKER_SERVER_URL }}
-          PGP_SYM_KEY: ${{ secrets.DOCKER_PGP_SYM_KEY }}
-          PASS_ENCRYPT_ALGO: ${{ secrets.DOCKER_PASS_ENCRYPT_ALGO }}
-          NOREPLY_EMAIL: ${{ secrets.DOCKER_NOREPLY_EMAIL }}
-          JWT_SECRET: ${{ secrets.DOCKER_JWT_SECRET }}
-          JWT_ISSUER: ${{ secrets.DOCKER_JWT_ISSUER }}
           APP_VERSION: ${{ github.ref_name }}
+          APP_NAME: ${{ secrets.DOCKER_REPOSITORY }}
+          HOST_PORT: ${{ secrets.HOST_PORT }}
+          # server related envs
+          APP_ENV: ${{ secrets.APP_ENV }}
+          PORT: ${{ secrets.PORT }}
+          DB_URL: ${{ secrets.DB_URL }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          DONOTREPLY_EMAIL: ${{ secrets.DONOTREPLY_EMAIL }}
+          SERVER_URL: ${{ secrets.SERVER_URL }}
+          PGP_SYM_KEY: ${{ secrets.PGP_SYM_KEY }}
+          PASS_ENCRYPT_ALGO: ${{ secrets.PASS_ENCRYPT_ALGO }}
+          JWT_ACCESS_TOKEN_SECRET: ${{ secrets.JWT_ACCESST_TOKEN_SECRET }}
+          JWT_ACCESS_TOKEN_TYPE: ${{ secrets.JWT_ACCESS_TOKEN_TYPE }}
+          JWT_REFRESH_TOKEN_SECRET: ${{ secrets.JWT_REFRESH_TOKEN_SECRET }}
+          JWT_REFRESH_TOKEN_TYPE: ${{ secrets.JWT_REFRESH_TOKEN_TYPE }}
+          JWT_ISSUER: ${{ secrets.JWT_ISSUER }}
         with:
           host: ${{ secrets.DO_HOST }}
           username: ${{ secrets.DO_USERNAME }}
           key: ${{ secrets.DO_KEY }}
-          envs: IMAGE_PATH,APP_NAME,PORT,DB_URL,DB_NAME,RESEND_API_KEY,SERVER_URL,NOREPLY_EMAIL,JWT_SECRET,JWT_ISSUER,PGP_SYM_KEY,PASS_ENCRYPT_ALGO,APP_PORT,APP_VERSION
+          envs: IMAGE_PATH,APP_NAME,APP_ENV,HOST_PORT,PORT,DB_URL,RESEND_API_KEY,DONOTREPLY_EMAIL,SERVER_URL,PGP_SYM_KEY,PASS_ENCRYPT_ALGO,JWT_ACCESS_TOKEN_SECRET,JWT_ACCESS_TOKEN_TYPE,JWT_REFRESH_TOKEN_SECRET,JWT_REFRESH_TOKEN_TYPE,JWT_ISSUER,APP_VERSION
           script: |
             docker image pull $IMAGE_PATH
             docker container stop $APP_NAME
             docker container rm $APP_NAME
-            docker container run -d --rm --network=host --add-host=host.docker.internal:host-gateway --name $APP_NAME -p $PORT:$PORT -e DB_URL=$DB_URL -e PORT=$APP_PORT -e DB_NAME=$DB_NAME -e RESEND_API_KEY=$RESEND_API_KEY -e SERVER_URL=$SERVER_URL -e PGP_SYM_KEY=$PGP_SYM_KEY -e PASS_ENCRYPT_ALGO=$PASS_ENCRYPT_ALGO -e NOREPLY_EMAIL=$NOREPLY_EMAIL -e JWT_SECRET=$JWT_SECRET -e JWT_ISSUER=$JWT_ISSUER -e APP_VERSION=$APP_VERSION $IMAGE_PATH
+            docker container run -d --rm --network=host --add-host=host.docker.internal:host-gateway --name $APP_NAME -p $HOST_PORT:$PORT -e DB_URL=$DB_URL -e PORT=$PORT -e RESEND_API_KEY=$RESEND_API_KEY -e SERVER_URL=$SERVER_URL -e PGP_SYM_KEY=$PGP_SYM_KEY -e PASS_ENCRYPT_ALGO=$PASS_ENCRYPT_ALGO -e NOREPLY_EMAIL=$NOREPLY_EMAIL -e DONOTREPLY_EMAIL=$DONOTREPLY_EMAIL -e JWT_ACCESS_TOKEN_SECRET=$JWT_ACCESS_TOKEN_SECRET -e JWT_REFRESH_TOKEN_SECRET=$JWT_REFRESH_TOKEN_SECRET -e JWT_ACCESS_TOKEN_TYPE=$JWT_ACCESS_TOKEN_TYPE -e JWT_REFRESH_TOKEN_TYPE=$JWT_REFRESH_TOKEN_TYPE -e JWT_ISSUER=$JWT_ISSUER -e APP_VERSION=$APP_VERSION $IMAGE_PATH
