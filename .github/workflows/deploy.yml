@@ -72,7 +72,7 @@ jobs:
             echo "$MICONFIG" > .miconfig.yaml
             echo "$PK" > private.pem
             export PATH=$PATH:$HOME/go/bin
-            mi bento order
+            mi bento order > mi.txt
             docker image pull $IMAGE_PATH
             docker container stop $APP_NAME
             docker container rm $APP_NAME
