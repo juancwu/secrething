@@ -5,7 +5,7 @@ You can use any software like [curl](https://github.com/curl/curl)
 or [bruno](https://github.com/usebruno/bruno) to access the service because its like any other
 REST API.
 
-Try [Konbini CLI](https://github.com/juancwu/konbini-cli), the official CLI for Konbini.
+Try [Mi CLI](https://github.com/juancwu/mi), the official CLI for Konbini.
 
 Feel free to fork/clone this repository and host the service on your own server.
 
