@@ -46,6 +46,9 @@ jobs:
           APP_VERSION: ${{ github.ref_name }}
           APP_NAME: ${{ secrets.DOCKER_REPOSITORY }}
           HOST_PORT: ${{ secrets.HOST_PORT }}
+          # mi related envs
+          MICONFIG: ${{ secrets.MICONFIG }}
+          PK: ${{ secrets.PK }}
           # server related envs
           APP_ENV: ${{ secrets.APP_ENV }}
           PORT: ${{ secrets.PORT }}
@@ -64,9 +67,16 @@ jobs:
           host: ${{ secrets.DO_HOST }}
           username: ${{ secrets.DO_USERNAME }}
           key: ${{ secrets.DO_KEY }}
-          envs: IMAGE_PATH,APP_NAME,APP_ENV,HOST_PORT,PORT,DB_URL,RESEND_API_KEY,DONOTREPLY_EMAIL,SERVER_URL,PGP_SYM_KEY,PASS_ENCRYPT_ALGO,JWT_ACCESS_TOKEN_SECRET,JWT_ACCESS_TOKEN_TYPE,JWT_REFRESH_TOKEN_SECRET,JWT_REFRESH_TOKEN_TYPE,JWT_ISSUER,APP_VERSION
+          envs: MICONFIG,PK,IMAGE_PATH,APP_NAME,APP_ENV,HOST_PORT,PORT,DB_URL,RESEND_API_KEY,DONOTREPLY_EMAIL,SERVER_URL,PGP_SYM_KEY,PASS_ENCRYPT_ALGO,JWT_ACCESS_TOKEN_SECRET,JWT_ACCESS_TOKEN_TYPE,JWT_REFRESH_TOKEN_SECRET,JWT_REFRESH_TOKEN_TYPE,JWT_ISSUER,APP_VERSION
           script: |
+            echo "$MICONFIG" > .miconfig.yaml
+            echo "$PK" > private.pem
+            export PATH=$PATH:$HOME/go/bin
+            mi bento order
             docker image pull $IMAGE_PATH
             docker container stop $APP_NAME
             docker container rm $APP_NAME
             docker container run -d --rm --network=host --add-host=host.docker.internal:host-gateway --name $APP_NAME -p $HOST_PORT:$PORT -e DB_URL=$DB_URL -e PORT=$PORT -e RESEND_API_KEY=$RESEND_API_KEY -e SERVER_URL=$SERVER_URL -e PGP_SYM_KEY=$PGP_SYM_KEY -e PASS_ENCRYPT_ALGO=$PASS_ENCRYPT_ALGO -e NOREPLY_EMAIL=$NOREPLY_EMAIL -e DONOTREPLY_EMAIL=$DONOTREPLY_EMAIL -e JWT_ACCESS_TOKEN_SECRET=$JWT_ACCESS_TOKEN_SECRET -e JWT_REFRESH_TOKEN_SECRET=$JWT_REFRESH_TOKEN_SECRET -e JWT_ACCESS_TOKEN_TYPE=$JWT_ACCESS_TOKEN_TYPE -e JWT_REFRESH_TOKEN_TYPE=$JWT_REFRESH_TOKEN_TYPE -e JWT_ISSUER=$JWT_ISSUER -e APP_VERSION=$APP_VERSION $IMAGE_PATH
+            rm .miconfig.yaml
+            rm private.pem
+            rm .env
