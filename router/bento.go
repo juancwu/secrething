@@ -17,7 +17,7 @@ import (
 // SetupBentoRoutes setups the routes for bento services.
 func SetupBentoRoutes(e RouterGroup) {
 	e.GET("/bento/order/:bentoId", handleOrderBento)
-	e.POST("/bento/prepare", handleNewBento, middleware.Protect())
+	e.POST("/bento/prepare", handlePrepareBento, middleware.Protect())
 	e.DELETE("/bento/throw/:bentoId", handleThrowBento, middleware.Protect())
 	e.POST("/bento/add/ingridients", handleAddIngridients)
 }
@@ -95,8 +95,8 @@ func handleOrderBento(c echo.Context) error {
 	return writeJSON(http.StatusOK, c, resBody)
 }
 
-// handleNewBento handles incoming requests to create a new bento. This route must be protected so that no anonymous client can access the api.
-func handleNewBento(c echo.Context) error {
+// handlePrepareBento handles incoming requests to create a new bento. This route must be protected so that no anonymous client can access the api.
+func handlePrepareBento(c echo.Context) error {
 	requestId := c.Request().Header.Get(echo.HeaderXRequestID)
 	body := new(newBentoReqBody)
 
