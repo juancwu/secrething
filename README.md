@@ -8,6 +8,7 @@ REST API.
 Try [Mi CLI](https://github.com/juancwu/mi), the official CLI for Konbini.
 
 Feel free to fork/clone this repository and host the service on your own server.
+Read the [documentation](/.github/docs/DOCUMENTATION.md) for more help.
 
 ## Table of Content
 - [Database Setup](#database-setup)
