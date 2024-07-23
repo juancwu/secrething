@@ -1,0 +1,15 @@
+meta {
+  name: verify email
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{URL}}/auth/email/verify
+  body: none
+  auth: none
+}
+
+vars:pre-request {
+  verificationId: IaqaEDCR9NSbXt6M
+}

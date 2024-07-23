@@ -1,0 +1,15 @@
+meta {
+  name: new access token
+  type: http
+  seq: 7
+}
+
+patch {
+  url: {{URL}}/auth/refresh
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNjA2MWU2M2ItMGJhYy00ZjFkLTgzYWMtMWZkNWNhNTJkZWRlIiwidG9rZW5fdHlwZSI6Imp3dHJlZnJlc2giLCJpc3MiOiJrb25iaW5pLXNlcnZpY2VzIiwiZXhwIjoxNzIxNDM3MTQyLCJpYXQiOjE3MjA4MzIzNDJ9.LsFUBk_wy5v3C_TRqZxFUp7bb-evH9xPP9bRE5mCNe8
+}
