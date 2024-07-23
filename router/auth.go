@@ -1,6 +1,8 @@
 package router
 
 import (
+	"bytes"
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -12,6 +14,7 @@ import (
 	"github.com/juancwu/konbini/email"
 	"github.com/juancwu/konbini/jwt"
 	"github.com/juancwu/konbini/store"
+	"github.com/juancwu/konbini/views"
 	"github.com/labstack/echo/v4"
 	"github.com/rs/zerolog/log"
 )
@@ -29,8 +32,7 @@ func SetupAuthRouter(e RouterGroup) {
 
 	// account related routes
 	e.GET("/auth/forgot/password", handleForgotPassword)
-	// TODO: finish handler
-	e.GET("/auth/reset/password/form", handleResetPasswordForm)
+	e.GET("/auth/reset/password", handleResetPasswordForm)
 	e.POST("/auth/reset/password", handleResetPassword)
 }
 
@@ -672,7 +674,19 @@ func handleResetPassword(c echo.Context) error {
 	return writeJSON(http.StatusOK, c, map[string]string{"message": "Password reset successful.", "request_id": requestId})
 }
 
-// TODO: finish this route, serves an html with a form for inputting a new password.
+// Only handles serving the reset password form view.
 func handleResetPasswordForm(c echo.Context) error {
-	return nil
+	requestId := c.Request().Header.Get(echo.HeaderXRequestID)
+	email := c.QueryParam("email")
+
+	var html bytes.Buffer
+	if err := views.ResetPasswordForm(fmt.Sprintf("%s/auth/reset/password", os.Getenv("SERVER_URL")), email).Render(context.Background(), &html); err != nil {
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Err:       err,
+			RequestId: requestId,
+		}
+	}
+
+	return c.HTML(http.StatusOK, html.String())
 }
