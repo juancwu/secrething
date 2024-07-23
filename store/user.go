@@ -30,7 +30,7 @@ func (u *User) Delete(tx *sql.Tx) (sql.Result, error) {
 //
 // You must call tx.Commit for it to take effect.
 func (u *User) Update(tx *sql.Tx) (sql.Result, error) {
-	return tx.Exec("UPDATE users SET email = $1, password = $2, name = $3, email_verified = $4 WHERE id = $5;", u.Email, u.Password, u.Name, u.EmailVerified, u.Id)
+	return tx.Exec("UPDATE users SET email = $1, password = crypt($2, gen_salt($6)), name = $3, email_verified = $4 WHERE id = $5;", u.Email, u.Password, u.Name, u.EmailVerified, u.Id, os.Getenv("PASS_ENCRYPT_ALGO"))
 }
 
 // NewUser creates a new user with the given information.
