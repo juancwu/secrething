@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"errors"
 	"net/http"
 	"strings"
 
@@ -33,13 +34,22 @@ func Protect() echo.MiddlewareFunc {
 				return c.JSON(http.StatusBadRequest, map[string]string{"message": "Invalid authorization header. Only bearer token is supported."})
 			}
 			// verify jwt
-			token, err := jwt.VerifyAccessToken(parts[1])
+			claims, err := jwt.VerifyAccessToken(parts[1])
 			if err != nil {
 				log.Error().Err(err).Str(echo.HeaderXRequestID, requestId).Str("path", path).Msg("Failed to validate access token.")
 				return c.JSON(http.StatusUnauthorized, map[string]string{"message": "unauthorized"})
 			}
-			c.Set(JWT_CLAIMS, token.Claims)
+			c.Set(JWT_CLAIMS, claims)
 			return next(c)
 		}
 	}
+}
+
+// Tries to get the jwt claims set by the Protect() middleware in the echo context.
+func GetJwtClaimsFromContext(c echo.Context) (*jwt.JwtClaims, error) {
+	claims, ok := c.Get(JWT_CLAIMS).(*jwt.JwtClaims)
+	if !ok {
+		return nil, errors.New("JWT claims not found in echo context")
+	}
+	return claims, nil
 }

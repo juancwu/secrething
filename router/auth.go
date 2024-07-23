@@ -153,7 +153,17 @@ func handleSignin(c echo.Context) error {
 		}
 	}
 
-	at, err := jwt.GenerateAccessToken(user.Id)
+	tx, err := store.StartTx()
+	if err != nil {
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Msg:       "Failed to start transaction for token generation.",
+			Err:       err,
+			RequestId: requestId,
+		}
+	}
+
+	at, err := jwt.GenerateAccessToken(tx, user.Id)
 	if err != nil {
 		return apiError{
 			Code:      http.StatusInternalServerError,
@@ -163,12 +173,24 @@ func handleSignin(c echo.Context) error {
 		}
 	}
 
-	rt, err := jwt.GenerateRefreshToken(user.Id)
+	rt, err := jwt.GenerateRefreshToken(tx, user.Id)
 	if err != nil {
 		return apiError{
 			Code:      http.StatusInternalServerError,
 			Msg:       "Failed to generate refresh token.",
 			Err:       err,
+			RequestId: requestId,
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		if err := tx.Rollback(); err != nil {
+			log.Error().Err(err).Str(echo.HeaderXRequestID, requestId).Msg("Failed to rollback changes for the generated tokens when signing in.")
+		}
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Err:       err,
+			Msg:       "Failed to commit changes for the generated tokens when signing in.",
 			RequestId: requestId,
 		}
 	}
@@ -446,21 +468,13 @@ func handleRefresh(c echo.Context) error {
 			RequestId: requestId,
 		}
 	}
-	token, err := jwt.VerifyRefreshToken(parts[1])
+	claims, err := jwt.VerifyRefreshToken(parts[1])
 	if err != nil {
 		return apiError{
 			Code:      http.StatusUnauthorized,
 			Err:       err,
 			Msg:       "Failed to verify refresh token.",
 			PublicMsg: http.StatusText(http.StatusUnauthorized),
-			RequestId: requestId,
-		}
-	}
-	claims, ok := token.Claims.(*jwt.JwtClaims)
-	if !ok {
-		return apiError{
-			Code:      http.StatusInternalServerError,
-			Msg:       "Failed to cast jwt.JwtClaims",
 			RequestId: requestId,
 		}
 	}
@@ -482,7 +496,16 @@ func handleRefresh(c echo.Context) error {
 		}
 	}
 	// create new access token
-	at, err := jwt.GenerateAccessToken(user.Id)
+	tx, err := store.StartTx()
+	if err != nil {
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Err:       err,
+			Msg:       "Failed to start transaction to generate access token using refresh token as authorization method.",
+			RequestId: requestId,
+		}
+	}
+	at, err := jwt.GenerateAccessToken(tx, user.Id)
 	if err != nil {
 		return apiError{
 			Code:      http.StatusInternalServerError,
@@ -491,6 +514,18 @@ func handleRefresh(c echo.Context) error {
 			RequestId: requestId,
 		}
 	}
+	if err := tx.Commit(); err != nil {
+		if err := tx.Rollback(); err != nil {
+			log.Error().Err(err).Str(echo.HeaderXRequestID, requestId).Msg("Failed to rollbakc changes when generating access token from refresh token.")
+		}
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Err:       err,
+			Msg:       "Failed to commit changes to save the newly genereated access token from refresh token.",
+			RequestId: requestId,
+		}
+	}
+
 	return writeJSON(http.StatusOK, c, map[string]string{"access_token": at})
 }
 
