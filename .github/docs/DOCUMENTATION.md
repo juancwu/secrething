@@ -4,12 +4,16 @@ This is a simple documentation for Konbini. Things might not be 1-1 with the cur
 implementation in `main`.
 
 ## Table of Content
-- [Routes](#routes)
-   * [Sign up / Create an account](#sign-up--create-an-account)
-   * [Sign in / Get access and refresh tokens](#sign-in--get-access-and-refresh-tokens)
-   * [Get new access token](#get-new-access-token)
-   * [Verify Email](#verify-email)
-   * [Resend verification email](#resend-verification-email)
+   * [Routes](#routes)
+      + [Sign up / Create an account](#sign-up-create-an-account)
+      + [Sign in / Get access and refresh tokens](#sign-in-get-access-and-refresh-tokens)
+      + [Get new access token](#get-new-access-token)
+      + [Verify email](#verify-email)
+      + [Resend verification email](#resend-verification-email)
+      + [Forgot password](#forgot-password)
+      + [Reset password](#reset-password)
+      + [Prepare bento](#prepare-bento)
+      + [Order bento](#order-bento)
 
 ## Routes
 
@@ -83,6 +87,29 @@ Content-Type: application/json
 {
     "email": "your@mail.com"
 }
+```
+
+### Forgot password
+
+This route requests a new password reset code for the given email. The code will be sent
+to the user's email and it expires in 3 minutes. You must use the [Reset password](#reset-password) route
+to finalize the password reset.
+
+```
+GET /auth/forgot/password?email HTTP/1.1
+Host: konbini.juancwu.dev
+
+Query:
+    email: required
+```
+
+### Reset password
+
+This routes is to finalize the password reset process. It requires the email and the code that
+its gotten from [Forgot password](#forgot-password) route.
+
+```
+Details not implemented yet.
 ```
 
 ### Prepare bento
