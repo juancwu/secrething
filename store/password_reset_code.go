@@ -1,6 +1,7 @@
 package store
 
 import (
+	"database/sql"
 	_ "embed"
 	"time"
 
@@ -15,6 +16,11 @@ type PasswordResetCode struct {
 	ExpiresAt time.Time
 	CreatedAt time.Time
 	UpdatedAt time.Time
+}
+
+// Delete the password reset code from the database.
+func (p *PasswordResetCode) Delete(tx *sql.Tx) (sql.Result, error) {
+	return tx.Exec("DELETE FROM password_reset_codes WHERE id = $1;", p.Id)
 }
 
 //go:embed raw_sql/new_or_update_password_reset_code.sql
@@ -43,5 +49,21 @@ func NewOrUpdatePasswordResetCode(uid string) (*PasswordResetCode, error) {
 		return nil, err
 	}
 
+	return &prc, nil
+}
+
+//go:embed raw_sql/get_password_reset_code_by_user_id.sql
+var getPasswordResetCodeByUserIdSQL string
+
+// Get a password reset code by using the given user id.
+func GetPasswordResetCodeByUserId(uid string) (*PasswordResetCode, error) {
+	row := db.QueryRow(getPasswordResetCodeByUserIdSQL, uid)
+	if err := row.Err(); err != nil {
+		return nil, err
+	}
+	prc := PasswordResetCode{}
+	if err := row.Scan(&prc.Id, &prc.Code, &prc.UserId, &prc.ExpiresAt, &prc.CreatedAt, &prc.UpdatedAt); err != nil {
+		return nil, err
+	}
 	return &prc, nil
 }

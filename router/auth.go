@@ -31,6 +31,7 @@ func SetupAuthRouter(e RouterGroup) {
 	e.GET("/auth/forgot/password", handleForgotPassword)
 	// TODO: finish handler
 	e.GET("/auth/reset/password/form", handleResetPasswordForm)
+	e.POST("/auth/reset/password", handleResetPassword)
 }
 
 // handleSignup handles incoming signup requests
@@ -554,6 +555,122 @@ func handleForgotPassword(c echo.Context) error {
 	return writeJSON(http.StatusOK, c, map[string]string{"message": "You should receive an email with a link to reset your password."})
 }
 
+// Handles requests to reset a user's password.
+// A code of length 6 is required and gotten from the forgot passwor route.
+func handleResetPassword(c echo.Context) error {
+	requestId := c.Request().Header.Get(echo.HeaderXRequestID)
+	email := c.FormValue("email")
+	code := c.FormValue("code")
+	password := c.FormValue("password")
+
+	if email == "" || code == "" || password == "" {
+		return apiError{
+			Code:      http.StatusBadRequest,
+			Msg:       "Missing code, email, or password form values.",
+			PublicMsg: "Missing code, email, or password form values.",
+			RequestId: requestId,
+		}
+	}
+
+	// TODO: add password format validation
+
+	user, err := store.GetUserWithEmail(email)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return apiError{
+				Code:      http.StatusBadRequest,
+				Msg:       fmt.Sprintf("No user found with given email. Email: %s", email),
+				RequestId: requestId,
+			}
+		}
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Err:       err,
+			Msg:       "Failed to get user",
+			RequestId: requestId,
+		}
+	}
+
+	prc, err := store.GetPasswordResetCodeByUserId(user.Id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return apiError{
+				Code:      http.StatusBadRequest,
+				Msg:       "No password reset code found",
+				PublicMsg: "Invalid code.",
+				RequestId: requestId,
+			}
+		}
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Msg:       "Failed to get password reset code",
+			Err:       err,
+			RequestId: requestId,
+		}
+	}
+
+	if time.Now().After(prc.ExpiresAt) {
+		return apiError{
+			Code:      http.StatusBadRequest,
+			Msg:       "Password reset code is expired.",
+			PublicMsg: "Invalid code.",
+			RequestId: requestId,
+		}
+	}
+
+	if prc.Code != code {
+		return apiError{
+			Code:      http.StatusBadRequest,
+			Msg:       "Password reset codes do not match.",
+			PublicMsg: "Invalid code.",
+			RequestId: requestId,
+		}
+	}
+
+	// update the user's password
+	user.Password = password
+	tx, err := store.StartTx()
+	if err != nil {
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Msg:       "Failed to start transaction to update user password.",
+			Err:       err,
+			RequestId: requestId,
+		}
+	}
+	if _, err := user.Update(tx); err != nil {
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Msg:       "Failed to update user password",
+			Err:       err,
+			RequestId: requestId,
+		}
+	}
+
+	if _, err := prc.Delete(tx); err != nil {
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Msg:       "Failed to delete password reset code after usage.",
+			Err:       err,
+			RequestId: requestId,
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		rollbakErr := tx.Rollback()
+		if rollbakErr != nil {
+			log.Error().Err(err).Str(echo.HeaderXRequestID, requestId).Msg("Failed to rollback.")
+		}
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Msg:       "Failed to commit changes",
+			Err:       err,
+			RequestId: requestId,
+		}
+	}
+
+	return writeJSON(http.StatusOK, c, map[string]string{"message": "Password reset successful.", "request_id": requestId})
+}
 
 // TODO: finish this route, serves an html with a form for inputting a new password.
 func handleResetPasswordForm(c echo.Context) error {
