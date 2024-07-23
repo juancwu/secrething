@@ -676,6 +676,10 @@ func handleResetPassword(c echo.Context) error {
 		}
 	}
 	if _, err := user.Update(tx); err != nil {
+		rollbakErr := tx.Rollback()
+		if rollbakErr != nil {
+			log.Error().Err(err).Str(echo.HeaderXRequestID, requestId).Msg("Failed to rollback.")
+		}
 		return apiError{
 			Code:      http.StatusInternalServerError,
 			Msg:       "Failed to update user password",
@@ -685,12 +689,36 @@ func handleResetPassword(c echo.Context) error {
 	}
 
 	if _, err := prc.Delete(tx); err != nil {
+		rollbakErr := tx.Rollback()
+		if rollbakErr != nil {
+			log.Error().Err(err).Str(echo.HeaderXRequestID, requestId).Msg("Failed to rollback.")
+		}
 		return apiError{
 			Code:      http.StatusInternalServerError,
 			Msg:       "Failed to delete password reset code after usage.",
 			Err:       err,
 			RequestId: requestId,
 		}
+	}
+
+	// delete the tokens associated to user
+	deleteResult, err := store.DeleteTokensOwnedByUser(tx, user.Id)
+	if err != nil {
+		rollbakErr := tx.Rollback()
+		if rollbakErr != nil {
+			log.Error().Err(err).Str(echo.HeaderXRequestID, requestId).Msg("Failed to rollback.")
+		}
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Msg:       "Failed to delete all tokens owned by user.",
+			Err:       err,
+			RequestId: requestId,
+		}
+	}
+	if n, err := deleteResult.RowsAffected(); err != nil {
+		log.Error().Err(err).Str(echo.HeaderXRequestID, requestId).Msg("Failed to get how many rows from auth_tokens where deleted.")
+	} else {
+		log.Info().Int64("delete_count", n).Str(echo.HeaderXRequestID, requestId).Msg("Rows deleted from auth_tokens.")
 	}
 
 	if err := tx.Commit(); err != nil {

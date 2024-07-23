@@ -1,6 +1,7 @@
 package store
 
 import (
+	"database/sql"
 	"errors"
 	"time"
 
@@ -29,4 +30,9 @@ func IsTokenValid(tokenId, tokenType string) error {
 		return errors.New("Token exists in database but it has expired")
 	}
 	return nil
+}
+
+// Deletes all the tokens, access and refresh tokens owned by the given user with the userId.
+func DeleteTokensOwnedByUser(tx *sql.Tx, userId string) (sql.Result, error) {
+	return tx.Exec("DELETE FROM auth_tokens WHERE user_id = $1;", userId)
 }
