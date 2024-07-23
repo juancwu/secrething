@@ -15,6 +15,8 @@ const (
 	JWT_CLAIMS = "JWT_CLAIMS"
 )
 
+var ErrNoJwtClaims error = errors.New("JWT claims not found in echo context")
+
 // Protect is a middleware that is used to protect a route by authorizing clients with a Bearer token.
 //
 // This middleware will attach the claims into the echo.Context using JWT_CLAIMS.
@@ -49,7 +51,7 @@ func Protect() echo.MiddlewareFunc {
 func GetJwtClaimsFromContext(c echo.Context) (*jwt.JwtClaims, error) {
 	claims, ok := c.Get(JWT_CLAIMS).(*jwt.JwtClaims)
 	if !ok {
-		return nil, errors.New("JWT claims not found in echo context")
+		return nil, ErrNoJwtClaims
 	}
 	return claims, nil
 }
