@@ -42,7 +42,7 @@ func ErrHandler(err error, c echo.Context) {
 	case *echo.HTTPError:
 		he := err.(*echo.HTTPError)
 		log.Error().Err(he).Msg("Echo HTTPError")
-		writeJSON(he.Code, c, map[string]string{"message": http.StatusText(http.StatusInternalServerError)})
+		writeJSON(he.Code, c, map[string]string{"message": http.StatusText(he.Code)})
 	case apiError:
 		e := err.(apiError)
 		if e.Code == 0 {
