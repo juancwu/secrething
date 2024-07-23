@@ -29,3 +29,13 @@ func RenderVerifiationEmail(name, url string) (string, error) {
 	}
 	return html.String(), nil
 }
+
+// Renders the email that is sent to the user who requested a password reset code.
+func RenderPasswordResetCodeEmail(name, code, url string) (string, error) {
+	var html bytes.Buffer
+	err := resetPasswordEmail(name, code, url).Render(context.Background(), &html)
+	if err != nil {
+		return "", err
+	}
+	return html.String(), nil
+}

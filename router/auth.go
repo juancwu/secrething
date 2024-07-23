@@ -3,10 +3,13 @@ package router
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
+	"github.com/juancwu/konbini/email"
 	"github.com/juancwu/konbini/jwt"
 	"github.com/juancwu/konbini/store"
 	"github.com/labstack/echo/v4"
@@ -23,6 +26,9 @@ func SetupAuthRouter(e RouterGroup) {
 	// email related routes
 	e.GET("/auth/email/verify", handleVerifyEmail)
 	e.POST("/auth/email/resend", handleResendVerificationEmail)
+
+	// account related routes
+	e.GET("/auth/forgot/password", handleForgotPassword)
 }
 
 // handleSignup handles incoming signup requests
@@ -481,4 +487,67 @@ func handleRefresh(c echo.Context) error {
 		}
 	}
 	return writeJSON(http.StatusOK, c, map[string]string{"access_token": at})
+}
+
+// Handle incoming request to start the password reset process.
+// Users receive an email with a code and link to open in their browsers to finish the process.
+// The link does not include the code itself but just the email. The email is used to put in the form that is
+// then sent to the backend for further processing along with the code in their email.
+func handleForgotPassword(c echo.Context) error {
+	requestId := c.Request().Header.Get(echo.HeaderXRequestID)
+	userEmail := c.QueryParam("email")
+	if userEmail == "" {
+		return apiError{
+			Code:      http.StatusBadRequest,
+			PublicMsg: "Missing 'email' query parameter.",
+			RequestId: requestId,
+		}
+	}
+
+	user, err := store.GetUserWithEmail(userEmail)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return apiError{
+				Code:      http.StatusBadRequest,
+				PublicMsg: "No user with given email.",
+				RequestId: requestId,
+			}
+		}
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Msg:       "Failed to get user with email",
+			Err:       err,
+			RequestId: requestId,
+		}
+	}
+
+	prc, err := store.NewOrUpdatePasswordResetCode(user.Id)
+	if err != nil {
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Err:       err,
+			Msg:       "Failed to create or update password reset code.",
+			RequestId: requestId,
+		}
+	}
+
+	template, err := email.RenderPasswordResetCodeEmail(user.Name, prc.Code, fmt.Sprintf("%s/auth/reset/password?email=%s", os.Getenv("SERVER_URL"), user.Email))
+	if err != nil {
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Err:       err,
+			Msg:       "Failed to render password reset code email template.",
+			RequestId: requestId,
+		}
+	}
+
+	go func(template, requestId string) {
+		res, err := email.Send("Reset Password - Konbini", os.Getenv("DONOTREPLY_EMAIL"), []string{user.Email}, template)
+		if err != nil {
+			log.Error().Err(err).Str(echo.HeaderXRequestID, requestId).Msg("Failed to send password reset code email.")
+		}
+		log.Info().Str(echo.HeaderXRequestID, requestId).Str("resend_email_id", res.Id).Msg("Password reset code email sent.")
+	}(template, requestId)
+
+	return writeJSON(http.StatusOK, c, map[string]string{"message": "You should receive an email with a link to reset your password."})
 }
