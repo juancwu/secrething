@@ -15,6 +15,7 @@ import (
 	"github.com/juancwu/konbini/jwt"
 	"github.com/juancwu/konbini/middleware"
 	"github.com/juancwu/konbini/store"
+	"github.com/juancwu/konbini/util"
 	"github.com/juancwu/konbini/views"
 	"github.com/labstack/echo/v4"
 	"github.com/rs/zerolog/log"
@@ -588,7 +589,14 @@ func handleResetPassword(c echo.Context) error {
 		}
 	}
 
-	// TODO: add password format validation
+	if !util.ValidatePassword(password) {
+		return apiError{
+			Code:      http.StatusBadRequest,
+			Msg:       "Invalid password format.",
+			PublicMsg: "Invalid password format. A password must of at least 12 characters and combines at least one special character, uppercase and lowercase letter, and number",
+			RequestId: requestId,
+		}
+	}
 
 	user, err := store.GetUserWithEmail(email)
 	if err != nil {
