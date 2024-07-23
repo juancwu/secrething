@@ -1,9 +1,8 @@
 package main
 
 import (
-	"regexp"
-
 	"github.com/go-playground/validator/v10"
+	"github.com/juancwu/konbini/util"
 )
 
 // customValidator represents the custom validator the echo server uses to validate data.
@@ -24,31 +23,5 @@ func (cv *customValidator) Validate(i interface{}) error {
 // and at least one digit.
 func validatePassword(fl validator.FieldLevel) bool {
 	password := fl.Field().String()
-
-	n := len(password)
-	if n < 12 {
-		return false
-	}
-
-	// check for special character
-	if matched, _ := regexp.MatchString(`[!@#$%^&*(),.?":{}|<>]`, password); !matched {
-		return false
-	}
-
-	// check for uppercase letter
-	if matched, _ := regexp.MatchString(`[A-Z]`, password); !matched {
-		return false
-	}
-
-	// check for lowercase letter
-	if matched, _ := regexp.MatchString(`[a-z]`, password); !matched {
-		return false
-	}
-
-	// check for number
-	if matched, _ := regexp.MatchString(`[0-9]`, password); !matched {
-		return false
-	}
-
-	return true
+	return util.ValidatePassword(password)
 }
