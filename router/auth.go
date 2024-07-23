@@ -296,14 +296,9 @@ func handleVerifyEmail(c echo.Context) error {
 	}
 
 	log.Info().Str(echo.HeaderXRequestID, requestId).Msg("Setting user email verified to true.")
-	user.EmailVerified = true
-	res, err := user.Update(tx)
+	res, err := user.SetEmailVerifiedTx(tx, true)
 	if err != nil {
-		log.Error().Err(err).Str(echo.HeaderXRequestID, requestId).Str("user_id", user.Id).Msg("Failed to update user.")
-		rollbackErr := tx.Rollback()
-		if rollbackErr != nil {
-			log.Error().Err(rollbackErr).Str(echo.HeaderXRequestID, requestId).Str("user_id", user.Id).Msg("Failed to rollback after failing to update user.")
-		}
+		store.Rollback(tx, requestId)
 		return apiError{
 			Code:      http.StatusInternalServerError,
 			Msg:       "Failed to update user.",
@@ -311,21 +306,13 @@ func handleVerifyEmail(c echo.Context) error {
 			RequestId: requestId,
 		}
 	}
-	n, _ := res.RowsAffected()
-	if n < 1 {
-		err = errors.New("Failed to update user model.")
-		log.Error().Err(err).Str("user_id", user.Id).Str(echo.HeaderXRequestID, requestId).Msg("Failed to update user.")
-		return err
-	} else if n > 1 {
-		log.Warn().Str(echo.HeaderXRequestID, requestId).Str("user_id", user.Id).Msgf("Multiple users where updated when trying to update one user. Count: %d. Will rollback.", n)
-		err = tx.Rollback()
-		if err != nil {
-			return apiError{
-				Code:      http.StatusInternalServerError,
-				Msg:       "Failed to rollback on multiple users updated on email verification process.",
-				Err:       err,
-				RequestId: requestId,
-			}
+	_, err = res.RowsAffected()
+	if err != nil {
+		store.Rollback(tx, requestId)
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Msg:       "Failed to update user.",
+			RequestId: requestId,
 		}
 	}
 	log.Info().Str(echo.HeaderXRequestID, requestId).Str("user_id", user.Id).Bool("email_verified", user.EmailVerified).Msg("User updated.")
@@ -334,6 +321,7 @@ func handleVerifyEmail(c echo.Context) error {
 	log.Info().Str(echo.HeaderXRequestID, requestId).Int64("email_verification_code", ev.Id).Msg("Delete used email verification code.")
 	res, err = ev.Delete(tx)
 	if err != nil {
+		store.Rollback(tx, requestId)
 		return apiError{
 			Code:      http.StatusInternalServerError,
 			Msg:       "Failed to delete used email verification code.",
@@ -341,27 +329,21 @@ func handleVerifyEmail(c echo.Context) error {
 			RequestId: requestId,
 		}
 	}
-	n, _ = res.RowsAffected()
-	if n < 1 {
-		err = errors.New("Failed to delete used email verification code.")
+	_, err = res.RowsAffected()
+	if err != nil {
+		store.Rollback(tx, requestId)
 		log.Error().Err(err).Int64("email_verification_code_id", ev.Id).Str(echo.HeaderXRequestID, requestId).Msg("Failed to delete used email verification code.")
-		return err
-	} else if n > 1 {
-		log.Warn().Str(echo.HeaderXRequestID, requestId).Int64("email_verification_code_id", ev.Id).Msgf("Multiple email verifications where deleted when trying to delete one. Count: %d. Will rollback.", n)
-		err = tx.Rollback()
-		if err != nil {
-			return apiError{
-				Code:      http.StatusInternalServerError,
-				Msg:       "Failed to rollback on multiple deleted email verifications on email verification process.",
-				Err:       err,
-				RequestId: requestId,
-			}
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Msg:       "Failed to delete used email verification code.",
+			RequestId: requestId,
 		}
 	}
 
 	log.Info().Str(echo.HeaderXRequestID, requestId).Msg("Committing changes in transaction.")
 	err = tx.Commit()
 	if err != nil {
+		store.Rollback(tx, requestId)
 		return apiError{
 			Code:      http.StatusInternalServerError,
 			Msg:       "Failed to commit changes in transaction.",
@@ -370,12 +352,7 @@ func handleVerifyEmail(c echo.Context) error {
 		}
 	}
 
-	return c.JSON(
-		http.StatusOK,
-		map[string]string{
-			"message": "Successfully verified email.",
-		},
-	)
+	return writeJSON(http.StatusOK, c, basicRespBody{Msg: "Successfully verifie email!", RequestId: requestId})
 }
 
 // handleResendVerificationEmail handles incoming request to send a new verification email.

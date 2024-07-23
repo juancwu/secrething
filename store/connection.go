@@ -8,7 +8,9 @@ import (
 	"time"
 
 	// package modules
+	"github.com/labstack/echo/v4"
 	_ "github.com/lib/pq"
+	"github.com/rs/zerolog/log"
 )
 
 // db is the connection we have established with the database when Connect is successful.
@@ -58,4 +60,14 @@ func Ping() error {
 // StartTx begins a new transaction
 func StartTx() (*sql.Tx, error) {
 	return db.Begin()
+}
+
+// Rollback is a helper function to rollback if tx.Commit() returns an error
+// and will log if rollback results in an error.
+func Rollback(tx *sql.Tx, requestId string) error {
+	if err := tx.Rollback(); err != nil {
+		log.Error().Err(err).Str(echo.HeaderXRequestID, requestId).Msg("Failed to rollback")
+		return err
+	}
+	return nil
 }

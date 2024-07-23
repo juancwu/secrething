@@ -24,6 +24,11 @@ func (u *User) Delete(tx *sql.Tx) (sql.Result, error) {
 	return tx.Exec("DELETE FROM users WHERE id = $1;", u.Id)
 }
 
+// DEPRACATED: this method will try to update the columns in users
+// and rehash the password while doing so, which causes issues since the
+// password is not the same anymore. This leads to users unable to access
+// their accounts unless they reset their password.
+//
 // Update updates the user in the database with the current field values of the struct.
 //
 // This does not update the Id, CreatedAt, and UpdatedAt fields.
