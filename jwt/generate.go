@@ -30,7 +30,7 @@ type JwtClaims struct {
 // Creates a new row in the auth_tokens table to register the token
 // to allow validation/invalidation of tokens.
 func saveTokenInDatabase(tx *sql.Tx, uid, tokenType string, exp time.Time) (string, error) {
-	row := tx.QueryRow("INSERT INTO auth_tokens (user_id, token_type, expires_at) VALUES ($1, $2) RETURNING id;", uid, tokenType, exp)
+	row := tx.QueryRow("INSERT INTO auth_tokens (user_id, token_type, expires_at) VALUES ($1, $2, $3) RETURNING id;", uid, tokenType, exp)
 	if err := row.Err(); err != nil {
 		return "", err
 	}
