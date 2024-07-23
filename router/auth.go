@@ -29,6 +29,8 @@ func SetupAuthRouter(e RouterGroup) {
 
 	// account related routes
 	e.GET("/auth/forgot/password", handleForgotPassword)
+	// TODO: finish handler
+	e.GET("/auth/reset/password/form", handleResetPasswordForm)
 }
 
 // handleSignup handles incoming signup requests
@@ -550,4 +552,10 @@ func handleForgotPassword(c echo.Context) error {
 	}(template, requestId)
 
 	return writeJSON(http.StatusOK, c, map[string]string{"message": "You should receive an email with a link to reset your password."})
+}
+
+
+// TODO: finish this route, serves an html with a form for inputting a new password.
+func handleResetPasswordForm(c echo.Context) error {
+	return nil
 }
