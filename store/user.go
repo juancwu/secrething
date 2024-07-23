@@ -38,6 +38,19 @@ func (u *User) Update(tx *sql.Tx) (sql.Result, error) {
 	return tx.Exec("UPDATE users SET email = $1, password = crypt($2, gen_salt($6)), name = $3, email_verified = $4 WHERE id = $5;", u.Email, u.Password, u.Name, u.EmailVerified, u.Id, os.Getenv("PASS_ENCRYPT_ALGO"))
 }
 
+// Sets the value for the email_verified column in the users table.
+// Will set the User.EmailVerified field to the boolean value 'v'.
+//
+// You must call tx.Commit() for it to take effect.
+func (u *User) SetEmailVerifiedTx(tx *sql.Tx, v bool) (sql.Result, error) {
+	res, err := tx.Exec("UPDATE users SET email_verified = $1 WHERE id = $2;", v, u.Id)
+	if err != nil {
+		return nil, err
+	}
+	u.EmailVerified = v
+	return res, nil
+}
+
 // NewUser creates a new user with the given information.
 // This function will save the new user in the database.
 func NewUser(email, password, name string) (*User, error) {

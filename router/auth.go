@@ -13,6 +13,7 @@ import (
 
 	"github.com/juancwu/konbini/email"
 	"github.com/juancwu/konbini/jwt"
+	"github.com/juancwu/konbini/middleware"
 	"github.com/juancwu/konbini/store"
 	"github.com/juancwu/konbini/views"
 	"github.com/labstack/echo/v4"
@@ -34,6 +35,7 @@ func SetupAuthRouter(e RouterGroup) {
 	e.GET("/auth/forgot/password", handleForgotPassword)
 	e.GET("/auth/reset/password", handleResetPasswordForm)
 	e.POST("/auth/reset/password", handleResetPassword)
+	e.DELETE("/auth/account", handleDeleteAccount, middleware.Protect())
 }
 
 // handleSignup handles incoming signup requests
@@ -729,4 +731,100 @@ func handleResetPasswordForm(c echo.Context) error {
 	}
 
 	return c.HTML(http.StatusOK, html.String())
+}
+
+// Handle requests to delete user account. Everything related to the account will be deleted.
+// This includes all prepared bentos.
+func handleDeleteAccount(c echo.Context) error {
+	requestId := c.Request().Header.Get(echo.HeaderXRequestID)
+	claims, err := middleware.GetJwtClaimsFromContext(c)
+	if err != nil {
+		if errors.Is(err, middleware.ErrNoJwtClaims) {
+			return echo.NewHTTPError(http.StatusUnauthorized)
+		}
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Err:       err,
+			Msg:       "Failed to get jwt claims from context to delete account.",
+			RequestId: requestId,
+		}
+	}
+
+	user, err := store.GetUserWithId(claims.UserId)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return apiError{
+				Code:      http.StatusNotFound,
+				Err:       err,
+				Msg:       "No user found to delete.",
+				PublicMsg: "No user found to delete.",
+				RequestId: requestId,
+			}
+		}
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Err:       err,
+			Msg:       "Failed to get user with id to delete account.",
+			RequestId: requestId,
+		}
+	}
+
+	tx, err := store.StartTx()
+	if err != nil {
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Err:       err,
+			Msg:       "Failed to start transaction to delete user.",
+			RequestId: requestId,
+		}
+	}
+
+	res, err := user.Delete(tx)
+	if err != nil {
+		if err := tx.Rollback(); err != nil {
+			log.Error().Err(err).Str(echo.HeaderXRequestID, requestId).Msg("Failed to rollback.")
+		}
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Err:       err,
+			Msg:       "Failed to delete user",
+			RequestId: requestId,
+		}
+	}
+
+	n, err := res.RowsAffected()
+	if err != nil {
+		if err := tx.Rollback(); err != nil {
+			log.Error().Err(err).Str(echo.HeaderXRequestID, requestId).Msg("Failed to rollback.")
+		}
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Err:       err,
+			Msg:       "Failed to get affected rows count after perfroming DELETE on user.",
+			RequestId: requestId,
+		}
+	}
+
+	if n < 1 {
+		return apiError{
+			Code:      http.StatusNotModified,
+			Msg:       "Failed to delete account since less than 1 users where deleted.",
+			PublicMsg: "Account not deleted.",
+			RequestId: requestId,
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		if err := tx.Rollback(); err != nil {
+			log.Error().Err(err).Str(echo.HeaderXRequestID, requestId).Msg("Failed to rollback.")
+		}
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Err:       err,
+			Msg:       "Failed to commit changes to delete account.",
+			RequestId: requestId,
+		}
+	}
+
+	return writeJSON(http.StatusOK, c, basicRespBody{Msg: "Account deleted. All data related to account pruned. This include all bentos previously created.", RequestId: requestId})
 }
