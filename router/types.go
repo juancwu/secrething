@@ -11,7 +11,8 @@ type RouterGroup interface {
 
 // basicRespBody represents a basic JSON response body that only has a "message" field.
 type basicRespBody struct {
-	Msg string `json:"message"`
+	Msg       string `json:"message"`
+	RequestId string `json:"request_id,omitempty"`
 }
 
 // healthReport represents the report after doing a healthcheck on the server.
