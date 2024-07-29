@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	O_READ              int = 0b0000_0000_0000_0000
+	O_NO_PERMS          int = 0b0000_0000_0000_0000
 	O_WRITE             int = 0b0000_0000_0000_0001
 	O_SHARE             int = 0b0000_0000_0000_0010
 	O_GRANT_SHARE       int = 0b0000_0000_0000_0100
