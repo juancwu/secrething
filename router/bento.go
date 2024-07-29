@@ -19,7 +19,7 @@ func SetupBentoRoutes(e RouterGroup) {
 	e.GET("/bento/order/:bentoId", handleOrderBento)
 	e.POST("/bento/prepare", handlePrepareBento, middleware.Protect())
 	e.DELETE("/bento/throw/:bentoId", handleThrowBento, middleware.Protect())
-	e.POST("/bento/add/ingridients", handleAddIngridients)
+	e.POST("/bento/add/ingridients", handleAddIngridients, middleware.Protect())
 	e.PATCH("/bento/rename", handleRenameBento, middleware.Protect())
 }
 
@@ -373,6 +373,7 @@ func handleAddIngridients(c echo.Context) error {
 			RequestId: requestId,
 		}
 	}
+
 	// verify challenge and signature
 	if err := bento.VerifySignature(body.Signature, body.Challenge); err != nil {
 		return apiError{
@@ -384,7 +385,36 @@ func handleAddIngridients(c echo.Context) error {
 		}
 	}
 
-	// verify permissions to write
+	// jwt claims
+	claims, err := middleware.GetJwtClaimsFromContext(c)
+	if err != nil {
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Err:       err,
+			Msg:       "Failed to get jwt claims from context.",
+			RequestId: requestId,
+		}
+	}
+
+	// get user permissions
+	perms, err := store.GetBentoPermissionByUserBentoId(claims.UserId, bento.Id)
+	if err != nil {
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Err:       err,
+			Msg:       "Failed to get bento permissions.",
+			RequestId: requestId,
+		}
+	}
+
+	// confirm perms to add ingridient
+	if perms.Permissions&(store.O_WRITE|store.O_WRITE_INGRIDIENT) == 0 {
+		return apiError{
+			Code:      http.StatusUnauthorized,
+			Msg:       fmt.Sprintf("Requesting user (%s) does not have permission to write ingridient to bento with id '%s'", claims.UserId, bento.Id),
+			RequestId: requestId,
+		}
+	}
 
 	entries := make([]store.BentoEntry, len(body.Ingridients))
 	for i := 0; i < len(body.Ingridients); i++ {
