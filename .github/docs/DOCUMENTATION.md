@@ -195,3 +195,33 @@ Query:
         message: string
         request_id: string
 ```
+
+## Custom tags
+
+This section covers all the custom tags with explanation on how to use them and where they are in the project.
+
+### Error msg tag `errormsg`
+
+The `errormsg` tag can be used to define the error message of a validation error using golang's validator `github.com/go-playground/validator/v10`.
+Since you can have multiple tags with errors, you can define the error message specifically for a tag
+just like how you define multiple validation tags.
+
+In case the validation tag is not found and no global error message is provided then an empty string is returned.
+
+Example usage:
+
+```go
+type User struct {
+    Name string `validate:"required,min=3" errormsg:"required=Name field is requried,min=Name must be at least 3 characters long"`
+}
+```
+
+Or if you want to just use a global error message:
+
+```go
+type User struct {
+    // required does not have any msg so it will just try to get __default
+    Name string `validate:required,min=3" errormsg:"required,__default=Name field has error(s)"`
+    Surname string `validate:required,min=3" errormsg:"Name field has error(s)"`
+}
+```
