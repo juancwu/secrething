@@ -151,8 +151,20 @@ func handlePrepareBento(c echo.Context) error {
 		}
 	}
 
-	bento, err := store.NewBento(body.Name, user.Id, body.PubKey)
+	// need to start a transaction to allow creating perms and bento at the same time
+	tx, err := store.StartTx()
 	if err != nil {
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Err:       err,
+			Msg:       "Failed to start transaction to preprare new bento.",
+			RequestId: requestId,
+		}
+	}
+
+	bento, err := store.NewBentoTx(tx, body.Name, user.Id, body.PubKey)
+	if err != nil {
+		store.Rollback(tx, requestId)
 		pgErr, ok := err.(*pq.Error)
 		if ok && pgErr.Code.Name() == store.PG_ERR_UNIQUE_VIOLATION {
 			return apiError{
@@ -171,6 +183,28 @@ func handlePrepareBento(c echo.Context) error {
 		}
 	}
 	log.Info().Str(echo.HeaderXRequestID, requestId).Str("bento_name", bento.Name).Str("bento_id", bento.Id).Msg("New bento created.")
+
+	perms, err := store.NewBentoPermissionTx(tx, user.Id, bento.Id, store.O_WRITE|store.O_SHARE|store.O_GRANT_SHARE)
+	if err != nil {
+		store.Rollback(tx, requestId)
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Err:       err,
+			Msg:       "Failed to create bento permissions for newly prepared bento.",
+			RequestId: requestId,
+		}
+	}
+	log.Info().Str(echo.HeaderXRequestID, requestId).Int64("bento_permission_id", perms.Id).Str("bento_id", bento.Id).Msg("New bento permission created.")
+
+	if err := tx.Commit(); err != nil {
+		store.Rollback(tx, requestId)
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Err:       err,
+			Msg:       "Failed to commit changes when preparing a new bento.",
+			RequestId: requestId,
+		}
+	}
 
 	if body.Ingridients != nil && len(body.Ingridients) > 0 {
 		log.Info().Str(echo.HeaderXRequestID, requestId).Msg("Trying to add ingridients.")

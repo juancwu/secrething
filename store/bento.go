@@ -72,10 +72,12 @@ func (b *Bento) Rename(newName string) error {
 	return nil
 }
 
-// NewBento will create and save a new bento into the database with the given information.
+// NewBentoTx will create and save a new bento into the database with the given information.
 // This method will return an error if there is another bento with the same name from the same user.
 // All bentos belonging to one user should have unique names.
-func NewBento(name, ownerId, pubKey string) (*Bento, error) {
+//
+// IMPORTANT: You must call tx.Commit() afterwards for changes to take effect.
+func NewBentoTx(tx *sql.Tx, name, ownerId, pubKey string) (*Bento, error) {
 	row := db.QueryRow(
 		"INSERT INTO bentos (name, owner_id, pub_key) VALUES ($1, $2, $3) RETURNING id, created_at, updated_at;",
 		name,
