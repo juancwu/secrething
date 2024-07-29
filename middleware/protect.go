@@ -28,18 +28,18 @@ func Protect() echo.MiddlewareFunc {
 			authHeader := c.Request().Header.Get(echo.HeaderAuthorization)
 			if authHeader == "" {
 				log.Error().Str(echo.HeaderXRequestID, requestId).Str("path", path).Msg("Missing authorization header to access route.")
-				return c.JSON(http.StatusUnauthorized, map[string]string{"message": "unauthorized"})
+				return c.JSON(http.StatusUnauthorized, map[string]string{"message": "unauthorized", "request_id": requestId})
 			}
 			parts := strings.Split(authHeader, " ")
 			if len(parts) < 2 || strings.ToLower(parts[0]) != "bearer" {
 				log.Error().Str(echo.HeaderXRequestID, requestId).Str("path", path).Msg("Invalid authorization header.")
-				return c.JSON(http.StatusBadRequest, map[string]string{"message": "Invalid authorization header. Only bearer token is supported."})
+				return c.JSON(http.StatusBadRequest, map[string]string{"message": "Invalid authorization header. Only bearer token is supported.", "request_id": requestId})
 			}
 			// verify jwt
 			claims, err := jwt.VerifyAccessToken(parts[1])
 			if err != nil {
 				log.Error().Err(err).Str(echo.HeaderXRequestID, requestId).Str("path", path).Msg("Failed to validate access token.")
-				return c.JSON(http.StatusUnauthorized, map[string]string{"message": "unauthorized"})
+				return c.JSON(http.StatusUnauthorized, map[string]string{"message": "unauthorized", "request_id": requestId})
 			}
 			c.Set(JWT_CLAIMS, claims)
 			return next(c)
