@@ -4,16 +4,17 @@ This is a simple documentation for Konbini. Things might not be 1-1 with the cur
 implementation in `main`.
 
 ## Table of Content
-   * [Routes](#routes)
-      + [Sign up / Create an account](#sign-up-create-an-account)
-      + [Sign in / Get access and refresh tokens](#sign-in-get-access-and-refresh-tokens)
-      + [Get new access token](#get-new-access-token)
-      + [Verify email](#verify-email)
-      + [Resend verification email](#resend-verification-email)
-      + [Forgot password](#forgot-password)
-      + [Reset password](#reset-password)
-      + [Prepare bento](#prepare-bento)
-      + [Order bento](#order-bento)
+
+- [Routes](#routes)
+  - [Sign up / Create an account](#sign-up-create-an-account)
+  - [Sign in / Get access and refresh tokens](#sign-in-get-access-and-refresh-tokens)
+  - [Get new access token](#get-new-access-token)
+  - [Verify email](#verify-email)
+  - [Resend verification email](#resend-verification-email)
+  - [Forgot password](#forgot-password)
+  - [Reset password](#reset-password)
+  - [Prepare bento](#prepare-bento)
+  - [Order bento](#order-bento)
 
 ## Routes
 
@@ -41,6 +42,7 @@ Content-Type: application/json
 ### Sign in / Get access and refresh tokens
 
 This route handles requests to sign into an account. This route will response with access and refrehs tokens.
+
 ```
 POST /auth/signin HTTP/1.1
 Host: konbini.juancwu.dev
