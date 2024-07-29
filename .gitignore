@@ -26,3 +26,6 @@ tmp
 .konbini.yaml
 .miconfig.prod.yaml
 .bruno/environments/konbini-prod.bru
+
+# Ignore development keys
+dev_keys/*.pem
