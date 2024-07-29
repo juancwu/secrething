@@ -7,10 +7,15 @@ import (
 )
 
 const (
-	O_WRITE       int16 = 0b0000_0001
-	O_SHARE       int16 = 0b0000_0010
-	O_GRANT_SHARE int16 = 0b0000_0100
-	O_DELETE      int16 = 0b0000_1000
+	O_READ              int = 0b0000_0000_0000_0000
+	O_WRITE             int = 0b0000_0000_0000_0001
+	O_SHARE             int = 0b0000_0000_0000_0010
+	O_GRANT_SHARE       int = 0b0000_0000_0000_0100
+	O_DELETE            int = 0b0000_0000_0000_1000
+	O_WRITE_INGRIDIENT  int = 0b0000_0000_0001_0000
+	O_DELETE_INGRIDIENT int = 0b0000_0000_0010_0000
+	O_RENAME_INGRIDIENT int = 0b0000_0000_0100_0000
+	O_RENAME_BENTO      int = 0b0000_0000_1000_0000
 )
 
 //go:embed raw_sql/new_bento_permission.sql
@@ -25,7 +30,7 @@ type BentoPermission struct {
 	Id          int64
 	UserId      string
 	BentoId     string
-	Permissions int16
+	Permissions int
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }
@@ -33,7 +38,7 @@ type BentoPermission struct {
 // This will create a new bento permission in the database using the transaction provided.
 //
 // IMPORTANT: You must call tx.Commit() afterwards for changes to take effect.
-func NewBentoPermissionTx(tx *sql.Tx, userId, bentoId string, permissions int16) (*BentoPermission, error) {
+func NewBentoPermissionTx(tx *sql.Tx, userId, bentoId string, permissions int) (*BentoPermission, error) {
 	perms := BentoPermission{
 		UserId:      userId,
 		BentoId:     bentoId,
