@@ -256,6 +256,12 @@ func handleThrowBento(c echo.Context) error {
 	bento, err := store.GetBentoWithId(bentoId)
 	if err != nil {
 		if err == sql.ErrNoRows {
+			return apiError{
+				Code:      http.StatusNotFound,
+				Msg:       "No bento found to throw.",
+				PublicMsg: "No bento found to throw.",
+				RequestId: requestId,
+			}
 		}
 		return apiError{
 			Code:      http.StatusInternalServerError,
@@ -265,8 +271,26 @@ func handleThrowBento(c echo.Context) error {
 		}
 	}
 
+	// get perms
+	perms, err := store.GetBentoPermissionByUserBentoId(claims.UserId, bento.Id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return apiError{
+				Code:      http.StatusUnauthorized,
+				Msg:       "No bento permissions found.",
+				RequestId: requestId,
+			}
+		}
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Err:       err,
+			Msg:       "Failed to get bento permissions.",
+			RequestId: c.Request().URL.RawQuery,
+		}
+	}
+
 	// verify if the requesting user is the owner of the bento
-	if bento.OwnerId != claims.UserId {
+	if perms.Permissions&store.O_DELETE == 0 {
 		return apiError{
 			Code:      http.StatusUnauthorized,
 			Msg:       "Requesting user does not own bento. Aborting deletion.",
