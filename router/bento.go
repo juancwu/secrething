@@ -184,7 +184,7 @@ func handlePrepareBento(c echo.Context) error {
 	}
 	log.Info().Str(echo.HeaderXRequestID, requestId).Str("bento_name", bento.Name).Str("bento_id", bento.Id).Msg("New bento created.")
 
-	perms, err := store.NewBentoPermissionTx(tx, user.Id, bento.Id, store.O_WRITE|store.O_SHARE|store.O_GRANT_SHARE|store.O_DELETE)
+	perms, err := store.NewBentoPermissionTx(tx, user.Id, bento.Id, store.O_READ|store.O_WRITE|store.O_SHARE|store.O_GRANT_SHARE|store.O_DELETE)
 	if err != nil {
 		store.Rollback(tx, requestId)
 		return apiError{
@@ -383,6 +383,9 @@ func handleAddIngridients(c echo.Context) error {
 			RequestId: requestId,
 		}
 	}
+
+	// verify permissions to write
+
 	entries := make([]store.BentoEntry, len(body.Ingridients))
 	for i := 0; i < len(body.Ingridients); i++ {
 		entries[i] = store.NewBentoEntry(body.Ingridients[i].Name, body.Ingridients[i].Value, bento.Id)
