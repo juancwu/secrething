@@ -20,6 +20,7 @@ func SetupBentoRoutes(e RouterGroup) {
 	e.POST("/bento/prepare", handlePrepareBento, middleware.Protect())
 	e.DELETE("/bento/throw/:bentoId", handleThrowBento, middleware.Protect())
 	e.POST("/bento/add/ingridients", handleAddIngridients)
+	e.PATCH("/bento/rename", handleRenameBento, middleware.Protect())
 }
 
 // handleOrderBento handles incoming requests to get an existing bento.
@@ -338,4 +339,97 @@ func handleAddIngridients(c echo.Context) error {
 		}
 	}
 	return writeJSON(http.StatusOK, c, map[string]string{"message": "Ingridients added."})
+}
+
+// Handle incoming requests to rename a bento.
+//
+// NOTE: Right now only way to rename a bento is being the owner. This should be updated soon.
+//
+// TODO: Update permission validation to use proper permissions instead of just owner.
+func handleRenameBento(c echo.Context) error {
+	requestId := c.Request().Header.Get(echo.HeaderXRequestID)
+
+	body := new(renameBentoReqBody)
+	if err := c.Bind(body); err != nil {
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Msg:       "Failed to bind rename bento request body.",
+			RequestId: requestId,
+			Err:       err,
+		}
+	}
+	if err := c.Validate(body); err != nil {
+		return apiError{
+			Code:      http.StatusBadRequest,
+			Msg:       "Error when validating rename bento request body.",
+			PublicMsg: "Invalid request body",
+			RequestId: requestId,
+			Err:       err,
+		}
+	}
+
+	claims, err := middleware.GetJwtClaimsFromContext(c)
+	if err != nil {
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Err:       err,
+			Msg:       "Failed to get claims from context",
+			RequestId: requestId,
+		}
+	}
+
+	user, err := store.GetUserWithId(claims.UserId)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			// no user, so we just return unauthorized
+			return echo.NewHTTPError(http.StatusUnauthorized)
+		}
+
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Err:       err,
+			Msg:       "Failed to get user",
+			RequestId: requestId,
+		}
+	}
+
+	bento, err := store.GetBentoWithId(body.BentoId)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return apiError{
+				Code:      http.StatusNotFound,
+				Err:       err,
+				Msg:       "No bento found with given id.",
+				RequestId: requestId,
+			}
+		}
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Err:       err,
+			Msg:       "Failed to get bento with given id.",
+			RequestId: requestId,
+		}
+	}
+
+	if user.Id != bento.OwnerId {
+		return apiError{
+			Code:      http.StatusUnauthorized,
+			Msg:       "Requesting user is not owner of bento. Aborting update.",
+			RequestId: requestId,
+		}
+	}
+
+	if err := bento.Rename(body.NewName); err != nil {
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Err:       err,
+			Msg:       "Failed to rename bento",
+			RequestId: requestId,
+		}
+	}
+
+	return writeJSON(http.StatusOK, c, basicRespBody{
+		Msg:       fmt.Sprintf("Bento with id: '%s' renamed to '%s'.", bento.Id, bento.Name),
+		RequestId: requestId,
+	})
 }

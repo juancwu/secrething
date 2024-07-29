@@ -41,6 +41,14 @@ var reqBodyValidationMsgs = map[string]string{
 	"addIngridientsReqBody.Ingridients.Name.required":   "Missing ingridient name.",
 	"addIngridientsReqBody.Ingridients.Name.printascii": "Ingridient name can only contain printable ascii characters.",
 	"addIngridientsReqBody.Ingridients.Value.required":  "Missing ingridient value.",
+
+	// rename bento messages
+	"renameBentoReqBody.BentoId.required": "Missing required 'bento_id' in request body.",
+	"renameBentoReqBody.BentoId.uuid4":    "Invalid bento id. It must be a UUID v4.",
+	"renameBentoReqBody.NewName.required": "Missing required 'new_name' in request body.",
+	"renameBentoReqBody.NewName.min":      "New name must be at least 3 characters long.",
+	"renameBentoReqBody.NewName.max":      "New name must not exceed 50 characters.",
+	"renameBentoReqBody.NewName.ascii":    "New name must only contain ascii characters.",
 }
 
 // signupReqBody represents the request body that is expected when handling a signup request.
@@ -82,4 +90,10 @@ type addIngridientsReqBody struct {
 type Ingridient struct {
 	Name  string `json:"name" validate:"required,printascii"`
 	Value string `json:"value" validate:"required"`
+}
+
+// renameBentoReqBody represents the request body that is expected when handling rename bento requests.
+type renameBentoReqBody struct {
+	BentoId string `json:"bento_id" validate:"required,uuid4"`
+	NewName string `json:"new_name" validate:"required,min=3,max=50,ascii"`
 }
