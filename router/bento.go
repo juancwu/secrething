@@ -433,10 +433,6 @@ func handleAddIngridients(c echo.Context) error {
 }
 
 // Handle incoming requests to rename a bento.
-//
-// NOTE: Right now only way to rename a bento is being the owner. This should be updated soon.
-//
-// TODO: Update permission validation to use proper permissions instead of just owner.
 func handleRenameBento(c echo.Context) error {
 	requestId := c.Request().Header.Get(echo.HeaderXRequestID)
 
@@ -502,7 +498,17 @@ func handleRenameBento(c echo.Context) error {
 		}
 	}
 
-	if user.Id != bento.OwnerId {
+	perms, err := store.GetBentoPermissionByUserBentoId(user.Id, bento.Id)
+	if err != nil {
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Err:       err,
+			Msg:       "Failed to get bento permissions.",
+			RequestId: requestId,
+		}
+	}
+
+	if perms.Permissions&(store.O_WRITE|store.O_RENAME_BENTO) == 0 {
 		return apiError{
 			Code:      http.StatusUnauthorized,
 			Msg:       "Requesting user is not owner of bento. Aborting update.",
