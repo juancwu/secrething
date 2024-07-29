@@ -7,9 +7,9 @@ import (
 )
 
 const (
-	O_WRITE       int16 = 0b001
-	O_SHARE       int16 = 0b010
-	O_GRANT_SHARE int16 = 0b100
+	O_WRITE       int16 = 0b0000_0001
+	O_SHARE       int16 = 0b0000_0010
+	O_GRANT_SHARE int16 = 0b0000_0100
 )
 
 //go:embed raw_sql/new_bento_permission.sql
