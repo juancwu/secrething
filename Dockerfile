@@ -13,6 +13,7 @@ COPY ./jwt ./jwt
 COPY ./middleware ./middleware
 COPY ./util ./util
 COPY ./views ./views
+COPY ./tag ./tag
 
 RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o konbini
 
