@@ -48,14 +48,14 @@ func ParseErrorMsgTag(structType reflect.Type, fieldError validator.FieldError) 
 		if len(parts) == 1 {
 			// treat as default global message
 			return parts[0]
-		} else if len(parts) == 2 && parts[0] == fieldError.Tag() {
+		} else if len(parts) == 2 && containsFieldTag(parts[0], fieldError.Tag()) {
 			return parts[1]
 		}
 	} else if len(validationTags) > 1 {
 		defaultMsg := ""
 		for _, tag := range validationTags {
 			parts := strings.Split(tag, "=")
-			if len(parts) == 2 && parts[0] == fieldError.Tag() {
+			if len(parts) == 2 && containsFieldTag(parts[0], fieldError.Tag()) {
 				return parts[1]
 			}
 			if parts[0] == "__default" {
@@ -66,4 +66,16 @@ func ParseErrorMsgTag(structType reflect.Type, fieldError validator.FieldError) 
 		return defaultMsg
 	}
 	return ""
+}
+
+// Checks if the errormsg tag whether or not contains the field error tag.
+// This method helps with checking combined errormsg tags.
+func containsFieldTag(errorMsgTag, fieldErrorTag string) bool {
+	tags := strings.Split(errorMsgTag, "|")
+	for _, tag := range tags {
+		if tag == fieldErrorTag {
+			return true
+		}
+	}
+	return false
 }

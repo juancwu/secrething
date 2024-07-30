@@ -225,3 +225,12 @@ type User struct {
     Surname string `validate:required,min=3" errormsg:"Name field has error(s)"`
 }
 ```
+
+Or combine two or more tags with `|` to use the same error message:
+
+```go
+
+type User struct {
+    Name string `validate:required,min=3,max=10" errormsg:"required=Some message,min|max=Too short/long"` // that's what she said...
+}
+```
