@@ -1,6 +1,8 @@
 package main
 
 import (
+	"strings"
+
 	"github.com/go-playground/validator/v10"
 	"github.com/juancwu/konbini/util"
 )
@@ -24,4 +26,21 @@ func (cv *customValidator) Validate(i interface{}) error {
 func validatePassword(fl validator.FieldLevel) bool {
 	password := fl.Field().String()
 	return util.ValidatePassword(password)
+}
+
+// Natively, the validator package does not come with slice validation.
+// This validator is useful for when there is a field of []string with multiple options and validate them.
+// Use tag "options" and specify the allowed options with whitespace separated strings.
+func validateOptions(fl validator.FieldLevel) bool {
+	options, ok := fl.Field().Interface().([]string)
+	if !ok {
+		return false
+	}
+	allowedOptions := fl.Param()
+	for _, option := range options {
+		if !strings.Contains(allowedOptions, option) {
+			return false
+		}
+	}
+	return true
 }

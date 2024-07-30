@@ -41,6 +41,7 @@ func main() {
 
 	validate := validator.New()
 	validate.RegisterValidation("password", validatePassword)
+	validate.RegisterValidation("options", validateOptions)
 	cv := customValidator{validator: validate}
 	e.Validator = &cv
 
