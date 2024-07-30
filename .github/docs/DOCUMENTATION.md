@@ -15,6 +15,7 @@ implementation in `main`.
   - [Reset password](#reset-password)
   - [Prepare bento](#prepare-bento)
   - [Order bento](#order-bento)
+  - [Rename bento](#rename-bento)
 - [Custom tags](#custom-tags)
   - [Error msg tag `errormsg`](#error-msg-tag-errormsg)
 
@@ -191,6 +192,41 @@ Query:
 404 Not Found:
     No content
 
+500 Internal Server Error:
+    Content-Type: application/json
+    JSON Body:
+        message: string
+        request_id: string
+```
+
+### Rename bento
+
+This route will rename a bento if it exists.
+
+```
+GET /bento/rename HTTP/1.1
+Host: konbini.juancwu.dev
+Authorization: Bearer <token>
+
+JSON Body:
+    bento_id: string
+    new_name: string
+
+200 OK:
+    Content-Type: application/json
+    JSON Body:
+        message: string
+        request_id: string
+
+400 Bad Request:
+    Content-Type: application/json
+    JSON Body:
+        errors: []string?
+        message: string
+        request_id: string
+
+401 Unauthorized:
+404 Not Found:
 500 Internal Server Error:
     Content-Type: application/json
     JSON Body:
