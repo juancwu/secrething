@@ -23,6 +23,7 @@ func SetupBentoRoutes(e RouterGroup) {
 	e.POST("/bento/add/ingridients", handleAddIngridients, middleware.Protect(), middleware.StructType(reflect.TypeOf(addIngridientsReqBody{})))
 	e.PATCH("/bento/rename/ingridients", handleRenameIngridients, middleware.Protect())
 	e.PATCH("/bento/rename", handleRenameBento, middleware.Protect(), middleware.StructType(reflect.TypeOf(renameBentoReqBody{})))
+	e.POST("/bento/share", handleShareBento, middleware.Protect(), middleware.StructType(reflect.TypeOf(shareBentoReqBody{})))
 }
 
 // handleOrderBento handles incoming requests to get an existing bento.
@@ -537,4 +538,169 @@ func handleRenameBento(c echo.Context) error {
 func handleRenameIngridients(c echo.Context) error {
 	requestId := c.Request().Header.Get(echo.HeaderXRequestID)
 	return writeJSON(http.StatusOK, c, basicRespBody{Msg: "Ingridients renamed", RequestId: requestId})
+}
+
+func handleShareBento(c echo.Context) error {
+	requestId := c.Request().Header.Get(echo.HeaderXRequestID)
+	body := new(shareBentoReqBody)
+
+	if err := c.Bind(body); err != nil {
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Err:       err,
+			Msg:       "Failed to bind body",
+			Path:      c.Request().URL.Path,
+			RequestId: requestId,
+		}
+	}
+
+	if err := c.Validate(body); err != nil {
+		return apiError{
+			Code:      http.StatusBadRequest,
+			Msg:       "Error when validating body",
+			PublicMsg: "Invalid request body",
+			Err:       err,
+			RequestId: requestId,
+			Path:      c.Request().URL.Path,
+		}
+	}
+
+	claims, err := middleware.GetJwtClaimsFromContext(c)
+	if err != nil {
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Err:       err,
+			Msg:       "Failed to get claims from context.",
+			Path:      c.Request().URL.Path,
+			RequestId: requestId,
+		}
+	}
+
+	// varify if target user exists or not
+	targetUser, err := store.GetUserWithEmail(body.ShareToEmail)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return echo.NewHTTPError(http.StatusBadRequest, "Target email does not belong to any user.")
+		}
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Err:       err,
+			Msg:       "Failed to get target user.",
+			Path:      c.Request().URL.Path,
+			RequestId: requestId,
+		}
+	}
+
+	bento, err := store.GetBentoWithId(body.BentoId)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return echo.NewHTTPError(http.StatusNotFound, fmt.Sprintf("No bento found with id: %s", body.BentoId))
+		}
+		return apiError{
+			Code:      http.StatusInsufficientStorage,
+			Err:       err,
+			Msg:       "Failed to get bento.",
+			Path:      c.Request().URL.Path,
+			RequestId: requestId,
+		}
+	}
+
+	exists, err := store.ExistsBentoPermissionByUserBentoId(targetUser.Id, bento.Id)
+	if err != nil {
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Err:       err,
+			Msg:       "Failed to check if bento permission exists.",
+			Path:      c.Request().URL.Path,
+			RequestId: requestId,
+		}
+	} else if exists {
+		return writeJSON(http.StatusOK, c, basicRespBody{Msg: "Bento has been previously shared to user. Refer to 'https://github.com/juancwu/konbini/blob/main/.github/docs/DOCUMENTATION.md#share-bento' for more information.", RequestId: requestId})
+	}
+
+	if err := bento.VerifySignature(body.Signature, body.Challenge); err != nil {
+		return apiError{
+			Code:      http.StatusUnauthorized,
+			Err:       err,
+			Msg:       "Failed to verify signature.",
+			Path:      c.Request().URL.Path,
+			RequestId: requestId,
+		}
+	}
+
+	perms, err := store.GetBentoPermissionByUserBentoId(claims.UserId, bento.Id)
+	if err != nil {
+		return apiError{
+			Code:      http.StatusUnauthorized,
+			Err:       err,
+			Msg:       "Failed to get bento permissions.",
+			Path:      c.Request().URL.Path,
+			RequestId: requestId,
+		}
+	}
+
+	if perms.Permissions&store.O_SHARE == 0 {
+		return apiError{
+			Code:      http.StatusUnauthorized,
+			Err:       err,
+			Msg:       "No permission to share bento",
+			Path:      c.Request().URL.Path,
+			RequestId: requestId,
+		}
+	}
+
+	tx, err := store.StartTx()
+	if err != nil {
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Err:       err,
+			Msg:       "Failed to start transaction.",
+			Path:      c.Request().URL.Path,
+			RequestId: requestId,
+		}
+	}
+
+	// It can only grant up to their own level of permission
+	targetUserPerms := store.O_NO_PERMS
+	if body.PermissionLevels != nil {
+		for _, level := range body.PermissionLevels {
+			if level == store.S_ALL {
+				// remove the grant share bit from the permissions if they had any
+				// by default, granting the ability to share should be explicitly
+				// given in another route
+				targetUserPerms = perms.Permissions & (^store.O_GRANT_SHARE)
+				// no need to continue since we got all the perms we need
+				break
+			}
+			// assigned the bit to the target user permissions
+			oLevel, ok := store.TextToBinPerms[level]
+			if !ok {
+				continue
+			}
+			targetUserPerms = targetUserPerms | (perms.Permissions & oLevel)
+		}
+	}
+
+	if _, err := store.NewBentoPermissionTx(tx, targetUser.Id, bento.Id, targetUserPerms); err != nil {
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Err:       err,
+			Msg:       "Failed to create bento permissions.",
+			Path:      c.Request().URL.Path,
+			RequestId: requestId,
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		store.Rollback(tx, requestId)
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Err:       err,
+			Msg:       "Failed to commit bento permission changes.",
+			Path:      c.Request().URL.Path,
+			RequestId: requestId,
+		}
+	}
+
+	return writeJSON(http.StatusOK, c, basicRespBody{Msg: fmt.Sprintf("Bento shared with '%s'", targetUser.Email), RequestId: requestId})
 }

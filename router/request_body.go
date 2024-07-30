@@ -46,3 +46,14 @@ type renameBentoReqBody struct {
 	BentoId string `json:"bento_id" validate:"required,uuid4" errormsg:"required=Missing bento id,uuid4=Invalid bento id; Only UUID v4"`
 	NewName string `json:"new_name" validate:"required,min=3,max=50,printascii" errormsg:"required=Missing new bento name,min|max=New name must be 3 to 50 characters long,printascii=New name can only contain printable ascii"`
 }
+
+type shareBentoReqBody struct {
+	BentoId      string `json:"bento_id" validate:"required,uuid4" errormsg:"required|uuid4=Invalid bento id; Must be UUID v4"`
+	ShareToEmail string `json:"share_to_email" validate:"required,email" errormsg:"required|email=Invalid email"`
+	Challenge    string `json:"challenge" validate:"required" errormsg:"Missing challenge"`
+	Signature    string `json:"signature" validate:"required" errormsg:"Missing signature"`
+	// PermissionLevels represents the up to what level of permission should the target user get.
+	// Keep in mind that the max level of permission that can be granted is the max level of the requesting user.
+	// The permission to grant share is not included. That needs to be exclusively granted in another route.
+	PermissionLevels []string `json:"permission_levels" validate:"omitnil,options=all write delete share rename_bento rename_ingridient write_ingridient delete_ingridient" errormsg:"options=Invalid permission levels. Please refer to 'https://github.com/juancwu/konbini/blob/main/.github/docs/DOCUMENTATION.md' for the available permission levels and its usage."`
+}

@@ -16,7 +16,30 @@ const (
 	O_DELETE_INGRIDIENT int = 0b0000_0000_0010_0000
 	O_RENAME_INGRIDIENT int = 0b0000_0000_0100_0000
 	O_RENAME_BENTO      int = 0b0000_0000_1000_0000
+
+	// text represnetation of the perms
+
+	// This represents all the permissions a requesting user can grant to a target user.
+	S_ALL               string = "all"
+	S_WRITE             string = "write"
+	S_DELETE            string = "delete"
+	S_SHARE             string = "share"
+	S_RENAME_BENTO      string = "rename_bento"
+	S_RENAME_INGRIDIENT string = "rename_ingridient"
+	S_WRITE_INGRIDIENT  string = "write_ingridient"
+	S_DELETE_INGRIDIENT string = "delete_ingridient"
 )
+
+// An map to take the integer permission value using text
+var TextToBinPerms map[string]int = map[string]int{
+	S_WRITE:             O_WRITE,
+	S_DELETE:            O_DELETE,
+	S_SHARE:             O_SHARE,
+	S_RENAME_BENTO:      O_RENAME_BENTO,
+	S_RENAME_INGRIDIENT: O_RENAME_INGRIDIENT,
+	S_WRITE_INGRIDIENT:  O_WRITE_INGRIDIENT,
+	S_DELETE_INGRIDIENT: O_DELETE_INGRIDIENT,
+}
 
 //go:embed raw_sql/new_bento_permission.sql
 var new_bento_permission_sql string
@@ -83,4 +106,19 @@ func GetBentoPermissionByUserBentoId(userId, bentoId string) (*BentoPermission, 
 	}
 
 	return perms, nil
+}
+
+// Checks if there already exists a bento permission for the given user and bento.
+func ExistsBentoPermissionByUserBentoId(userId, bentoId string) (bool, error) {
+	row := db.QueryRow("SELECT EXISTS (SELECT 1 FROM bento_permissions WHERE user_id = $1 AND bento_id = $2)", userId, bentoId)
+	err := row.Err()
+	if err != nil {
+		return false, err
+	}
+	var exists bool
+	err = row.Scan(&exists)
+	if err != nil {
+		return false, err
+	}
+	return exists, nil
 }
