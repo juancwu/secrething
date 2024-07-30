@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
-	"regexp"
-	"strings"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/juancwu/konbini/middleware"
@@ -37,28 +35,6 @@ func (e apiError) Error() string {
 	return e.Msg
 }
 
-// getErrorMsgFromField uses the reqBodyValidationMsgs to retrieve the message for the error.
-func getErrorMsgFromField(err validator.FieldError, re *regexp.Regexp) string {
-	field := fmt.Sprintf("%s.%s", err.StructNamespace(), err.Tag())
-	var sliceIndeces []string
-	if re != nil {
-		matches := re.FindAllStringSubmatch(field, -1)
-		for _, m := range matches {
-			sliceIndeces = append(sliceIndeces, m[1])
-		}
-		field = re.ReplaceAllString(field, "")
-	}
-	log.Info().Msg(field)
-	msg, exists := reqBodyValidationMsgs[field]
-	if !exists {
-		msg = fmt.Sprintf("Validation failed on the '%s' failed.", err.Tag())
-	}
-	if len(sliceIndeces) > 0 {
-		msg = fmt.Sprintf("%s (index path: %s)", msg, strings.Join(sliceIndeces, "->"))
-	}
-	return msg
-}
-
 // ErrHandler is a custom error handler that will log the error and corresponding message.
 // Use an echo.HTTPError if there is a need to return a status code other than 500.
 // Normal errors will be handled using a 500 and generic internal server error message..
@@ -79,22 +55,16 @@ func ErrHandler(err error, c echo.Context) {
 				e.PublicMsg = "Invalid request body. Please fix the issues."
 			}
 			e.Errs = make([]string, len(ve))
-			re, err := regexp.Compile(`\[(\d+)\]`)
-			if err != nil {
-				log.Error().Err(err).Str(echo.HeaderXRequestID, e.RequestId).Msg("Failed to compile regex.")
-				re = nil
-			}
 			structType, ok := c.Get(middleware.STRUCT_TYPE_KEY).(reflect.Type)
 			if !ok {
 				for i, err := range ve {
-					e.Errs[i] = getErrorMsgFromField(err, re)
-
+					e.Errs[i] = fmt.Sprintf("Validation failed on the '%s' failed.", err.Tag())
 				}
 			} else {
 				for i, err := range ve {
 					msg := tag.ParseErrorMsgTag(structType, err)
 					if msg == "" {
-						msg = getErrorMsgFromField(err, re)
+						msg = fmt.Sprintf("Validation failed on the '%s' failed.", err.Tag())
 					}
 					e.Errs[i] = msg
 				}
