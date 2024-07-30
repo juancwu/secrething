@@ -22,7 +22,7 @@ func SetupBentoRoutes(e RouterGroup) {
 	e.DELETE("/bento/throw/:bentoId", handleThrowBento, middleware.Protect())
 	e.POST("/bento/add/ingridients", handleAddIngridients, middleware.Protect(), middleware.StructType(reflect.TypeOf(addIngridientsReqBody{})))
 	e.PATCH("/bento/rename/ingridients", handleRenameIngridients, middleware.Protect())
-	e.PATCH("/bento/rename", handleRenameBento, middleware.Protect())
+	e.PATCH("/bento/rename", handleRenameBento, middleware.Protect(), middleware.StructType(reflect.TypeOf(renameBentoReqBody{})))
 }
 
 // handleOrderBento handles incoming requests to get an existing bento.

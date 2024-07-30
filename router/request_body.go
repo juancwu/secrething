@@ -43,6 +43,6 @@ type Ingridient struct {
 
 // renameBentoReqBody represents the request body that is expected when handling rename bento requests.
 type renameBentoReqBody struct {
-	BentoId string `json:"bento_id" validate:"required,uuid4"`
-	NewName string `json:"new_name" validate:"required,min=3,max=50,ascii"`
+	BentoId string `json:"bento_id" validate:"required,uuid4" errormsg:"required=Missing bento id,uuid4=Invalid bento id; Only UUID v4"`
+	NewName string `json:"new_name" validate:"required,min=3,max=50,printascii" errormsg:"required=Missing new bento name,min|max=New name must be 3 to 50 characters long,printascii=New name can only contain printable ascii"`
 }
