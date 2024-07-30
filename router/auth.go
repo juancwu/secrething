@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"reflect"
 	"strings"
 	"time"
 
@@ -24,7 +25,7 @@ import (
 // SetupAuthRouter is a helper function that will register all the auth routes to the RouterGroup.
 func SetupAuthRouter(e RouterGroup) {
 	// sessions related routes
-	e.POST("/auth/signup", handleSignup)
+	e.POST("/auth/signup", handleSignup, middleware.StructType(reflect.TypeOf(signupReqBody{})))
 	e.POST("/auth/signin", handleSignin)
 	e.PATCH("/auth/refresh", handleRefresh)
 
