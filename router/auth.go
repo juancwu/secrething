@@ -26,7 +26,7 @@ import (
 func SetupAuthRouter(e RouterGroup) {
 	// sessions related routes
 	e.POST("/auth/signup", handleSignup, middleware.StructType(reflect.TypeOf(signupReqBody{})))
-	e.POST("/auth/signin", handleSignin)
+	e.POST("/auth/signin", handleSignin, middleware.StructType(reflect.TypeOf(signinReqBody{})))
 	e.PATCH("/auth/refresh", handleRefresh)
 
 	// email related routes

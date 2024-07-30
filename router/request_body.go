@@ -2,11 +2,6 @@ package router
 
 // reqBodyValidationMsgs is a collection of all request body validation error messages.
 var reqBodyValidationMsgs = map[string]string{
-	// signinReqBody messages
-	"signinReqBody.Email.required":    "Missing email in request body",
-	"signinReqBody.Email.email":       "Invalid email provided",
-	"signinReqBody.Password.required": "Missing password in request body",
-
 	// resendVerificationEmailReqBody messages
 	"resendVerificationEmailReqBody.Email.required": "Missing email in request body",
 	"resendVerificationEmailReqBody.Email.email":    "Invalid email provided",
@@ -51,9 +46,9 @@ type signupReqBody struct {
 // signinReqBody represents the request body that is expected when handling a signin request.
 type signinReqBody struct {
 	// Email is the username that is used to signin
-	Email string `json:"email" validate:"required,email"`
+	Email string `json:"email" validate:"required,email" errormsg:"required=Missing email,email=Invalid email"`
 	// Password no password validation here because there is no need to gives hints about it when signing in.
-	Password string `json:"password" validate:"required"`
+	Password string `json:"password" validate:"required" errormsg:"required=Missing password"`
 }
 
 // resendVerificationEmailReqBody represents the request body that is expected when handling a resend ev request.
