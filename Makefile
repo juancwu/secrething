@@ -27,7 +27,7 @@ start-testdb:
 	@goose -dir ./migrations postgres $(TEST_DB_URL) up
 
 run-tests:
-	APP_ENV=test VERSION=0.0.0-test PASS_ENCRYPT_ALGO=md5 DB_URL=$(TEST_DB_URL) go test -v ./router | rg -S "ok|error|fail"
+	APP_ENV=test VERSION=0.0.0-test PASS_ENCRYPT_ALGO=md5 DB_URL=$(TEST_DB_URL) go test -v ./router ./store
 
 stop-testdb:
 	@docker container stop test-postgres
