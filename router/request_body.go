@@ -73,8 +73,8 @@ type resendVerificationEmailReqBody struct {
 
 // newBentoReqBody represents the request body that is expected when handling a new bento requets.
 type newBentoReqBody struct {
-	Name        string       `json:"name" validate:"required,min=3,max=50,ascii"`
-	PubKey      string       `json:"pub_key" validate:"required"`
+	Name        string       `json:"name" validate:"required,min=3,max=50,printascii" errormsg:"required=Missing name in request body,min=Name must be longer than 3 characters,max=Name must not be longer than 50 characters,printascii=Name must only contain printable ascii characters"`
+	PubKey      string       `json:"pub_key" validate:"required" errormsg:"Missing pub_key"`
 	Ingridients []Ingridient `json:"ingridients,omitempty" validate:"omitnil,dive"`
 }
 
@@ -88,8 +88,8 @@ type addIngridientsReqBody struct {
 
 // Ingridient is used in the addIngridientsReqBody.
 type Ingridient struct {
-	Name  string `json:"name" validate:"required,printascii"`
-	Value string `json:"value" validate:"required"`
+	Name  string `json:"name" validate:"required,printascii" errormsg:"required=Missing ingridient name,printascii=Ingridient name can only contain printable ascii"`
+	Value string `json:"value" validate:"required" errormsg:"Missing ingridient value"`
 }
 
 // renameBentoReqBody represents the request body that is expected when handling rename bento requests.

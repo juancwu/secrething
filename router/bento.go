@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
+	"reflect"
 
 	"github.com/juancwu/konbini/jwt"
 	"github.com/juancwu/konbini/middleware"
@@ -17,9 +18,10 @@ import (
 // SetupBentoRoutes setups the routes for bento services.
 func SetupBentoRoutes(e RouterGroup) {
 	e.GET("/bento/order/:bentoId", handleOrderBento)
-	e.POST("/bento/prepare", handlePrepareBento, middleware.Protect())
+	e.POST("/bento/prepare", handlePrepareBento, middleware.Protect(), middleware.StructType(reflect.TypeOf(newBentoReqBody{})))
 	e.DELETE("/bento/throw/:bentoId", handleThrowBento, middleware.Protect())
 	e.POST("/bento/add/ingridients", handleAddIngridients, middleware.Protect())
+	e.PATCH("/bento/rename/ingridients", handleRenameIngridients, middleware.Protect())
 	e.PATCH("/bento/rename", handleRenameBento, middleware.Protect())
 }
 
@@ -529,4 +531,10 @@ func handleRenameBento(c echo.Context) error {
 		Msg:       fmt.Sprintf("Bento with id: '%s' renamed to '%s'.", bento.Id, bento.Name),
 		RequestId: requestId,
 	})
+}
+
+// handleRenameIngridients handles incoming requests to rename ingridient(s).
+func handleRenameIngridients(c echo.Context) error {
+	requestId := c.Request().Header.Get(echo.HeaderXRequestID)
+	return writeJSON(http.StatusOK, c, basicRespBody{Msg: "Ingridients renamed", RequestId: requestId})
 }
