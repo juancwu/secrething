@@ -15,6 +15,8 @@ implementation in `main`.
   - [Reset password](#reset-password)
   - [Prepare bento](#prepare-bento)
   - [Order bento](#order-bento)
+- [Custom tags](#custom-tags)
+  - [Error msg tag `errormsg`](#error-msg-tag-errormsg)
 
 ## Routes
 
