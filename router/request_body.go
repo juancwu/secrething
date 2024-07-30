@@ -65,10 +65,10 @@ type newBentoReqBody struct {
 
 // addIngridientsReqBody represents the request body that is expected when handling adding a new Ingridient to a prepared bento.
 type addIngridientsReqBody struct {
-	BentoId     string       `json:"bento_id" validate:"required,uuid4"`
-	Ingridients []Ingridient `json:"ingridients" validate:"required,gt=0,dive"`
-	Challenge   string       `json:"challenge" validate:"required"`
-	Signature   string       `json:"signature" validate:"required"`
+	BentoId     string       `json:"bento_id" validate:"required,uuid4" errormsg:"required=Missing bento id,uuid4=Invalid bento id; Only UUID v4"`
+	Ingridients []Ingridient `json:"ingridients" validate:"required,gt=0,dive" errormsg:"required=Missing ingridients,gt=Missing ingridients,__default=Invalid ingridients field"`
+	Challenge   string       `json:"challenge" validate:"required" errormsg:"required=Missing challenge"`
+	Signature   string       `json:"signature" validate:"required" errormsg:"required=Missing signature"`
 }
 
 // Ingridient is used in the addIngridientsReqBody.
