@@ -31,7 +31,7 @@ func SetupAuthRouter(e RouterGroup) {
 
 	// email related routes
 	e.GET("/auth/email/verify", handleVerifyEmail)
-	e.POST("/auth/email/resend", handleResendVerificationEmail)
+	e.POST("/auth/email/resend", handleResendVerificationEmail, middleware.StructType(reflect.TypeOf(resendVerificationEmailReqBody{})))
 
 	// account related routes
 	e.GET("/auth/forgot/password", handleForgotPassword)

@@ -53,7 +53,7 @@ type signinReqBody struct {
 
 // resendVerificationEmailReqBody represents the request body that is expected when handling a resend ev request.
 type resendVerificationEmailReqBody struct {
-	Email string `json:"email" validate:"required,email"`
+	Email string `json:"email" validate:"required,email" errormsg:"Invalid email"`
 }
 
 // newBentoReqBody represents the request body that is expected when handling a new bento requets.
