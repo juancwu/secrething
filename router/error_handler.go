@@ -21,6 +21,8 @@ type apiError struct {
 	Err error `json:"-"`
 	// Msg is the internal message that gets log.
 	Msg string `json:"-"`
+	// The path the api error occurred.
+	Path string `json:"-"`
 
 	// Errs is a string that gets send back to the client after ValidationErrs is processed. This field will be in the json response if not empty.
 	Errs []string `json:"errors,omitempty"`
@@ -42,8 +44,8 @@ func ErrHandler(err error, c echo.Context) {
 	switch err.(type) {
 	case *echo.HTTPError:
 		he := err.(*echo.HTTPError)
-		log.Error().Err(he).Msg("Echo HTTPError")
-		writeJSON(he.Code, c, map[string]string{"message": http.StatusText(he.Code)})
+		log.Error().Err(he).Str(echo.HeaderXRequestID, c.Request().Header.Get(echo.HeaderXRequestID)).Send()
+		writeJSON(he.Code, c, basicRespBody{Msg: fmt.Sprintf("%v", he.Message), RequestId: c.Request().Header.Get(echo.HeaderXRequestID)})
 	case apiError:
 		e := err.(apiError)
 		if e.Code == 0 {
@@ -79,11 +81,12 @@ func ErrHandler(err error, c echo.Context) {
 			Err(e.Err).
 			Str(echo.HeaderXRequestID, e.RequestId).
 			Int("status_code", e.Code).
+			Str("path", e.Path).
 			Msg(e.Msg)
 
 		writeJSON(e.Code, c, e)
 	default:
-		log.Error().Msg("Standard error encountered. Somewhere in route code is returning standard error.")
+		log.Error().Err(err).Msg("Standard error encountered. Somewhere in route code is returning standard error.")
 		c.NoContent(http.StatusInternalServerError)
 	}
 }
