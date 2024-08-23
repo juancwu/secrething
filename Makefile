@@ -1,17 +1,25 @@
 # migration name
 NAME ?= name
 TEST_DB_PASSWORD ?= password
-TEST_DB_HOST_PORT ?= 55432
+TEST_DB_HOST_PORT ?= 5432
 TEST_DB_URL ?= postgres://postgres:$(TEST_DB_PASSWORD)@localhost:$(TEST_DB_HOST_PORT)/postgres?sslmode=disable 
 
 dev:
 	@VERSION=dev APP_ENV=development air
 up:
-	@goose -dir ./migrations postgres "postgres://konbini:konbini@localhost:5432/konbini?sslmode=disable" up
+	@goose -dir ./migrations postgres "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable" up
 down:
-	@goose -dir ./migrations postgres "postgres://konbini:konbini@localhost:5432/konbini?sslmode=disable" down-to 0
+	@goose -dir ./migrations postgres "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable" down-to 0
 migration:
-	@goose -dir ./migrations postgres "postgres://konbini:konbini@localhost:5432/konbini?sslmode=disable" create $(NAME) sql
+	@goose -dir ./migrations postgres "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable" create $(NAME) sql
+
+init-dev-db:
+	@docker run --name konbini-postgres -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DATABASE=konbini -p 5432:5432 -d postgres:14 && \
+		timeout 90s bash -c "until docker exec konbini-postgres pg_isready ; do sleep 5 ; done" && echo "Postgres is ready! Run migrations with 'make up'"
+check-dev-db:
+	@docker exec konbini-postgres pg_isready
+clean-dev-db:
+	@docker stop konbini-postgres && docker rm konbini-postgres
 
 test: start-testdb
 	@trap 'make stop-testdb' EXIT; \
