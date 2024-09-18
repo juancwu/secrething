@@ -16,6 +16,13 @@ migration:
 init-dev-db:
 	@docker run --name konbini-postgres -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DATABASE=konbini -p 5432:5432 -d postgres:14 && \
 		timeout 90s bash -c "until docker exec konbini-postgres pg_isready ; do sleep 5 ; done" && echo "Postgres is ready! Run migrations with 'make up'"
+start-dev-db:
+	@docker start konbini-postgres && \
+		timeout 90s bash -c \
+		"until docker exec konbini-postgres pg_isready ; do sleep 5 ; done" && \
+		echo "Postgres is ready! Run migrations with 'make up'"
+stop-dev-db:
+	@docker stop konbini-postgres
 check-dev-db:
 	@docker exec konbini-postgres pg_isready
 clean-dev-db:
