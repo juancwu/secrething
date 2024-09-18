@@ -14,6 +14,13 @@ const (
 	PROD_ENV string = "production"
 )
 
+var (
+	// Version refers to the current running version of the application based
+	// on the git tag that it was deployed with. This variable is set during
+	// build with build flags.
+	Version string
+)
+
 // LoadEnv will try to load .env file in development and
 // will check the existance of required environment variables.
 func LoadEnv() error {
