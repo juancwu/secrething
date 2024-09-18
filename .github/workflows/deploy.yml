@@ -47,6 +47,7 @@ jobs:
           IMAGE_PATH: ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKER_REPOSITORY }}:latest
           APP_VERSION: ${{ github.ref_name }}
           APP_NAME: ${{ secrets.DOCKER_REPOSITORY }}
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           # mi related envs
           MICONFIG: ${{ secrets.MICONFIG }}
           PK: ${{ secrets.PK }}
@@ -68,13 +69,14 @@ jobs:
           host: ${{ secrets.DO_HOST }}
           username: ${{ secrets.DO_USERNAME }}
           key: ${{ secrets.DO_KEY }}
-          envs: MICONFIG,PK,IMAGE_PATH,APP_NAME,APP_ENV,PORT,DB_URL,RESEND_API_KEY,DONOTREPLY_EMAIL,SERVER_URL,PGP_SYM_KEY,PASS_ENCRYPT_ALGO,JWT_ACCESS_TOKEN_SECRET,JWT_ACCESS_TOKEN_TYPE,JWT_REFRESH_TOKEN_SECRET,JWT_REFRESH_TOKEN_TYPE,JWT_ISSUER,APP_VERSION
+          envs: MICONFIG,PK,IMAGE_PATH,APP_NAME,APP_ENV,PORT,DB_URL,RESEND_API_KEY,DONOTREPLY_EMAIL,SERVER_URL,PGP_SYM_KEY,PASS_ENCRYPT_ALGO,JWT_ACCESS_TOKEN_SECRET,JWT_ACCESS_TOKEN_TYPE,JWT_REFRESH_TOKEN_SECRET,JWT_REFRESH_TOKEN_TYPE,JWT_ISSUER,APP_VERSION,DOCKER_USERNAME
           script: |
             echo "$MICONFIG" > .miconfig.yaml
             echo "$PK" > private.pem
             export PATH=$PATH:$HOME/go/bin
             mi bento order
             echo "APP_VERSION=$APP_VERSION" >> .env
+            cat ~/docker-pat | docker login --username "$DOCKER_USERNAME" --password-stdin
             docker image pull $IMAGE_PATH
             docker container stop $APP_NAME
             docker container rm $APP_NAME
