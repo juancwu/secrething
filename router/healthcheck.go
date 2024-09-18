@@ -3,6 +3,7 @@ package router
 import (
 	"net/http"
 
+	"github.com/juancwu/konbini/config"
 	"github.com/juancwu/konbini/store"
 	"github.com/labstack/echo/v4"
 	"github.com/rs/zerolog/log"
@@ -17,6 +18,7 @@ func SetupHealthcheckRoutes(e RouterGroup) {
 func handleGetHealth(c echo.Context) error {
 	report := healthReport{
 		Database: true,
+		Version:  config.Version,
 	}
 	// ping the db
 	if err := store.Ping(); err != nil {
