@@ -15,7 +15,8 @@ COPY ./util ./util
 COPY ./views ./views
 COPY ./tag ./tag
 
-RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o konbini
+ARG VERSION
+RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o konbini -ldflags "-X github.com/juancwu/konbini/config.Version=${VERSION}"
 
 FROM alpine AS runner
 WORKDIR /go
