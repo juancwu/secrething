@@ -356,7 +356,7 @@ func handleVerifyEmail(c echo.Context) error {
 		}
 	}
 
-	return writeJSON(http.StatusOK, c, basicRespBody{Msg: "Successfully verifie email!", RequestId: requestId})
+	return writeJSON(http.StatusOK, c, basicRespBody{Msg: "Successfully verified email!", RequestId: requestId})
 }
 
 // handleResendVerificationEmail handles incoming request to send a new verification email.
