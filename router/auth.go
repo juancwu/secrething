@@ -32,6 +32,7 @@ func SetupAuthRouter(e RouterGroup) {
 	// email related routes
 	e.GET("/auth/email/verify", handleVerifyEmail)
 	e.POST("/auth/email/resend", handleResendVerificationEmail, middleware.StructType(reflect.TypeOf(resendVerificationEmailReqBody{})))
+	e.PATCH("/auth/email/update", handleUpdateEmail, middleware.Protect(), middleware.StructType(reflect.TypeOf(updateEmailReqBody{})))
 
 	// account related routes
 	e.GET("/auth/forgot/password", handleForgotPassword)
@@ -836,4 +837,99 @@ func handleDeleteAccount(c echo.Context) error {
 	}
 
 	return writeJSON(http.StatusOK, c, basicRespBody{Msg: "Account deleted. All data related to account pruned. This include all bentos previously created.", RequestId: requestId})
+}
+
+// handle incoming requests to update/change a user's email. This handler expects the route to be protected and have claims available in the context.
+func handleUpdateEmail(c echo.Context) error {
+	requestId := c.Request().Header.Get(echo.HeaderXRequestID)
+	claims, err := middleware.GetJwtClaimsFromContext(c)
+	if err != nil {
+		if errors.Is(err, middleware.ErrNoJwtClaims) {
+			return echo.NewHTTPError(http.StatusUnauthorized)
+		}
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Err:       err,
+			Msg:       "Failed to get jwt claims from context to delete account.",
+			RequestId: requestId,
+		}
+	}
+
+	body := new(updateEmailReqBody)
+	log.Info().Str(echo.HeaderXRequestID, requestId).Msg("Binding update email request body.")
+	err = c.Bind(body)
+	if err != nil {
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Msg:       "Failed to bind new bento request body.",
+			RequestId: requestId,
+			Err:       err,
+		}
+	}
+
+	log.Info().Str(echo.HeaderXRequestID, requestId).Msg("Validating update email request body.")
+	err = c.Validate(body)
+	if err != nil {
+		return apiError{
+			Code:      http.StatusBadRequest,
+			Msg:       "Error when validating update email request body.",
+			PublicMsg: "Invalid request body",
+			RequestId: requestId,
+			Err:       err,
+		}
+	}
+
+	user, err := store.GetUserWithId(claims.UserId)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			log.Info().Str("user_id", claims.UserId).Str(echo.HeaderXRequestID, requestId).Msg("Could not find user using user id in claims.")
+			return writeJSON(http.StatusOK, c, basicRespBody{Msg: "Email not updated. Make sure you have the right credentials.", RequestId: requestId})
+		}
+
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Msg:       "Failed to get user to update email.",
+			RequestId: requestId,
+			Err:       err,
+		}
+	}
+
+	user.Email = body.NewEmail
+	user.EmailVerified = false
+
+	tx, err := store.StartTx()
+	if err != nil {
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Msg:       "Failed to start transaction to update user email.",
+			RequestId: requestId,
+			Err:       err,
+		}
+	}
+
+	_, err = user.Update(tx)
+	if err != nil {
+		go store.Rollback(tx, requestId)
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Msg:       "Failed to update user email.",
+			RequestId: requestId,
+			Err:       err,
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		store.Rollback(tx, requestId)
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Msg:       "Failed to commit update user email.",
+			RequestId: requestId,
+			Err:       err,
+		}
+	}
+
+	// resend new email verification
+	go sendVerificationEmail(requestId, user)
+
+	return writeJSON(http.StatusOK, c, basicRespBody{Msg: "Email updated.", RequestId: requestId})
 }

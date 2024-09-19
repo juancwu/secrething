@@ -57,3 +57,7 @@ type shareBentoReqBody struct {
 	// The permission to grant share is not included. That needs to be exclusively granted in another route.
 	PermissionLevels []string `json:"permission_levels" validate:"omitnil,options=all write delete share rename_bento rename_ingridient write_ingridient delete_ingridient" errormsg:"options=Invalid permission levels. Please refer to 'https://github.com/juancwu/konbini/blob/main/.github/docs/DOCUMENTATION.md' for the available permission levels and its usage."`
 }
+
+type updateEmailReqBody struct {
+	NewEmail string `json:"new_email" validate:"required,email" errormsg:"required|email=Invalid email"`
+}
