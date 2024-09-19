@@ -21,9 +21,9 @@ func Send(subject, from string, to []string, html string) (*resend.SendEmailResp
 }
 
 // RenderVerifiationEmail renders the html for verification email.
-func RenderVerifiationEmail(name, url string) (string, error) {
+func RenderVerifiationEmail(name, url, code string) (string, error) {
 	var html bytes.Buffer
-	err := verificationEmailTempl(name, url).Render(context.Background(), &html)
+	err := verificationEmailTempl(name, url, code).Render(context.Background(), &html)
 	if err != nil {
 		return "", err
 	}

@@ -24,7 +24,7 @@ func sendVerificationEmail(requestId string, user *store.User) {
 		log.Error().Err(err).Str(echo.HeaderXRequestID, requestId).Msg("Failed to create email verification.")
 	} else {
 		url := fmt.Sprintf("%s/auth/email/verify?code=%s", os.Getenv("SERVER_URL"), ev.Code)
-		html, err := email.RenderVerifiationEmail(user.Name, url)
+		html, err := email.RenderVerifiationEmail(user.Name, url, ev.Code)
 		if err != nil {
 			log.Error().Err(err).Str(echo.HeaderXRequestID, requestId).Msg("Failed to render email verification html.")
 		} else {
