@@ -94,6 +94,39 @@ Content-Type: application/json
 }
 ```
 
+### Update/Change email
+
+This route will update/change a user's email. The user must provide a valid access token.
+
+```
+PATCH /auth/email/update HTTP/1.1
+Host: konbini.juancwu.dev
+Authorization: Bearer <token>
+
+JSON Body:
+    new_email: string
+
+200 OK:
+    Content-Type: application/json
+    JSON Body:
+        message: string
+        request_id: string
+
+400 Bad Request:
+    Content-Type: application/json
+    JSON Body:
+        errors: []string?
+        message: string
+        request_id: string
+
+401 Unauthorized:
+500 Internal Server Error:
+    Content-Type: application/json
+    JSON Body:
+        message: string
+        request_id: string
+```
+
 ### Forgot password
 
 This route requests a new password reset code for the given email. The code will be sent
@@ -106,6 +139,30 @@ Host: konbini.juancwu.dev
 
 Query:
     email: required
+```
+
+### Delete account
+
+Request your account to be deleted. This route, if successful, will delete the account immediately.
+The user must provide a valid access token.
+
+```
+DELETE /auth/account HTTP/1.1
+Host: konbini.juancwu.dev
+Authorization: Bearer <token>
+
+200 OK:
+    Content-Type: application/json
+    JSON Body:
+        message: string
+        request_id: string
+
+401 Unauthorized:
+500 Internal Server Error:
+    Content-Type: application/json
+    JSON Body:
+        message: string
+        request_id: string
 ```
 
 ### Reset password
