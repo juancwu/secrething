@@ -16,6 +16,7 @@ const (
 	O_DELETE_INGRIDIENT int = 0b0000_0000_0010_0000
 	O_RENAME_INGRIDIENT int = 0b0000_0000_0100_0000
 	O_RENAME_BENTO      int = 0b0000_0000_1000_0000
+	O_REVOKE_SHARE      int = 0b0000_0001_0000_0000
 
 	// text represnetation of the perms
 
@@ -28,6 +29,7 @@ const (
 	S_RENAME_INGRIDIENT string = "rename_ingridient"
 	S_WRITE_INGRIDIENT  string = "write_ingridient"
 	S_DELETE_INGRIDIENT string = "delete_ingridient"
+	S_REVOKE_SHARE      string = "revoke_share"
 )
 
 // An map to take the integer permission value using text
