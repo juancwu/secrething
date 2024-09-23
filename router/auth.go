@@ -196,7 +196,7 @@ func handleSignin(c echo.Context) error {
 		}
 	}
 
-	return writeJSON(http.StatusOK, c, map[string]string{"access_token": at, "refresh_token": rt, "request_id": requestId})
+	return writeJSON(http.StatusOK, c, tokenRespBody{AccessToken: at, RefreshToken: rt, RequestId: requestId})
 }
 
 // handleVerifyEmail handles incoming request to verify an email of a user.
@@ -499,7 +499,7 @@ func handleRefresh(c echo.Context) error {
 		}
 	}
 
-	return writeJSON(http.StatusOK, c, map[string]string{"access_token": at})
+	return writeJSON(http.StatusOK, c, tokenRespBody{AccessToken: at, RequestId: requestId})
 }
 
 // Handle incoming request to start the password reset process.
