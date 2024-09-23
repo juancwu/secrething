@@ -128,9 +128,10 @@ func handleSignin(c echo.Context) error {
 	err = c.Validate(body)
 	if err != nil {
 		return apiError{
-			Code: http.StatusBadRequest,
-			Msg:  "Error when validating signin request body.",
-			Err:  err,
+			Code:      http.StatusBadRequest,
+			Msg:       "Error when validating signin request body.",
+			Err:       err,
+			RequestId: requestId,
 		}
 	}
 
@@ -195,7 +196,7 @@ func handleSignin(c echo.Context) error {
 		}
 	}
 
-	return writeJSON(http.StatusOK, c, map[string]string{"access_token": at, "refresh_token": rt})
+	return writeJSON(http.StatusOK, c, map[string]string{"access_token": at, "refresh_token": rt, "request_id": requestId})
 }
 
 // handleVerifyEmail handles incoming request to verify an email of a user.
