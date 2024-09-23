@@ -104,12 +104,7 @@ func handleSignup(c echo.Context) error {
 	// try to send email verification
 	go sendVerificationEmail(requestId, user)
 
-	return c.JSON(
-		http.StatusCreated,
-		map[string]string{
-			"message": "Successfully signed up! Please check your email to verify it.",
-		},
-	)
+	return writeJSON(http.StatusCreated, c, basicRespBody{Msg: "Successfully signed up! Please check your email to verify it.", RequestId: requestId})
 }
 
 // handleSignin handles incoming request to signin.
