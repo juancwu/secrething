@@ -714,7 +714,7 @@ func handleResetPassword(c echo.Context) error {
 		}
 	}
 
-	return writeJSON(http.StatusOK, c, map[string]string{"message": "Password reset successful.", "request_id": requestId})
+	return writeJSON(http.StatusOK, c, basicRespBody{Msg: "Password reset successful.", RequestId: requestId})
 }
 
 // Only handles serving the reset password form view.
