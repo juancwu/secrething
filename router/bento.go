@@ -227,14 +227,16 @@ func handlePrepareBento(c echo.Context) error {
 			}
 		}
 		return writeJSON(http.StatusCreated, c, map[string]string{
-			"message":  "New bento created and ingridients added.",
-			"bento_id": bento.Id,
+			"message":    "New bento created and ingridients added.",
+			"bento_id":   bento.Id,
+			"request_id": requestId,
 		})
 	}
 
 	return writeJSON(http.StatusCreated, c, map[string]string{
-		"message":  "New bento created! Start add ingridients to your bento.",
-		"bento_id": bento.Id,
+		"message":    "New bento created! Start add ingridients to your bento.",
+		"bento_id":   bento.Id,
+		"request_id": requestId,
 	})
 }
 
@@ -290,7 +292,7 @@ func handleThrowBento(c echo.Context) error {
 			Code:      http.StatusInternalServerError,
 			Err:       err,
 			Msg:       "Failed to get bento permissions.",
-			RequestId: c.Request().URL.RawQuery,
+			RequestId: requestId,
 		}
 	}
 
@@ -343,7 +345,8 @@ func handleThrowBento(c echo.Context) error {
 		http.StatusOK,
 		c,
 		basicRespBody{
-			Msg: "Bento deleted.",
+			Msg:       "Bento deleted.",
+			RequestId: requestId,
 		},
 	)
 }
@@ -617,7 +620,10 @@ func handleShareBento(c echo.Context) error {
 			RequestId: requestId,
 		}
 	} else if exists {
-		return writeJSON(http.StatusOK, c, basicRespBody{Msg: "Bento has been previously shared to user. Refer to 'https://github.com/juancwu/konbini/blob/main/.github/docs/DOCUMENTATION.md#share-bento' for more information.", RequestId: requestId})
+		return writeJSON(http.StatusOK, c, basicRespBody{
+			Msg:       "Bento has been previously shared to user. Refer to 'https://github.com/juancwu/konbini/blob/main/.github/docs/DOCUMENTATION.md#share-bento' for more information.",
+			RequestId: requestId,
+		})
 	}
 
 	if err := bento.VerifySignature(body.Signature, body.Challenge); err != nil {
