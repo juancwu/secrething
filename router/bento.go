@@ -58,6 +58,7 @@ func handleOrderBento(c echo.Context) error {
 	// get bento
 	bento, err := store.GetBentoWithId(bentoId)
 	if err != nil {
+		c.Response().Header().Add(echo.HeaderXRequestID, requestId)
 		return c.NoContent(http.StatusNotFound)
 	}
 
@@ -94,6 +95,7 @@ func handleOrderBento(c echo.Context) error {
 	resBody := map[string]any{
 		"message":     "Here is your bento order.",
 		"ingridients": ingridients,
+		"request_id":  requestId,
 	}
 
 	return writeJSON(http.StatusOK, c, resBody)
