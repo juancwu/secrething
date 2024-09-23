@@ -20,3 +20,12 @@ type healthReport struct {
 	Database bool   `json:"database"`
 	Version  string `json:"version"`
 }
+
+// tokenRespBody represents a basic JSON response body that can have fields
+// "access_token", "refresh_token" and "request_id".
+// All fields can be optional and will be omitted if they are empty strings.
+type tokenRespBody struct {
+	AccessToken  string `json:"access_token,omitempty"`
+	RefreshToken string `json:"refresh_token,omitempty"`
+	RequestId    string `json:"request_id,omitempty"`
+}
