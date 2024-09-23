@@ -417,12 +417,7 @@ func handleResendVerificationEmail(c echo.Context) error {
 	// send the new email
 	go sendVerificationEmail(requestId, user)
 
-	return c.JSON(
-		http.StatusOK,
-		map[string]string{
-			"message": "New verification email sent.",
-		},
-	)
+	return writeJSON(http.StatusOK, c, basicRespBody{Msg: "New verification email sent.", RequestId: requestId})
 }
 
 // handleRefresh handles incoming requests for a new access token without using credentials but client must provide a valid refresh token.
