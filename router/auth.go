@@ -562,7 +562,7 @@ func handleForgotPassword(c echo.Context) error {
 		log.Info().Str(echo.HeaderXRequestID, requestId).Str("resend_email_id", res.Id).Msg("Password reset code email sent.")
 	}(template, requestId)
 
-	return writeJSON(http.StatusOK, c, map[string]string{"message": "You should receive an email with a link to reset your password."})
+	return writeJSON(http.StatusOK, c, basicRespBody{Msg: "You should receive an email with a link to reset your password.", RequestId: requestId})
 }
 
 // Handles requests to reset a user's password.
