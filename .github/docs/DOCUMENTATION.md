@@ -256,9 +256,9 @@ Query:
         request_id: string
 ```
 
-### Rename bento
+### Rename ingridient
 
-This route will rename a bento if it exists.
+This route will rename an ingridient if it exists.
 
 ```
 GET /bento/ingridient/rename HTTP/1.1
@@ -291,7 +291,7 @@ JSON Body:
         request_id: string
 ```
 
-### Re-season Bento
+### Re-season ingridient
 
 This route will "re-season", change the value of an ingridient.
 
