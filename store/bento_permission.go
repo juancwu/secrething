@@ -41,6 +41,7 @@ var TextToBinPerms map[string]int = map[string]int{
 	S_RENAME_INGRIDIENT: O_RENAME_INGRIDIENT,
 	S_WRITE_INGRIDIENT:  O_WRITE_INGRIDIENT,
 	S_DELETE_INGRIDIENT: O_DELETE_INGRIDIENT,
+	S_REVOKE_SHARE:      O_REVOKE_SHARE,
 }
 
 //go:embed raw_sql/new_bento_permission.sql
