@@ -120,7 +120,7 @@ func ReseasonIngridient(bentoId, name, value string) error {
 
 	n, err := res.RowsAffected()
 	if err == nil && n > 1 {
-		log.Warn().Str("bento_id", bentoId).Str("name", name).Str("value", value).Msg("More than one ingridient was re-seasoned.")
+		log.Warn().Str("bento_id", bentoId).Str("name", name).Msg("More than one ingridient was re-seasoned.")
 	}
 
 	return nil
