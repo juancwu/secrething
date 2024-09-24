@@ -109,3 +109,19 @@ func RenameIngridient(bentoId, oldName, newName string) error {
 
 	return nil
 }
+
+// Re-seaons, aka, change the value of the ingridient.
+// IMPORTANT: This method does not check for permissions before executing. Make sure to check before calling it.
+func ReseasonIngridient(bentoId, name, value string) error {
+	res, err := db.Exec("UPDATE bento_entries SET value = $1 WHERE bento_id = $2 AND name = $3;", value, bentoId, name)
+	if err != nil {
+		return err
+	}
+
+	n, err := res.RowsAffected()
+	if err == nil && n > 1 {
+		log.Warn().Str("bento_id", bentoId).Str("name", name).Str("value", value).Msg("More than one ingridient was re-seasoned.")
+	}
+
+	return nil
+}

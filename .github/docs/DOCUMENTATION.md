@@ -5,19 +5,19 @@ implementation in `main`.
 
 ## Table of Content
 
--   [Routes](#routes)
-    -   [Sign up / Create an account](#sign-up-create-an-account)
-    -   [Sign in / Get access and refresh tokens](#sign-in-get-access-and-refresh-tokens)
-    -   [Get new access token](#get-new-access-token)
-    -   [Verify email](#verify-email)
-    -   [Resend verification email](#resend-verification-email)
-    -   [Forgot password](#forgot-password)
-    -   [Reset password](#reset-password)
-    -   [Prepare bento](#prepare-bento)
-    -   [Order bento](#order-bento)
-    -   [Rename bento](#rename-bento)
--   [Custom tags](#custom-tags)
-    -   [Error msg tag `errormsg`](#error-msg-tag-errormsg)
+- [Routes](#routes)
+  - [Sign up / Create an account](#sign-up-create-an-account)
+  - [Sign in / Get access and refresh tokens](#sign-in-get-access-and-refresh-tokens)
+  - [Get new access token](#get-new-access-token)
+  - [Verify email](#verify-email)
+  - [Resend verification email](#resend-verification-email)
+  - [Forgot password](#forgot-password)
+  - [Reset password](#reset-password)
+  - [Prepare bento](#prepare-bento)
+  - [Order bento](#order-bento)
+  - [Rename bento](#rename-bento)
+- [Custom tags](#custom-tags)
+  - [Error msg tag `errormsg`](#error-msg-tag-errormsg)
 
 ## Routes
 
@@ -269,6 +269,41 @@ JSON Body:
     bento_id: string
     new_name: string
     old_name: string
+
+200 OK:
+    Content-Type: application/json
+    JSON Body:
+        message: string
+        request_id: string
+
+400 Bad Request:
+    Content-Type: application/json
+    JSON Body:
+        errors: []string?
+        message: string
+        request_id: string
+
+401 Unauthorized:
+500 Internal Server Error:
+    Content-Type: application/json
+    JSON Body:
+        message: string
+        request_id: string
+```
+
+### Re-season Bento
+
+This route will "re-season", change the value of an ingridient.
+
+```
+GET /bento/ingridient/reseason HTTP/1.1
+Host: konbini.juancwu.dev
+Authorization: Bearer <token>
+
+JSON Body:
+    bento_id: string
+    name: string
+    value: string
 
 200 OK:
     Content-Type: application/json

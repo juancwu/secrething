@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"reflect"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/juancwu/konbini/jwt"
 	"github.com/juancwu/konbini/middleware"
 	"github.com/juancwu/konbini/store"
@@ -23,7 +24,7 @@ func SetupBentoRoutes(e RouterGroup) {
 	e.DELETE("/bento/throw/:bentoId", handleThrowBento, middleware.Protect())
 	e.POST("/bento/add/ingridients", handleAddIngridients, middleware.Protect(), middleware.StructType(reflect.TypeOf(addIngridientsReqBody{})))
 	e.PATCH("/bento/ingridient/rename", handleRenameIngridient, middleware.Protect(), middleware.StructType(reflect.TypeOf(renameIngridientReqBody{})))
-	// e.PATCH("/bento/ingridient/revalue")
+	e.PATCH("/bento/ingridient/reseason", handleReseasonIngridient, middleware.Protect(), middleware.StructType(reflect.TypeOf(reseasonIngridientReqBody{})))
 	// e.DELETE("/bento/ingridient")
 	e.PATCH("/bento/rename", handleRenameBento, middleware.Protect(), middleware.StructType(reflect.TypeOf(renameBentoReqBody{})))
 	e.POST("/bento/share", handleShareBento, middleware.Protect(), middleware.StructType(reflect.TypeOf(shareBentoReqBody{})))
@@ -629,6 +630,96 @@ func handleRenameIngridient(c echo.Context) error {
 	}
 
 	return writeJSON(http.StatusOK, c, basicRespBody{Msg: "Ingridients renamed", RequestId: requestId})
+}
+
+func handleReseasonIngridient(c echo.Context) error {
+	requestId := c.Request().Header.Get(echo.HeaderXRequestID)
+	path := c.Request().URL.Path
+	body := new(reseasonIngridientReqBody)
+	if err := readRequestBody(c, body); err != nil {
+		code := http.StatusInternalServerError
+		if _, ok := err.(validator.ValidationErrors); ok {
+			code = http.StatusBadRequest
+		}
+		return apiError{
+			Code:      code,
+			Msg:       "Failed to read request body",
+			Path:      path,
+			Err:       err,
+			RequestId: requestId,
+		}
+	}
+	claims, err := middleware.GetJwtClaimsFromContext(c)
+	if err != nil {
+		return apiError{
+			Msg:       "Failed to get jwt claims from context",
+			Err:       err,
+			Path:      path,
+			RequestId: requestId,
+		}
+	}
+	bento, err := store.GetBentoWithId(body.BentoId)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return echo.NewHTTPError(http.StatusBadRequest, "Invalid bento id. Bento does not exists.")
+		}
+		return apiError{
+			Msg:       "Failed to get bento",
+			Path:      path,
+			Err:       err,
+			RequestId: requestId,
+		}
+	}
+	if err := bento.VerifySignature(body.Challenger.Signature, body.Challenger.Challenge); err != nil {
+		return apiError{
+			Code:      http.StatusUnauthorized,
+			Msg:       "Challenger failed",
+			PublicMsg: "Challenger failed",
+			Err:       err,
+			Path:      path,
+			RequestId: requestId,
+		}
+	}
+	bentoPerms, err := store.GetBentoPermissionByUserBentoId(claims.UserId, bento.Id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return apiError{
+				Code:      http.StatusUnauthorized,
+				Msg:       "No bento permissions for requesting user found",
+				PublicMsg: "Invalid credentials. Make sure to have a valid access token.",
+				Path:      path,
+				Err:       err,
+				RequestId: requestId,
+			}
+		}
+		return apiError{
+			Msg:       "Failed to get bento permissions for requesting user",
+			Err:       err,
+			Path:      path,
+			RequestId: requestId,
+		}
+	}
+	if bentoPerms.Permissions&(store.O_WRITE|store.O_WRITE_INGRIDIENT) == 0 {
+		return apiError{
+			Code:      http.StatusUnauthorized,
+			Msg:       fmt.Sprintf("Requesting user does not have permissions to re-season ingridient. Bento ID: %s", bento.Id),
+			PublicMsg: fmt.Sprintf("You do not have permissions to re-season ingridients in bento with ID: %s", bento.Id),
+			Path:      path,
+			Err:       err,
+			RequestId: requestId,
+		}
+	}
+
+	if err := store.ReseasonIngridient(bento.Id, body.Name, body.Value); err != nil {
+		return apiError{
+			Msg:       "Failed to change ingridient value",
+			Err:       err,
+			Path:      path,
+			RequestId: requestId,
+		}
+	}
+
+	return writeJSON(http.StatusOK, c, basicRespBody{Msg: "Bento ingridient re-seasoned.", RequestId: requestId})
 }
 
 func handleShareBento(c echo.Context) error {
