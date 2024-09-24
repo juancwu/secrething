@@ -2,6 +2,7 @@ package router
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"net/http"
 	"reflect"
@@ -21,7 +22,9 @@ func SetupBentoRoutes(e RouterGroup) {
 	e.POST("/bento/prepare", handlePrepareBento, middleware.Protect(), middleware.StructType(reflect.TypeOf(newBentoReqBody{})))
 	e.DELETE("/bento/throw/:bentoId", handleThrowBento, middleware.Protect())
 	e.POST("/bento/add/ingridients", handleAddIngridients, middleware.Protect(), middleware.StructType(reflect.TypeOf(addIngridientsReqBody{})))
-	e.PATCH("/bento/rename/ingridients", handleRenameIngridients, middleware.Protect())
+	e.PATCH("/bento/ingridient/rename", handleRenameIngridient, middleware.Protect(), middleware.StructType(reflect.TypeOf(renameIngridientReqBody{})))
+	// e.PATCH("/bento/ingridient/revalue")
+	// e.DELETE("/bento/ingridient")
 	e.PATCH("/bento/rename", handleRenameBento, middleware.Protect(), middleware.StructType(reflect.TypeOf(renameBentoReqBody{})))
 	e.POST("/bento/share", handleShareBento, middleware.Protect(), middleware.StructType(reflect.TypeOf(shareBentoReqBody{})))
 }
@@ -539,9 +542,92 @@ func handleRenameBento(c echo.Context) error {
 	})
 }
 
-// handleRenameIngridients handles incoming requests to rename ingridient(s).
-func handleRenameIngridients(c echo.Context) error {
+// handleRenameIngridient handles incoming requests to rename ingridient(s).
+func handleRenameIngridient(c echo.Context) error {
 	requestId := c.Request().Header.Get(echo.HeaderXRequestID)
+	path := c.Request().URL.Path
+	body := new(renameIngridientReqBody)
+	if err := readRequestBody(c, body); err != nil {
+		return apiError{
+			Msg:       "Failed to read request body",
+			Path:      path,
+			Err:       err,
+			RequestId: requestId,
+		}
+	}
+	claims, err := middleware.GetJwtClaimsFromContext(c)
+	if err != nil {
+		return apiError{
+			Code:      http.StatusInternalServerError,
+			Msg:       "Failed to get jwt claims from context",
+			Path:      path,
+			Err:       err,
+			RequestId: requestId,
+		}
+	}
+	bento, err := store.GetBentoWithId(body.BentoId)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return echo.NewHTTPError(http.StatusBadRequest, "Invalid bento id. Bento does not exists.")
+		}
+		return apiError{
+			Msg:       "Failed to get bento",
+			Path:      path,
+			Err:       err,
+			RequestId: requestId,
+		}
+	}
+	if err := bento.VerifySignature(body.Challenger.Signature, body.Challenger.Challenge); err != nil {
+		return apiError{
+			Code:      http.StatusUnauthorized,
+			Msg:       "Challenger failed",
+			PublicMsg: "Challenger failed",
+			Err:       err,
+			Path:      path,
+			RequestId: requestId,
+		}
+	}
+
+	bentoPerms, err := store.GetBentoPermissionByUserBentoId(claims.UserId, bento.Id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return apiError{
+				Code:      http.StatusUnauthorized,
+				Msg:       "No bento permissions for requesting user found",
+				PublicMsg: "Invalid credentials. Make sure to have a valid access token.",
+				Path:      path,
+				Err:       err,
+				RequestId: requestId,
+			}
+		}
+		return apiError{
+			Msg:       "Failed to get bento permissions for requesting user",
+			Err:       err,
+			Path:      path,
+			RequestId: requestId,
+		}
+	}
+
+	if bentoPerms.Permissions&(store.O_WRITE|store.O_RENAME_INGRIDIENT|store.O_WRITE_INGRIDIENT) == 0 {
+		return apiError{
+			Code:      http.StatusUnauthorized,
+			Msg:       fmt.Sprintf("Requesting user does not have permissions to rename ingridient. Bento ID: %s", bento.Id),
+			PublicMsg: fmt.Sprintf("You do not have permissions to rename ingridients in bento with ID: %s", bento.Id),
+			Path:      path,
+			Err:       err,
+			RequestId: requestId,
+		}
+	}
+
+	if err := store.RenameIngridient(bento.Id, body.OldName, body.NewName); err != nil {
+		return apiError{
+			Msg:       "Failed to rename ingridient",
+			Path:      path,
+			Err:       err,
+			RequestId: requestId,
+		}
+	}
+
 	return writeJSON(http.StatusOK, c, basicRespBody{Msg: "Ingridients renamed", RequestId: requestId})
 }
 

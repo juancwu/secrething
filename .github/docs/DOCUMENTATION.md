@@ -5,19 +5,19 @@ implementation in `main`.
 
 ## Table of Content
 
-- [Routes](#routes)
-  - [Sign up / Create an account](#sign-up-create-an-account)
-  - [Sign in / Get access and refresh tokens](#sign-in-get-access-and-refresh-tokens)
-  - [Get new access token](#get-new-access-token)
-  - [Verify email](#verify-email)
-  - [Resend verification email](#resend-verification-email)
-  - [Forgot password](#forgot-password)
-  - [Reset password](#reset-password)
-  - [Prepare bento](#prepare-bento)
-  - [Order bento](#order-bento)
-  - [Rename bento](#rename-bento)
-- [Custom tags](#custom-tags)
-  - [Error msg tag `errormsg`](#error-msg-tag-errormsg)
+-   [Routes](#routes)
+    -   [Sign up / Create an account](#sign-up-create-an-account)
+    -   [Sign in / Get access and refresh tokens](#sign-in-get-access-and-refresh-tokens)
+    -   [Get new access token](#get-new-access-token)
+    -   [Verify email](#verify-email)
+    -   [Resend verification email](#resend-verification-email)
+    -   [Forgot password](#forgot-password)
+    -   [Reset password](#reset-password)
+    -   [Prepare bento](#prepare-bento)
+    -   [Order bento](#order-bento)
+    -   [Rename bento](#rename-bento)
+-   [Custom tags](#custom-tags)
+    -   [Error msg tag `errormsg`](#error-msg-tag-errormsg)
 
 ## Routes
 
@@ -261,13 +261,14 @@ Query:
 This route will rename a bento if it exists.
 
 ```
-GET /bento/rename HTTP/1.1
+GET /bento/ingridient/rename HTTP/1.1
 Host: konbini.juancwu.dev
 Authorization: Bearer <token>
 
 JSON Body:
     bento_id: string
     new_name: string
+    old_name: string
 
 200 OK:
     Content-Type: application/json
@@ -283,7 +284,6 @@ JSON Body:
         request_id: string
 
 401 Unauthorized:
-404 Not Found:
 500 Internal Server Error:
     Content-Type: application/json
     JSON Body:

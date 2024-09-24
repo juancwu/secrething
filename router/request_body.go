@@ -41,6 +41,16 @@ type Ingridient struct {
 	Value string `json:"value" validate:"required" errormsg:"Missing ingridient value"`
 }
 
+// A challenger represents the pair challenge and signature that is used to verify someone
+// who is making a request in fact has access to the private key of a target bento. This
+// helps in verifying that the user might be a trusful user. More permissions have to be checked
+// to have a better understanding on who the server is dealing with and whether said requested action
+// is to be performed or denied.
+type challenger struct {
+	Challenge string `json:"challenge" validate:"required" errormsg:"Missing challenge"`
+	Signature string `json:"signature" validate:"required" errormsg:"Missing signature"`
+}
+
 // renameBentoReqBody represents the request body that is expected when handling rename bento requests.
 type renameBentoReqBody struct {
 	BentoId string `json:"bento_id" validate:"required,uuid4" errormsg:"required=Missing bento id,uuid4=Invalid bento id; Only UUID v4"`
@@ -60,4 +70,11 @@ type shareBentoReqBody struct {
 
 type updateEmailReqBody struct {
 	NewEmail string `json:"new_email" validate:"required,email" errormsg:"required|email=Invalid email"`
+}
+
+type renameIngridientReqBody struct {
+	BentoId    string     `json:"bento_id" validate:"required,uuid4" errormsg:"Invalid bento id."`
+	Challenger challenger `json:"challenger" validate:"required" errormsg:"Missing challenger."`
+	OldName    string     `json:"old_name" validate:"required,printascii" errormsg:"required=Missing old ingridient name,printascii=Old name can only consist of printable ASCII characters"`
+	NewName    string     `json:"new_name" validate:"required,printascii" errormsg:"required=Missing new ingridient name,printascii=New name can only consist of printable ASCII characters"`
 }

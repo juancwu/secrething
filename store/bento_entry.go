@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/rs/zerolog/log"
 )
 
 // BentoEntry represents an entry (secret) of a already preprared bento in the database.
@@ -87,4 +89,23 @@ func GetEntriesForBento(bentoId string) ([]BentoEntry, error) {
 		entries = append(entries, entry)
 	}
 	return entries, nil
+}
+
+// Rename an ingridient in a bento. The ingridient and bento must exists or an error will be returned.
+func RenameIngridient(bentoId, oldName, newName string) error {
+	res, err := db.Exec("UPDATE bento_entries SET name = $1 WHERE bento_id = $2 AND name = $3;", newName, bentoId, oldName)
+	if err != nil {
+		return err
+	}
+
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if n > 1 {
+		log.Warn().Str("bento_id", bentoId).Str("new_name", newName).Str("old_name", oldName).Msg("More than one ingridient was renamed.")
+	}
+
+	return nil
 }
