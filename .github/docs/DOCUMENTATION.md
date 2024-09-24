@@ -261,7 +261,7 @@ Query:
 This route will rename an ingridient if it exists.
 
 ```
-GET /bento/ingridient/rename HTTP/1.1
+PATCH /bento/ingridient/rename HTTP/1.1
 Host: konbini.juancwu.dev
 Authorization: Bearer <token>
 
@@ -296,7 +296,7 @@ JSON Body:
 This route will "re-season", change the value of an ingridient.
 
 ```
-GET /bento/ingridient/reseason HTTP/1.1
+PATCH /bento/ingridient/reseason HTTP/1.1
 Host: konbini.juancwu.dev
 Authorization: Bearer <token>
 
