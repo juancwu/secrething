@@ -125,3 +125,10 @@ func ReseasonIngridient(bentoId, name, value string) error {
 
 	return nil
 }
+
+// Deletes an ingridient from a bento.
+// IMPORTANT: This method does not check for permissions before executing. Make sure to check before calling.
+func DeleteIngridient(bentoId, name string) error {
+	_, err := db.Exec("DELETE FROM bento_entries WHERE bento_id = $1 AND name = $2;", bentoId, name)
+	return err
+}

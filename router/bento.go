@@ -25,7 +25,7 @@ func SetupBentoRoutes(e RouterGroup) {
 	e.POST("/bento/add/ingridients", handleAddIngridients, middleware.Protect(), middleware.StructType(reflect.TypeOf(addIngridientsReqBody{})))
 	e.PATCH("/bento/ingridient/rename", handleRenameIngridient, middleware.Protect(), middleware.StructType(reflect.TypeOf(renameIngridientReqBody{})))
 	e.PATCH("/bento/ingridient/reseason", handleReseasonIngridient, middleware.Protect(), middleware.StructType(reflect.TypeOf(reseasonIngridientReqBody{})))
-	// e.DELETE("/bento/ingridient")
+	e.DELETE("/bento/ingridient", handleDeleteIngridient, middleware.Protect(), middleware.StructType(reflect.TypeOf(deleteIngridientReqBody{})))
 	e.PATCH("/bento/rename", handleRenameBento, middleware.Protect(), middleware.StructType(reflect.TypeOf(renameBentoReqBody{})))
 	e.POST("/bento/share", handleShareBento, middleware.Protect(), middleware.StructType(reflect.TypeOf(shareBentoReqBody{})))
 }
@@ -720,6 +720,101 @@ func handleReseasonIngridient(c echo.Context) error {
 	}
 
 	return writeJSON(http.StatusOK, c, basicRespBody{Msg: "Bento ingridient re-seasoned.", RequestId: requestId})
+}
+
+func handleDeleteIngridient(c echo.Context) error {
+	requestId := c.Request().Header.Get(echo.HeaderXRequestID)
+	path := c.Request().URL.Path
+	body := new(deleteIngridientReqBody)
+	if err := readRequestBody(c, body); err != nil {
+		code := http.StatusInternalServerError
+		if _, ok := err.(validator.ValidationErrors); ok {
+			code = http.StatusBadRequest
+		}
+		return apiError{
+			Code:      code,
+			Err:       err,
+			Path:      path,
+			RequestId: requestId,
+			Msg:       "Failed to read request body.",
+		}
+	}
+	claims, err := middleware.GetJwtClaimsFromContext(c)
+	if err != nil {
+		return apiError{
+			Err:       err,
+			Path:      path,
+			RequestId: requestId,
+			Msg:       "Failed to get jwt claims from context",
+		}
+	}
+	bento, err := store.GetBentoWithId(body.BentoId)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return apiError{
+				Code:      http.StatusBadRequest,
+				Err:       err,
+				Path:      path,
+				RequestId: requestId,
+				PublicMsg: fmt.Sprintf("No bento with ID: %s found", body.BentoId),
+			}
+		}
+		return apiError{
+			Err:       err,
+			Path:      path,
+			RequestId: requestId,
+			Msg:       "Failed to get bento",
+		}
+	}
+	if err := bento.VerifySignature(body.Challenger.Signature, body.Challenger.Challenge); err != nil {
+		return apiError{
+			Code:      http.StatusUnauthorized,
+			Msg:       "Challenger failed",
+			PublicMsg: "Challenger failed",
+			Err:       err,
+			Path:      path,
+			RequestId: requestId,
+		}
+	}
+	bentoPerms, err := store.GetBentoPermissionByUserBentoId(claims.UserId, bento.Id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return apiError{
+				Code:      http.StatusUnauthorized,
+				Msg:       "No bento permissions for requesting user found",
+				PublicMsg: "Invalid credentials. Make sure to have a valid access token.",
+				Path:      path,
+				Err:       err,
+				RequestId: requestId,
+			}
+		}
+		return apiError{
+			Msg:       "Failed to get bento permissions for requesting user",
+			Err:       err,
+			Path:      path,
+			RequestId: requestId,
+		}
+	}
+	if bentoPerms.Permissions&(store.O_DELETE|store.O_DELETE_INGRIDIENT) == 0 {
+		return apiError{
+			Code:      http.StatusUnauthorized,
+			Msg:       "Requesting user has no permissions to delete ingridient",
+			PublicMsg: fmt.Sprintf("You do not have permissions to delete ingridients in bento with ID: %s", bento.Id),
+			Err:       err,
+			Path:      path,
+			RequestId: requestId,
+		}
+	}
+	if err := store.DeleteIngridient(bento.Id, body.Name); err != nil {
+		return apiError{
+			Msg:       "Failed to delete ingridient from bento",
+			Err:       err,
+			Path:      path,
+			RequestId: requestId,
+		}
+	}
+
+	return writeJSON(http.StatusOK, c, basicRespBody{Msg: "Bento ingridient removed.", RequestId: requestId})
 }
 
 func handleShareBento(c echo.Context) error {

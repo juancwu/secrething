@@ -85,3 +85,9 @@ type reseasonIngridientReqBody struct {
 	Name       string     `json:"name" validate:"required,printascii" errormsg:"required=Missing ingridient name,printascii=Name can only consist of printable ASCII characters"`
 	Value      string     `json:"value" validate:"required" errormsg:"Missing ingridient value. If it should be empty then provide an empty string"`
 }
+
+type deleteIngridientReqBody struct {
+	BentoId    string     `json:"bento_id" validate:"required,uuid4" errormsg:"Invalid bento id."`
+	Challenger challenger `json:"challenger" validate:"required" errormsg:"Missing challenger."`
+	Name       string     `json:"name" validate:"required,printascii" errormsg:"required=Missing ingridient name,printascii=Name can only consist of printable ASCII characters"`
+}

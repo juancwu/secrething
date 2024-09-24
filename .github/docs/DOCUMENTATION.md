@@ -326,6 +326,40 @@ JSON Body:
         request_id: string
 ```
 
+### Delete ingridient
+
+This route will delete an existing ingridient from a bento.
+
+```
+DELETE /bento/ingridient HTTP/1.1
+Host: konbini.juancwu.dev
+Authorization: Bearer <token>
+
+JSON Body:
+    bento_id: string
+    name: string
+
+200 OK:
+    Content-Type: application/json
+    JSON Body:
+        message: string
+        request_id: string
+
+400 Bad Request:
+    Content-Type: application/json
+    JSON Body:
+        errors: []string?
+        message: string
+        request_id: string
+
+401 Unauthorized:
+500 Internal Server Error:
+    Content-Type: application/json
+    JSON Body:
+        message: string
+        request_id: string
+```
+
 ## Custom tags
 
 This section covers all the custom tags with explanation on how to use them and where they are in the project.
