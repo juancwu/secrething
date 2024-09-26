@@ -65,7 +65,7 @@ type shareBentoReqBody struct {
 	// PermissionLevels represents the up to what level of permission should the target user get.
 	// Keep in mind that the max level of permission that can be granted is the max level of the requesting user.
 	// The permission to grant share is not included. That needs to be exclusively granted in another route.
-	PermissionLevels []string `json:"permission_levels" validate:"omitnil,options=all write delete share rename_bento rename_ingridient write_ingridient delete_ingridient" errormsg:"options=Invalid permission levels. Please refer to 'https://github.com/juancwu/konbini/blob/main/.github/docs/DOCUMENTATION.md' for the available permission levels and its usage."`
+	PermissionLevels []string `json:"permission_levels" validate:"omitnil,options=all write delete share rename_bento rename_ingridient write_ingridient delete_ingridient revoke_share" errormsg:"options=Invalid permission levels. Please refer to 'https://github.com/juancwu/konbini/blob/main/.github/docs/DOCUMENTATION.md' for the available permission levels and its usage."`
 }
 
 type updateEmailReqBody struct {
