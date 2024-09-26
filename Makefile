@@ -4,6 +4,8 @@ TEST_DB_PASSWORD ?= password
 TEST_DB_HOST_PORT ?= 5432
 TEST_DB_URL ?= postgres://postgres:$(TEST_DB_PASSWORD)@localhost:$(TEST_DB_HOST_PORT)/postgres?sslmode=disable 
 
+.PHONE: query
+
 dev:
 	@VERSION=dev APP_ENV=development air
 up:
@@ -27,6 +29,11 @@ check-dev-db:
 	@docker exec konbini-postgres pg_isready
 clean-dev-db:
 	@docker stop konbini-postgres && docker rm konbini-postgres
+query:
+	@docker exec konbini-postgres psql -U postgres -d postgres -c "$(filter-out $@,$(MAKECMDGOALS))"
+# Prevent make from treating the query string as a target
+%:
+	@:
 
 test: start-testdb
 	@trap 'make stop-testdb' EXIT; \
