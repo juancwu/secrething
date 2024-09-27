@@ -68,11 +68,14 @@ type allowEditBentoReqBody struct {
 	PermissionLevels []string `json:"permission_levels" validate:"omitnil,options=all write delete share rename_bento rename_ingridient write_ingridient delete_ingridient revoke_share" errormsg:"options=Invalid permission levels. Please refer to 'https://github.com/juancwu/konbini/blob/main/.github/docs/DOCUMENTATION.md' for the available permission levels and its usage."`
 }
 
-type revokeShareBentoReqBody struct {
-	BentoId           string     `json:"bento_id" validate:"required,uuid4" errormsg:"required|uuid4=Invalid bento id; Must be UUID v4"`
-	RevokeFromEmail   string     `json:"revoke_from_email" validate:"required,email" errormsg:"required|email=Invalid email"`
-	Challenger        challenger `json:"challenger" validate:"required" errormsg:"Missing required challenger (a challenge and a signature)"`
-	RevokePermissions []string   `json:"revoke_permissions" validate:"omitnil,options=all write delete share rename_bento rename_ingridient write_ingridient delete_ingridient revoke_share" errormsg:"options=Invalid permission levels. Please refer to 'https://github.com/juancwu/konbini/blob/main/.github/docs/DOCUMENTATION.md' for the available permission levels and its usage."`
+type revokeEditBentoReqBody struct {
+	BentoId   string `json:"bento_id" validate:"required,uuid4" errormsg:"required|uuid4=Invalid bento id; Must be UUID v4"`
+	Email     string `json:"email" validate:"required,email" errormsg:"required|email=Invalid email"`
+	Challenge string `json:"challenge" validate:"required" errormsg:"Missing challenge"`
+	Signature string `json:"signature" validate:"required" errormsg:"Missing signature"`
+	// ToBeRevokePermissions represents a list of edit permissions to revoke from the user with "email".
+	// If nothing is provided, all permissions will be removed.
+	ToBeRevokePermissions []string `json:"to_be_revoked_permissions" validate:"omitnil,options=all write delete share rename_bento rename_ingridient write_ingridient delete_ingridient revoke_share" errormsg:"options=Invalid permission levels. Please refer to 'https://github.com/juancwu/konbini/blob/main/.github/docs/DOCUMENTATION.md' for the available permission levels and its usage."`
 }
 
 type updateEmailReqBody struct {

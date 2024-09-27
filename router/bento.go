@@ -28,7 +28,7 @@ func SetupBentoRoutes(e RouterGroup) {
 	e.DELETE("/bento/ingridient", handleDeleteIngridient, middleware.Protect(), middleware.StructType(reflect.TypeOf(deleteIngridientReqBody{})))
 	e.PATCH("/bento/rename", handleRenameBento, middleware.Protect(), middleware.StructType(reflect.TypeOf(renameBentoReqBody{})))
 	e.POST("/bento/edit/allow", handleAllowEditBento, middleware.Protect(), middleware.StructType(reflect.TypeOf(allowEditBentoReqBody{})))
-	e.PATCH("/bento/edit/revoke", handleRevokeEditBento, middleware.Protect(), middleware.StructType(reflect.TypeOf(revokeShareBentoReqBody{})))
+	e.DELETE("/bento/edit/revoke", handleRevokeEditBento, middleware.Protect(), middleware.StructType(reflect.TypeOf(revokeEditBentoReqBody{})))
 }
 
 // handleOrderBento handles incoming requests to get an existing bento.
@@ -596,7 +596,7 @@ func handleRenameIngridient(c echo.Context) error {
 			return apiError{
 				Code:      http.StatusUnauthorized,
 				Msg:       "No bento permissions for requesting user found",
-				PublicMsg: "Invalid credentials. Make sure to have a valid access token.",
+				PublicMsg: "You do not have permissions to rename ingridients.",
 				Path:      path,
 				Err:       err,
 				RequestId: requestId,
@@ -988,10 +988,112 @@ func handleAllowEditBento(c echo.Context) error {
 
 func handleRevokeEditBento(c echo.Context) error {
 	requestId := c.Request().Header.Get(echo.HeaderXRequestID)
-	// path := c.Request().URL.Path
+	path := c.Request().URL.Path
+
+	body := new(revokeEditBentoReqBody)
+	if err := readRequestBody(c, body); err != nil {
+		return apiError{
+			Err:       err,
+			Msg:       "Failed to read request body",
+			Path:      path,
+			RequestId: requestId,
+		}
+	}
+
+	claims, err := middleware.GetJwtClaimsFromContext(c)
+	if err != nil {
+		return apiError{
+			Msg:       "Failed to get jwt claims from context",
+			Err:       err,
+			Path:      path,
+			RequestId: requestId,
+		}
+	}
+
+	targetUser, err := store.GetUserWithEmail(body.Email)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("No user found with email: %s", body.Email))
+		}
+		return apiError{
+			Msg:       "Failed to get target user with email",
+			Err:       err,
+			Path:      path,
+			RequestId: requestId,
+		}
+	}
+
+	// prevent removing permissions from yourself...
+	if claims.UserId == targetUser.Id {
+		return echo.NewHTTPError(http.StatusBadRequest, "Can't revoke edit permissions from yourself.")
+	}
+
+	bento, err := store.GetBentoWithId(body.BentoId)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("No bento found with id: %s", body.BentoId))
+		}
+		return apiError{
+			Msg:       "Failed to get bento with id",
+			Err:       err,
+			Path:      path,
+			RequestId: requestId,
+		}
+	}
+	// prevent owner doing something stupid and be locked out forever.
+	if bento.OwnerId == targetUser.Id {
+		return echo.NewHTTPError(http.StatusBadRequest, "Can't revoke edit permissions from yourself as the owner of the bento. Please throw away the bento if not desired anymore or transfer ownership.")
+	}
+
+	requestingUserPerms, err := store.GetBentoPermissionByUserBentoId(claims.UserId, bento.Id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return echo.NewHTTPError(http.StatusUnauthorized, "You are unauthorized to perform any actions on the requested bento.")
+		}
+		return apiError{
+			Msg:       "Failed to get requesting user's permissions.",
+			Err:       err,
+			Path:      path,
+			RequestId: requestId,
+		}
+	}
+	if requestingUserPerms.Permissions&(store.O_REVOKE_SHARE|store.O_SHARE) == 0 {
+		return echo.NewHTTPError(http.StatusUnauthorized, "You are unauthorized to revoke edit access.")
+	}
+
+	targetUserPerms, err := store.GetBentoPermissionByUserBentoId(targetUser.Id, bento.Id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return echo.NewHTTPError(http.StatusOK, "User does not have edit access to revoke.")
+		}
+		return apiError{
+			Msg:       "Failed to get target user's permissions.",
+			Err:       err,
+			Path:      path,
+			RequestId: requestId,
+		}
+	}
+
+	if err := bento.VerifySignature(body.Signature, body.Challenge); err != nil {
+		return apiError{
+			Err:       err,
+			Msg:       "Failed to verify signature.",
+			Path:      path,
+			RequestId: requestId,
+		}
+	}
+
+	if err := store.DeleteBentoPermissionById(targetUserPerms.Id); err != nil {
+		return apiError{
+			Err:       err,
+			Msg:       "Failed to remove edit permissions.",
+			Path:      path,
+			RequestId: requestId,
+		}
+	}
 
 	return writeJSON(http.StatusOK, c, basicRespBody{
-		Msg:       "Share revoked.",
+		Msg:       "Edit permissions revoked.",
 		RequestId: requestId,
 	})
 }

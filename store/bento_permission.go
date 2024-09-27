@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	_ "embed"
 	"time"
+
+	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -124,4 +126,21 @@ func ExistsBentoPermissionByUserBentoId(userId, bentoId string) (bool, error) {
 		return false, err
 	}
 	return exists, nil
+}
+
+// Deletes an entry in bento_permissions by matching the given id.
+//
+// IMPORTANT: THIS PROCESS IS NOT REVERSABLE!
+func DeleteBentoPermissionById(permsId int64) error {
+	res, err := db.Exec("DELETE FROM bento_permissions WHERE id = $1;", permsId)
+	if err != nil {
+		return err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to get rows affected after performing DELETE on bento_permissions")
+	} else if n > 1 {
+		log.Warn().Int64("perms_id", permsId).Msg("More than 1 permissions entry has been deleted.")
+	}
+	return nil
 }

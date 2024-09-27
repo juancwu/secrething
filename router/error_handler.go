@@ -1,6 +1,7 @@
 package router
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"reflect"
@@ -44,17 +45,22 @@ func ErrHandler(err error, c echo.Context) {
 	switch err.(type) {
 	case *echo.HTTPError:
 		he := err.(*echo.HTTPError)
-		log.Error().Err(he).Str(echo.HeaderXRequestID, c.Request().Header.Get(echo.HeaderXRequestID)).Send()
+		logger := log.Info()
+		if he.Code >= 400 && he.Code < 500 {
+			logger = log.Warn()
+		} else if he.Code >= 500 {
+			logger = log.Error()
+		}
+		logger.Err(he).Str(echo.HeaderXRequestID, c.Request().Header.Get(echo.HeaderXRequestID)).Send()
 		writeJSON(he.Code, c, basicRespBody{Msg: fmt.Sprintf("%v", he.Message), RequestId: c.Request().Header.Get(echo.HeaderXRequestID)})
 	case apiError:
 		e := err.(apiError)
-		if e.Code == 0 {
-			e.Code = http.StatusInternalServerError
-		}
-
 		if ve, ok := e.Err.(validator.ValidationErrors); ok {
 			if e.PublicMsg == "" {
 				e.PublicMsg = "Invalid request body. Please fix the issues."
+			}
+			if e.Code == 0 {
+				e.Code = http.StatusBadRequest
 			}
 			e.Errs = make([]string, len(ve))
 			structType, ok := c.Get(middleware.STRUCT_TYPE_KEY).(reflect.Type)
@@ -71,10 +77,19 @@ func ErrHandler(err error, c echo.Context) {
 					e.Errs[i] = msg
 				}
 			}
+		} else if errors.Is(e.Err, middleware.ErrNoJwtClaims) {
+			e.Code = http.StatusUnauthorized
+			if e.Msg == "" {
+				e.Msg = "Failed to get jwt claims from context."
+			}
 		}
 
 		if e.PublicMsg == "" {
 			e.PublicMsg = http.StatusText(e.Code)
+		}
+
+		if e.Code == 0 {
+			e.Code = http.StatusInternalServerError
 		}
 
 		log.Error().
