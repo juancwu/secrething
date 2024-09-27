@@ -27,7 +27,8 @@ func SetupBentoRoutes(e RouterGroup) {
 	e.PATCH("/bento/ingridient/reseason", handleReseasonIngridient, middleware.Protect(), middleware.StructType(reflect.TypeOf(reseasonIngridientReqBody{})))
 	e.DELETE("/bento/ingridient", handleDeleteIngridient, middleware.Protect(), middleware.StructType(reflect.TypeOf(deleteIngridientReqBody{})))
 	e.PATCH("/bento/rename", handleRenameBento, middleware.Protect(), middleware.StructType(reflect.TypeOf(renameBentoReqBody{})))
-	e.POST("/bento/share", handleShareBento, middleware.Protect(), middleware.StructType(reflect.TypeOf(shareBentoReqBody{})))
+	e.POST("/bento/edit/allow", handleAllowEditBento, middleware.Protect(), middleware.StructType(reflect.TypeOf(allowEditBentoReqBody{})))
+	e.PATCH("/bento/edit/revoke", handleRevokeEditBento, middleware.Protect(), middleware.StructType(reflect.TypeOf(revokeShareBentoReqBody{})))
 }
 
 // handleOrderBento handles incoming requests to get an existing bento.
@@ -817,9 +818,9 @@ func handleDeleteIngridient(c echo.Context) error {
 	return writeJSON(http.StatusOK, c, basicRespBody{Msg: "Bento ingridient removed.", RequestId: requestId})
 }
 
-func handleShareBento(c echo.Context) error {
+func handleAllowEditBento(c echo.Context) error {
 	requestId := c.Request().Header.Get(echo.HeaderXRequestID)
-	body := new(shareBentoReqBody)
+	body := new(allowEditBentoReqBody)
 
 	if err := c.Bind(body); err != nil {
 		return apiError{
@@ -942,7 +943,7 @@ func handleShareBento(c echo.Context) error {
 
 	// It can only grant up to their own level of permission
 	targetUserPerms := store.O_NO_PERMS
-	if body.PermissionLevels != nil {
+	if body.PermissionLevels != nil && len(body.PermissionLevels) > 0 {
 		for _, level := range body.PermissionLevels {
 			if level == store.S_ALL {
 				// remove the grant share bit from the permissions if they had any
@@ -983,4 +984,14 @@ func handleShareBento(c echo.Context) error {
 	}
 
 	return writeJSON(http.StatusOK, c, basicRespBody{Msg: fmt.Sprintf("Bento shared with '%s'", targetUser.Email), RequestId: requestId})
+}
+
+func handleRevokeEditBento(c echo.Context) error {
+	requestId := c.Request().Header.Get(echo.HeaderXRequestID)
+	// path := c.Request().URL.Path
+
+	return writeJSON(http.StatusOK, c, basicRespBody{
+		Msg:       "Share revoked.",
+		RequestId: requestId,
+	})
 }
