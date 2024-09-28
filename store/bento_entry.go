@@ -42,7 +42,7 @@ func SaveBentoEntryBatch(entries []BentoEntry) error {
 		}
 		values = append(values, e.Name, e.Value, e.BentoId)
 	}
-	sqlStr := fmt.Sprintf("INSERT INTO bento_entries (name, value, bento_id) VALUES %s RETURNING id, created_at, updated_at;", builder.String())
+	sqlStr := fmt.Sprintf("INSERT INTO bento_entries (name, value, bento_id) VALUES %s on CONFLICT (bento_id, name) DO UPDATE SET value = EXCLUDED.value RETURNING id, created_at, updated_at;", builder.String())
 	stmt, err := db.Prepare(sqlStr)
 	if err != nil {
 		return err
