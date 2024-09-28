@@ -194,7 +194,7 @@ func handlePrepareBento(c echo.Context) error {
 	}
 	log.Info().Str(echo.HeaderXRequestID, requestId).Str("bento_name", bento.Name).Str("bento_id", bento.Id).Msg("New bento created.")
 
-	perms, err := store.NewBentoPermissionTx(tx, user.Id, bento.Id, store.O_WRITE|store.O_SHARE|store.O_GRANT_SHARE|store.O_DELETE)
+	perms, err := store.NewBentoPermissionTx(tx, user.Id, bento.Id, store.O_OWNER|store.O_WRITE|store.O_SHARE|store.O_GRANT_SHARE|store.O_DELETE)
 	if err != nil {
 		store.Rollback(tx, requestId)
 		return apiError{
@@ -302,7 +302,7 @@ func handleThrowBento(c echo.Context) error {
 	}
 
 	// verify if the requesting user is the owner of the bento
-	if perms.Permissions&store.O_DELETE == 0 {
+	if perms.Permissions&(store.O_DELETE|store.O_OWNER) == 0 {
 		return apiError{
 			Code:      http.StatusUnauthorized,
 			Msg:       "Requesting user does not own bento. Aborting deletion.",
@@ -421,7 +421,7 @@ func handleAddIngridients(c echo.Context) error {
 	}
 
 	// confirm perms to add ingridient
-	if perms.Permissions&(store.O_WRITE|store.O_WRITE_INGRIDIENT) == 0 {
+	if perms.Permissions&(store.O_OWNER|store.O_WRITE|store.O_WRITE_INGRIDIENT) == 0 {
 		return apiError{
 			Code:      http.StatusUnauthorized,
 			Msg:       fmt.Sprintf("Requesting user (%s) does not have permission to write ingridient to bento with id '%s'", claims.UserId, bento.Id),
@@ -521,7 +521,7 @@ func handleRenameBento(c echo.Context) error {
 		}
 	}
 
-	if perms.Permissions&(store.O_WRITE|store.O_RENAME_BENTO) == 0 {
+	if perms.Permissions&(store.O_OWNER|store.O_WRITE|store.O_RENAME_BENTO) == 0 {
 		return apiError{
 			Code:      http.StatusUnauthorized,
 			Msg:       "Requesting user is not owner of bento. Aborting update.",
@@ -610,7 +610,7 @@ func handleRenameIngridient(c echo.Context) error {
 		}
 	}
 
-	if bentoPerms.Permissions&(store.O_WRITE|store.O_RENAME_INGRIDIENT|store.O_WRITE_INGRIDIENT) == 0 {
+	if bentoPerms.Permissions&(store.O_OWNER|store.O_WRITE|store.O_RENAME_INGRIDIENT|store.O_WRITE_INGRIDIENT) == 0 {
 		return apiError{
 			Code:      http.StatusUnauthorized,
 			Msg:       fmt.Sprintf("Requesting user does not have permissions to rename ingridient. Bento ID: %s", bento.Id),
@@ -700,7 +700,7 @@ func handleReseasonIngridient(c echo.Context) error {
 			RequestId: requestId,
 		}
 	}
-	if bentoPerms.Permissions&(store.O_WRITE|store.O_WRITE_INGRIDIENT) == 0 {
+	if bentoPerms.Permissions&(store.O_OWNER|store.O_WRITE|store.O_WRITE_INGRIDIENT) == 0 {
 		return apiError{
 			Code:      http.StatusUnauthorized,
 			Msg:       fmt.Sprintf("Requesting user does not have permissions to re-season ingridient. Bento ID: %s", bento.Id),
@@ -796,7 +796,7 @@ func handleDeleteIngridient(c echo.Context) error {
 			RequestId: requestId,
 		}
 	}
-	if bentoPerms.Permissions&(store.O_DELETE|store.O_DELETE_INGRIDIENT) == 0 {
+	if bentoPerms.Permissions&(store.O_OWNER|store.O_DELETE|store.O_DELETE_INGRIDIENT) == 0 {
 		return apiError{
 			Code:      http.StatusUnauthorized,
 			Msg:       "Requesting user has no permissions to delete ingridient",
@@ -920,7 +920,7 @@ func handleAllowEditBento(c echo.Context) error {
 		}
 	}
 
-	if perms.Permissions&store.O_SHARE == 0 {
+	if perms.Permissions&(store.O_OWNER|store.O_SHARE) == 0 {
 		return apiError{
 			Code:      http.StatusUnauthorized,
 			Err:       err,
@@ -948,8 +948,8 @@ func handleAllowEditBento(c echo.Context) error {
 			if level == store.S_ALL {
 				// remove the grant share bit from the permissions if they had any
 				// by default, granting the ability to share should be explicitly
-				// given in another route
-				targetUserPerms = perms.Permissions & (^store.O_GRANT_SHARE)
+				// given in another route, also remove the owner bit
+				targetUserPerms = perms.Permissions & (^(store.O_OWNER | store.O_GRANT_SHARE))
 				// no need to continue since we got all the perms we need
 				break
 			}
@@ -1057,7 +1057,7 @@ func handleRevokeEditBento(c echo.Context) error {
 			RequestId: requestId,
 		}
 	}
-	if requestingUserPerms.Permissions&(store.O_REVOKE_SHARE|store.O_SHARE) == 0 {
+	if requestingUserPerms.Permissions&(store.O_OWNER|store.O_REVOKE_SHARE|store.O_SHARE) == 0 {
 		return echo.NewHTTPError(http.StatusUnauthorized, "You are unauthorized to revoke edit access.")
 	}
 

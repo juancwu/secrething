@@ -19,6 +19,7 @@ const (
 	O_RENAME_INGRIDIENT int = 0b0000_0000_0100_0000
 	O_RENAME_BENTO      int = 0b0000_0000_1000_0000
 	O_REVOKE_SHARE      int = 0b0000_0001_0000_0000
+	O_OWNER             int = 0b1000_0000_0000_0000
 
 	// text represnetation of the perms
 
