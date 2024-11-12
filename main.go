@@ -11,7 +11,7 @@ import (
 
 func main() {
 	zerolog.TimeFieldFormat = common.FRIENDLY_TIME_FORMAT
-	if os.Getenv("APP_ENV") == "development" {
+	if os.Getenv("APP_ENV") != "production" {
 		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: common.FRIENDLY_TIME_FORMAT})
 		if err := godotenv.Load(); err != nil {
 			log.Fatal().Err(err).Msg("Failed to load .env")
