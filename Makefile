@@ -4,6 +4,8 @@ DB_URL ?= http://localhost:8080
 
 dev:
 	@VERSION=dev APP_ENV=development air
+db:
+	turso dev -f .local/turso.db
 up:
 	DATABASE_URL=$(DB_URL) geni up
 down:
