@@ -2,6 +2,7 @@ package main
 
 import (
 	"konbini/common"
+	"konbini/store"
 	"os"
 
 	"github.com/joho/godotenv"
@@ -17,4 +18,10 @@ func main() {
 			log.Fatal().Err(err).Msg("Failed to load .env")
 		}
 	}
+
+	db, err := store.NewConn()
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to load .env")
+	}
+	defer db.Close()
 }
