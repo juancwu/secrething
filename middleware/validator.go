@@ -22,7 +22,7 @@ const (
 func BindAndValidate(structType reflect.Type) echo.MiddlewareFunc {
 	if structType == nil {
 		// Crash, invalid state
-		log.Fatal().Err(errors.New("Nil struct type passed to BindAndValidate")).Stack().Msg("CRASH: invalid state reached.")
+		log.Panic().Err(errors.New("Nil struct type passed to BindAndValidate")).Stack().Msg("CRASH: invalid state reached.")
 	}
 
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
