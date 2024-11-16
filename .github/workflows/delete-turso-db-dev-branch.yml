@@ -13,7 +13,7 @@ jobs:
           SANITIZED_NAME=$(echo "$BRANCH_NAME" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g' | sed 's/--*/-/g' | sed 's/^-//; s/-$//')
           curl -X DELETE \
             -H "Authorization: Bearer ${{ secrets.TURSO_PLATFORM_API_KEY }}" \
-            "https://api.turso.tech/v1/organizations/${{ secrets.TURSO_ORGANIZATION_NAME }}/$SANITIZED_NAME"
+            "https://api.turso.tech/v1/organizations/${{ secrets.TURSO_ORGANIZATION_NAME }}/databases/$SANITIZED_NAME"
 
           if [ $? -ne 0 ]; then
             echo "Delete database API call failed"
