@@ -13,9 +13,11 @@ func Logger() echo.MiddlewareFunc {
 		return func(c echo.Context) error {
 			req := c.Request()
 			res := c.Response()
-			start := time.Now()
 
+			start := time.Now()
 			err := next(c)
+			latency := time.Now().Sub(start)
+
 			var logger *zerolog.Event
 			if err != nil {
 				logger = log.Error().Err(err)
@@ -25,7 +27,6 @@ func Logger() echo.MiddlewareFunc {
 				logger = log.Info()
 			}
 
-			latency := time.Now().Sub(start)
 			protocol := req.Proto
 			remoteIP := c.RealIP()
 			host := req.Host
@@ -41,7 +42,6 @@ func Logger() echo.MiddlewareFunc {
 			reqContentLength := req.Header.Get(echo.HeaderContentLength)
 			resSize := res.Size
 			resContentType := res.Header().Get(echo.HeaderContentType)
-			resContentLength := res.Header().Get(echo.HeaderContentLength)
 
 			logger.
 				Dur("latency", latency).
@@ -60,7 +60,6 @@ func Logger() echo.MiddlewareFunc {
 				Str("request_content_length", reqContentLength).
 				Int64("response_size", resSize).
 				Str("response_content_type", resContentType).
-				Str("response_content_length", resContentLength).
 				Send()
 
 			return err
