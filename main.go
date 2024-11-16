@@ -5,6 +5,7 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
+	emw "github.com/labstack/echo/v4/middleware"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
@@ -33,6 +34,8 @@ func main() {
 	e.HTTPErrorHandler = handler.ErrorHandler
 
 	e.HideBanner = os.Getenv("APP_ENV") == common.PRODUCTION_ENV
+
+	e.Use(emw.RequestID())
 
 	port := os.Getenv("PORT")
 	if port == "" {
