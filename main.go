@@ -1,13 +1,16 @@
 package main
 
 import (
-	"konbini/common"
-	"konbini/store"
 	"os"
 
 	"github.com/joho/godotenv"
+	"github.com/labstack/echo/v4"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+
+	"konbini/common"
+	"konbini/handler"
+	"konbini/store"
 )
 
 func main() {
@@ -24,4 +27,8 @@ func main() {
 		log.Fatal().Err(err).Msg("Failed to load .env")
 	}
 	defer db.Close()
+
+	e := echo.New()
+
+	e.HTTPErrorHandler = handler.ErrorHandler
 }
