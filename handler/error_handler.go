@@ -16,9 +16,15 @@ func ErrorHandler(err error, c echo.Context) {
 		if resp, ok := he.Message.(*types.ErrorResponse); ok {
 			response = resp
 		} else {
+			var msg string
+			if m, ok := he.Message.(string); ok {
+				msg = m
+			} else {
+				msg = http.StatusText(he.Code)
+			}
 			response = &types.ErrorResponse{
 				Status:  he.Code,
-				Message: he.Message.(string),
+				Message: msg,
 			}
 		}
 	} else {
