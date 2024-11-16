@@ -35,6 +35,12 @@ func main() {
 
 	e.HideBanner = os.Getenv("APP_ENV") == common.PRODUCTION_ENV
 
+	e.Use(emw.RecoverWithConfig(emw.RecoverConfig{
+		LogErrorFunc: func(c echo.Context, err error, stack []byte) error {
+			log.Error().Err(err).Bytes("stack", stack).Msg("Oh uh... this is a recover attempt.")
+			return err
+		},
+	}))
 	e.Use(emw.RequestID())
 
 	port := os.Getenv("PORT")
