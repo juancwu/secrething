@@ -17,3 +17,4 @@ END;
 CREATE TRIGGER cleanup_refresh_tokens_after_user_delete AFTER DELETE ON users BEGIN
 DELETE FROM refresh_tokens WHERE user_id = OLD.id;
 END;
+CREATE TABLE sqlite_sequence(name,seq);
