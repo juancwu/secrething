@@ -31,4 +31,15 @@ func main() {
 	e := echo.New()
 
 	e.HTTPErrorHandler = handler.ErrorHandler
+
+	e.HideBanner = os.Getenv("APP_ENV") == common.PRODUCTION_ENV
+
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "3000"
+	}
+
+	if err := e.Start(":" + port); err != nil {
+		log.Fatal().Err(err).Msg("Failed to start TLS server.")
+	}
 }
