@@ -11,6 +11,7 @@ import (
 
 	"konbini/common"
 	"konbini/handler"
+	"konbini/middleware"
 	"konbini/store"
 )
 
@@ -42,6 +43,7 @@ func main() {
 		},
 	}))
 	e.Use(emw.RequestID())
+	e.Use(middleware.Logger())
 
 	port := os.Getenv("PORT")
 	if port == "" {
