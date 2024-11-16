@@ -15,7 +15,7 @@ jobs:
           SANITIZED_NAME=$(echo "$BRANCH_NAME" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g' | sed 's/--*/-/g' | sed 's/^-//; s/-$//')
           echo "Sanitized name is $SANITIZED_NAME"
           RESPONSE=$(curl -X POST \
-            -H "Authorization: Bearer ${{ secrets.TURSO_DEV_API_TOKEN }}" \
+            -H "Authorization: Bearer ${{ secrets.TURSO_PLATFORM_API_KEY }}" \
             -H "Content-Type: application/json" \
             -d "{\"name\": \"$SANITIZED_NAME\", \"group\": \"${{ secrets.TURSO_GROUP_NAME }}\", \"seed\": {\"type\": \"database\", \"name\": \"${{ secrets.TURSO_DEV_DATABASE_NAME }}\"} }" \
             "https://api.turso.tech/v1/organizations/${{ secrets.TURSO_ORGANIZATION_NAME }}/databases")
