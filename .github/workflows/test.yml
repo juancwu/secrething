@@ -13,6 +13,8 @@ jobs:
     env:
       DATABASE_URL: sqlite://./test.db
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
       - name: emilpriver/geni
         uses: emilpriver/geni@v1.1.4
         with:
