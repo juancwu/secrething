@@ -18,7 +18,7 @@ jobs:
       - name: emilpriver/geni
         uses: emilpriver/geni@v1.1.4
         with:
-          database_url: "sqlite://./test.db"
+          database_url: ${{ env.DATABASE_URL }}
       - name: Run migrations with geni
         shell: bash
         run: |
