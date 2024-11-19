@@ -1,0 +1,23 @@
+name: Run tests
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+jobs:
+  run_migrations:
+    name: 'Run migrations'
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: sqlite://./test.db
+    steps:
+      - name: emilpriver/geni
+        uses: emilpriver/geni@v1.1.4
+        with:
+          database_url: "sqlite://./test.db"
+      - name: Run migrations with geni
+        shell: bash
+        run: |
+          echo $DATABASE_URL
