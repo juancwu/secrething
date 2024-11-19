@@ -4,6 +4,7 @@
 --
 
 CREATE TABLE schema_migrations (id VARCHAR(255) NOT NULL PRIMARY KEY);
+CREATE TABLE sqlite_sequence(name,seq);
 CREATE TABLE users (id TEXT PRIMARY KEY CHECK (length (id) = 36), email TEXT NOT NULL UNIQUE COLLATE NOCASE, password_hash TEXT NOT NULL CHECK (length (password_hash) > 0), is_active BOOLEAN NOT NULL DEFAULT TRUE, email_verified BOOLEAN NOT NULL DEFAULT FALSE, created_at TEXT NOT NULL DEFAULT (datetime ('now')), updated_at TEXT NOT NULL DEFAULT (datetime ('now')), last_login_at TEXT, CHECK (email LIKE '%@%.%'));
 CREATE TABLE refresh_tokens (id TEXT PRIMARY KEY CHECK (length (id) = 36), user_id TEXT NOT NULL, token TEXT NOT NULL UNIQUE, expires_at TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT (datetime ('now')));
 CREATE INDEX idx_users_email ON users (email);
