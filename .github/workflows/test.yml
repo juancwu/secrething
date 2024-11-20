@@ -22,6 +22,7 @@ jobs:
           curl -sSfL https://get.tur.so/install.sh | bash
           source /home/runner/.bashrc
           turso dev -p 9000 &
+          echo "$!"
       - name: emilpriver/geni
         uses: emilpriver/geni@v1.1.4
         with:
