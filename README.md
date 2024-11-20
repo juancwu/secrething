@@ -1,3 +1,8 @@
+# Notice:
+The current `main` branch does not reflect the currently deployed beta version of this software.
+The deployed version is in branch `old-main`.
+The project is undergoing a major re-write and re-design after user feedback in beta.
+
 # Database Management
 Continue to use PostgreSQL but migrate SQL to use SQLc for type-safe golang code usage. Makes sure that queries are performed correctly against the schema.
 
