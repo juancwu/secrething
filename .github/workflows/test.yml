@@ -25,6 +25,6 @@ jobs:
           go-version: 1.23.1
       - name: Start tests
         env:
-          TURSO_DATABASE_URL: ${{ env.DATABASE_URL }}
+          TURSO_DATABASE_URL: file://./test.db
         run: |
           go test -v ./...
