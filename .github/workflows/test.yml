@@ -16,8 +16,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Install Turso CLI
+        env:
+          TURSO_INSTALL_SKIP_SIGNUP: true
         run: |
           curl -sSfL https://get.tur.so/install.sh | bash
+          source /home/runner/.bashrc
           turso dev -p 9000 &
       - name: emilpriver/geni
         uses: emilpriver/geni@v1.1.4
