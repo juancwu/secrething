@@ -17,9 +17,11 @@ sleep 2
 
 echo "Running migrations..."
 make up DB_URL="$LOCAL_TURSO_DB_URL:$LOCAL_TURSO_DB_PORT"
+# make up DB_URL="sqlite://./test.db"
 
 echo "Run tests..."
 TURSO_DATABASE_URL="$LOCAL_TURSO_DB_URL:$LOCAL_TURSO_DB_PORT" go test -v ./...
+# TURSO_DATABASE_URL="file:./test.db" go test -v ./...
 
 if ps -p $LOCAL_TURSO_DB_PID > /dev/null; then
     echo "Terminating local db instance..."
