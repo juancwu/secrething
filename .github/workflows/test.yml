@@ -11,10 +11,14 @@ jobs:
     name: 'Run Tests'
     runs-on: ubuntu-latest
     env:
-      DATABASE_URL: sqlite://./test.db
+      DATABASE_URL: http://localhost:9000
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - name: Install Turso CLI
+        run: |
+          curl -sSfL https://get.tur.so/install.sh | bash
+          turso dev -p 9000 &
       - name: emilpriver/geni
         uses: emilpriver/geni@v1.1.4
         with:
@@ -24,7 +28,5 @@ jobs:
         with:
           go-version: 1.23.1
       - name: Start tests
-        env:
-          TURSO_DATABASE_URL: file:./test.db
         run: |
           go test -v ./...
