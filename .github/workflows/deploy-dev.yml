@@ -7,7 +7,6 @@ on:
       - 'v*.*.*-canary.*'
 jobs:
   migrate:
-    id: migrations
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
