@@ -34,4 +34,13 @@ jobs:
           go-version: 1.23.1
       - name: Start tests
         run: |
-          go test -v ./...
+          go test -v -coverprofile=coverage.out ./...
+      - name: Generate coverate report
+        if: ${{ github.event_name == 'pull_request' && always() }}
+        run: go tool cover -html=coverage.out -o coverage.html
+      - name: Upload coverage report
+        if: ${{ github.event_name == 'pull_request' && always() }}
+        uses: actions/upload-artifact@4
+        with:
+          name: coverage-report
+          path: coverage.html
