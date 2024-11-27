@@ -24,6 +24,4 @@ COPY --from=builder /app/konbini ./
 
 EXPOSE 3000
 
-ENV APP_ENV="production"
-
 ENTRYPOINT ["./konbini"]
