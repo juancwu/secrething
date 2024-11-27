@@ -3,3 +3,6 @@
 
 .local
 tmp
+
+coverage.out
+coverage.html
