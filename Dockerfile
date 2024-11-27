@@ -4,15 +4,12 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY main.go ./
-COPY validator.go ./
-COPY ./router ./router
-COPY ./store ./store
-COPY ./config ./config
-COPY ./email ./email
-COPY ./jwt ./jwt
+COPY ./common ./common
+COPY ./handler ./handler
 COPY ./middleware ./middleware
-COPY ./util ./util
-COPY ./views ./views
+COPY ./service ./service
+COPY ./store ./store
+COPY ./types ./types
 
 ARG VERSION
 RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o konbini -ldflags "-X github.com/juancwu/konbini/config.Version=${VERSION}"
