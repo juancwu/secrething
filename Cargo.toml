@@ -2,4 +2,7 @@
 
 members = ["konbini-core", "konbini-server", "konbini-tenin"]
 resolver = "2"
-default-members = ["konbini-server"]
+
+[workspace.dependencies]
+serde = { version = "1.0.216", features = ["derive"] }
+uuid = { version = "1.11.0", features = ["v4"] }

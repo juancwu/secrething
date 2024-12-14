@@ -1,14 +1,23 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
+use serde::{Deserialize, Serialize};
+use uuid::Uuid;
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct User {
+    pub id: String,
+    pub username: String,
+    pub email: String,
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+impl User {
+    pub fn new(username: String, email: String) -> Self {
+        Self {
+            id: Uuid::new_v4().to_string(),
+            username,
+            email,
+        }
+    }
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
+    pub fn validate(&self) -> bool {
+        !self.username.is_empty() && !self.email.is_empty() && self.email.contains('@')
     }
 }
