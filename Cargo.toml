@@ -1,0 +1,4 @@
+[workspace]
+
+members = ["konbini-core", "konbini-server", "konbini-tenin"]
+resolver = "2"
