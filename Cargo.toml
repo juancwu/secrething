@@ -2,3 +2,4 @@
 
 members = ["konbini-core", "konbini-server", "konbini-tenin"]
 resolver = "2"
+default-members = ["konbini-server"]
