@@ -23,3 +23,34 @@ CREATE TABLE email_tokens (
     updated_at TEXT NOT NULL DEFAULT (datetime('now', 'utc')),
     expires_at TEXT NOT NULL
 );
+CREATE TABLE sessions (
+    token_id TEXT NOT NULL,
+    token_salt BLOB NOT NULL UNIQUE,
+    user_id TEXT NOT NULL,
+    device_name TEXT,
+    device_os TEXT,
+    device_hostname TEXT,
+    ip TEXT,
+    location TEXT,
+    last_activity TEXT NOT NULL,
+
+    -- define compound pk for sessions since each user should only have one session
+    -- per token, if it isn't then there is something fishy going on.
+    CONSTRAINT pk_sessions PRIMARY KEY (user_id, token_id)
+);
+CREATE TABLE groups (
+    id TEXT NOT NULL PRIMARY KEY DEFAULT (uuid4()),
+    name TEXT NOT NULL,
+    owner_id TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now', 'utc')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now', 'utc')),
+
+    CONSTRAINT unique_group_name_owner UNIQUE (name, owner_id)
+);
+CREATE TABLE users_groups (
+    user_id TEXT NOT NULL,
+    group_id TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now', 'utc')),
+
+    CONSTRAINT pk_users_groups PRIMARY KEY (user_id, group_id)
+);
