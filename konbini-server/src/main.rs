@@ -4,7 +4,9 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
+use konbini_core::crypto;
 use konbini_core::User;
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::info;
@@ -25,6 +27,7 @@ async fn main() {
     let app = Router::new()
         .route("/users", get(list_users))
         .route("/user", post(create_user))
+        .route("/aes", get(aes_cipher))
         .with_state(state);
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:3000")
@@ -56,4 +59,52 @@ async fn create_user(
     } else {
         Err(StatusCode::BAD_REQUEST)
     }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+struct AES {
+    pub key: String,
+    pub plaintext: String,
+    pub ciphertext: String,
+}
+
+impl AES {
+    pub fn new(key: String, plaintext: String, ciphertext: String) -> Self {
+        Self {
+            plaintext,
+            ciphertext,
+            key,
+        }
+    }
+}
+
+async fn aes_cipher() -> Result<Json<AES>, StatusCode> {
+    let key = match crypto::aes::generate_key() {
+        Ok(k) => k,
+        Err(_) => {
+            return Err(StatusCode::BAD_REQUEST);
+        }
+    };
+    let data = b"some text";
+    let ciphertext = match crypto::aes::encrypt(&key, data) {
+        Ok(k) => k,
+        Err(_) => {
+            return Err(StatusCode::BAD_REQUEST);
+        }
+    };
+    let plaintext = match crypto::aes::decrypt(&key, ciphertext.as_str()) {
+        Ok(k) => k,
+        Err(_) => {
+            return Err(StatusCode::BAD_REQUEST);
+        }
+    };
+    let plaintext = match String::from_utf8(plaintext) {
+        Ok(k) => k,
+        Err(_) => {
+            return Err(StatusCode::BAD_REQUEST);
+        }
+    };
+    let key = crypto::aes::encode_key(&key);
+    let aes = AES::new(key, plaintext, ciphertext);
+    Ok(Json(aes.clone()))
 }
