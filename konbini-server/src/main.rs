@@ -3,6 +3,7 @@ use dotenvy::dotenv;
 use libsql::Builder;
 use std::sync::Arc;
 
+mod auth;
 mod routes;
 mod state;
 
