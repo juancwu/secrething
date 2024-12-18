@@ -14,8 +14,7 @@ pub fn generate_key() -> Result<[u8; 32]> {
 }
 
 /// Encrypts the given byte array using the provided byte array key.
-/// The function automatically encodes the data in hex.
-pub fn encrypt(key: &[u8; 32], data: &[u8]) -> Result<String> {
+pub fn encrypt(key: &[u8; 32], data: &[u8]) -> Result<Vec<u8>> {
     let key: &Key<Aes256Gcm> = key.into();
     let cipher = Aes256Gcm::new(&key);
     let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
@@ -24,13 +23,11 @@ pub fn encrypt(key: &[u8; 32], data: &[u8]) -> Result<String> {
         .map_err(|e| anyhow!("Failed to encrypt data: {}", e))?;
     let mut data = nonce.to_vec();
     data.extend(&ciphertext);
-    Ok(hex::encode_upper(data))
+    Ok(data)
 }
 
 /// Decrypts the given byte array using the provided byte array key.
-/// The function automatically encodes the data in hex.
-pub fn decrypt(key: &[u8], data: &str) -> Result<Vec<u8>> {
-    let data = hex::decode(data).map_err(|e| anyhow!("Failed to decode data: {}", e))?;
+pub fn decrypt(key: &[u8], data: &[u8]) -> Result<Vec<u8>> {
     if data.len() < 12 {
         return Err(anyhow!("Encrypted data too short"));
     }
@@ -44,8 +41,8 @@ pub fn decrypt(key: &[u8], data: &str) -> Result<Vec<u8>> {
     Ok(plaintext)
 }
 
-pub fn encode_key(key: &[u8; 32]) -> String {
-    hex::encode(key)
+pub fn encode_to_hex(data: &[u8]) -> String {
+    hex::encode(data)
 }
 
 #[cfg(test)]
@@ -58,8 +55,7 @@ mod tests {
         assert_eq!(key.len(), 32);
         let data = b"plaintext";
         let encrypted = encrypt(&key, data).unwrap();
-        assert_ne!(encrypted, "");
-        let decrypted = decrypt(&key, encrypted.as_str()).unwrap();
+        let decrypted = decrypt(&key, &encrypted).unwrap();
         assert_eq!(decrypted, data.to_vec());
     }
 }

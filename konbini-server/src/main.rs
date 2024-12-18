@@ -92,7 +92,7 @@ async fn aes_cipher() -> Result<Json<AES>, StatusCode> {
             return Err(StatusCode::BAD_REQUEST);
         }
     };
-    let plaintext = match crypto::aes::decrypt(&key, ciphertext.as_str()) {
+    let plaintext = match crypto::aes::decrypt(&key, &ciphertext) {
         Ok(k) => k,
         Err(_) => {
             return Err(StatusCode::BAD_REQUEST);
@@ -104,7 +104,8 @@ async fn aes_cipher() -> Result<Json<AES>, StatusCode> {
             return Err(StatusCode::BAD_REQUEST);
         }
     };
-    let key = crypto::aes::encode_key(&key);
+    let key = crypto::aes::encode_to_hex(&key);
+    let ciphertext = crypto::aes::encode_to_hex(&ciphertext);
     let aes = AES::new(key, plaintext, ciphertext);
     Ok(Json(aes.clone()))
 }
