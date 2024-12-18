@@ -5,3 +5,21 @@
 
 CREATE TABLE sqlite_sequence(name,seq);
 CREATE TABLE schema_migrations (id VARCHAR(255) NOT NULL PRIMARY KEY);
+CREATE TABLE users (
+    id TEXT NOT NULL PRIMARY KEY DEFAULT (uuid4()),
+    email TEXT NOT NULL UNIQUE,
+    password BLOB NOT NULL,
+    nickname TEXT NOT NULL,
+    email_verified BOOL NOT NULL DEFAULT false,
+    token_salt BLOB NOT NULL UNIQUE,
+    created_at TEXT NOT NULL DEFAULT (datetime('now', 'utc')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now', 'utc'))
+);
+CREATE TABLE email_tokens (
+    id TEXT NOT NULL PRIMARY KEY DEFAULT (uuid4()),
+    user_id TEXT NOT NULL UNIQUE,
+    token_salt BLOB NOT NULL UNIQUE,
+    created_at TEXT NOT NULL DEFAULT (datetime('now', 'utc')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now', 'utc')),
+    expires_at TEXT NOT NULL
+);
