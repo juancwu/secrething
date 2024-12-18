@@ -1,6 +1,11 @@
-use konbini_core::User;
-use tokio::sync::RwLock;
+use libsql::Database;
 
 pub struct AppState {
-    pub users: RwLock<Vec<User>>,
+    pub db: Database,
+}
+
+impl AppState {
+    pub fn new(db: Database) -> Self {
+        Self { db }
+    }
 }

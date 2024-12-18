@@ -1,33 +1,6 @@
-use crate::state::AppState;
-use axum::{extract::State, http::StatusCode, Json};
+use axum::{http::StatusCode, Json};
 use konbini_core::crypto;
-use konbini_core::User;
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
-
-pub async fn list_users(State(state): State<Arc<AppState>>) -> Json<Vec<User>> {
-    let users = state.users.read().await;
-    Json(users.clone())
-}
-
-#[derive(serde::Deserialize)]
-pub struct CreateUserRequest {
-    username: String,
-    email: String,
-}
-
-pub async fn create_user(
-    State(state): State<Arc<AppState>>,
-    Json(payload): Json<CreateUserRequest>,
-) -> Result<Json<User>, StatusCode> {
-    let user = User::new(payload.username, payload.email);
-    if user.validate() {
-        state.users.write().await.push(user.clone());
-        Ok(Json(user.clone()))
-    } else {
-        Err(StatusCode::BAD_REQUEST)
-    }
-}
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AES {
