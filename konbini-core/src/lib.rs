@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+pub mod crypto;
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct User {
     pub id: String,

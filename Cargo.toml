@@ -6,3 +6,4 @@ resolver = "2"
 [workspace.dependencies]
 serde = { version = "1.0.216", features = ["derive"] }
 uuid = { version = "1.11.0", features = ["v4"] }
+anyhow = "1.0.94"
