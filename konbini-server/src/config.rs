@@ -12,6 +12,7 @@ pub struct Config {
     pub backend_url: String,
     pub resend_api_key: String,
     pub noreply_email: String,
+    pub port: String,
 }
 
 impl Config {
@@ -30,6 +31,7 @@ impl Config {
         let backend_url = std::env::var("BACKEND_URL").expect("BACKEND_URL must be set");
         let resend_api_key = std::env::var("RESEND_API_KEY").expect("RESEND_API_KEY must be set");
         let noreply_email = std::env::var("NOREPLY_EMAIL").expect("NOREPLY_EMAIL must be set");
+        let port = std::env::var("PORT").expect("PORT must be set");
 
         Self {
             turso_database_url,
@@ -38,6 +40,7 @@ impl Config {
             backend_url,
             resend_api_key,
             noreply_email,
+            port,
         }
     }
 }

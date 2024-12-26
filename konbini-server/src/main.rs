@@ -1,35 +1,34 @@
-use axum::{routing::get, Router};
-use dotenvy::dotenv;
+use axum::{
+    routing::{get, post},
+    Router,
+};
 use libsql::Builder;
 use std::sync::Arc;
 
-mod auth;
-mod routes;
+mod config;
 mod state;
 
 #[tokio::main]
 async fn main() {
-    let app_env = match std::env::var("APP_ENV").ok() {
-        Some(value) => value,
-        None => String::from("production"),
-    };
-    if app_env == "development" {
-        dotenv().expect("Failed to load .env file");
-    }
+    let config = config::Config::load();
 
-    let url = std::env::var("TURSO_DATABASE_URL").expect("TURSO_DATABASE_URL must be set");
-    let token = std::env::var("TURSO_AUTH_TOKEN").expect("TURSO_AUTH_TOKEN must be set");
+    let db = Builder::new_remote(config.turso_database_url, config.turso_auth_token)
+        .build()
+        .await
+        .unwrap();
 
-    let db = Builder::new_remote(url, token).build().await.unwrap();
-
-    let state = Arc::new(state::AppState::new(db));
+    let app_state = Arc::new(state::AppState::new(db));
 
     let app = Router::new()
-        .route("/aes", get(routes::aes_cipher))
-        .with_state(state);
+        .route("/", get(hello_world))
+        .with_state(app_state);
 
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:3000")
+    let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", config.port))
         .await
         .unwrap();
     axum::serve(listener, app).await.unwrap();
+}
+
+async fn hello_world() -> &'static str {
+    "hello world"
 }

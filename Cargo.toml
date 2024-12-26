@@ -7,3 +7,5 @@ resolver = "2"
 serde = { version = "1.0.216", features = ["derive"] }
 uuid = { version = "1.11.0", features = ["v4"] }
 anyhow = "1.0.94"
+jsonwebtoken = "9.3.0"
+thiserror = "2.0.8"
