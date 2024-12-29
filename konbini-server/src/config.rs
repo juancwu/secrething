@@ -5,6 +5,17 @@ pub enum AppEnv {
     PRODUCTION,
 }
 
+impl AppEnv {
+    pub fn from(app_env: &str) -> Self {
+        match app_env {
+            "development" => AppEnv::DEVELOPMENT,
+            "staging" => AppEnv::STAGING,
+            "production" => AppEnv::PRODUCTION,
+            _ => AppEnv::DEVELOPMENT,
+        }
+    }
+}
+
 pub struct Config {
     pub turso_database_url: String,
     pub turso_auth_token: String,
@@ -18,7 +29,7 @@ pub struct Config {
 impl Config {
     pub fn load() -> Self {
         let app_env = match std::env::var("APP_ENV").ok() {
-            Some(value) => match_app_env(value.as_str()),
+            Some(value) => AppEnv::from(value.as_str()),
             None => AppEnv::DEVELOPMENT,
         };
         if app_env == AppEnv::DEVELOPMENT {
@@ -42,15 +53,5 @@ impl Config {
             noreply_email,
             port,
         }
-    }
-}
-
-/// Matches a string env value to the corresponding enum value.
-fn match_app_env(app_env: &str) -> AppEnv {
-    match app_env {
-        "development" => AppEnv::DEVELOPMENT,
-        "staging" => AppEnv::STAGING,
-        "production" => AppEnv::PRODUCTION,
-        _ => AppEnv::DEVELOPMENT,
     }
 }
