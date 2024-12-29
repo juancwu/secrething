@@ -1,11 +1,9 @@
-use axum::{
-    routing::{get, post},
-    Router,
-};
+use axum::{routing::get, Router};
 use libsql::Builder;
 use std::sync::Arc;
 
 mod config;
+mod handlers;
 mod state;
 
 #[tokio::main]
@@ -20,15 +18,11 @@ async fn main() {
     let app_state = Arc::new(state::AppState::new(db));
 
     let app = Router::new()
-        .route("/", get(hello_world))
+        .route("/health", get(handlers::health::get_health))
         .with_state(app_state);
 
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", config.port))
         .await
         .unwrap();
     axum::serve(listener, app).await.unwrap();
-}
-
-async fn hello_world() -> &'static str {
-    "hello world"
 }
