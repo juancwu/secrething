@@ -1,0 +1,25 @@
+-- +goose Up
+-- +goose StatementBegin
+
+-- enable foreign key support
+PRAGMA foreign_keys = ON;
+
+CREATE TABLE IF NOT EXISTS users (
+    id TEXT NOT NULL PRIMARY KEY DEFAULT(uuidv4()),
+    email TEXT NOT NULL UNIQUE,
+    password BLOB NOT NULL,
+    nickname TEXT NOT NULL,
+    email_verified BOOL NOT NULL DEFAULT false,
+    token_salt BLOB NOT NULL UNIQUE,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+-- +goose StatementEnd
+
+-- +goose Down
+-- +goose StatementBegin
+DROP TABLE IF EXISTS users;
+
+-- disable foreign key support
+PRAGMA foreign_keys = OFF;
+-- +goose StatementEnd
