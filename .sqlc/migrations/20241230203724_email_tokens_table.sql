@@ -1,7 +1,7 @@
 -- +goose Up
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS email_tokens (
-    id TEXT NOT NULL PRIMARY KEY DEFAULT (uuid4()),
+    id TEXT NOT NULL PRIMARY KEY DEFAULT (gen_random_uuid()),
     user_id TEXT NOT NULL UNIQUE,
     token_salt BLOB NOT NULL UNIQUE,
     created_at TEXT NOT NULL,

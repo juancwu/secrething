@@ -5,7 +5,7 @@
 PRAGMA foreign_keys = ON;
 
 CREATE TABLE IF NOT EXISTS users (
-    id TEXT NOT NULL PRIMARY KEY DEFAULT(uuidv4()),
+    id TEXT NOT NULL PRIMARY KEY DEFAULT(gen_random_uuid()),
     email TEXT NOT NULL UNIQUE,
     password TEXT NOT NULL,
     nickname TEXT NOT NULL,

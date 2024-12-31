@@ -1,7 +1,7 @@
 -- +goose Up
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS groups (
-    id TEXT NOT NULL PRIMARY KEY DEFAULT (uuid4()),
+    id TEXT NOT NULL PRIMARY KEY DEFAULT (gen_random_uuid()),
     name TEXT NOT NULL,
     owner_id TEXT NOT NULL,
     created_at TEXT NOT NULL,

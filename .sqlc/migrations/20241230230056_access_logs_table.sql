@@ -1,7 +1,7 @@
 -- +goose Up
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS access_logs (
-    id TEXT NOT NULL PRIMARY KEY DEFAULT (uuid4()),
+    id TEXT NOT NULL PRIMARY KEY DEFAULT (gen_random_uuid()),
     user_id TEXT,
     bento_id TEXT,
     group_id TEXT,
