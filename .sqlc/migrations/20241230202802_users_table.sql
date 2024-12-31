@@ -7,7 +7,7 @@ PRAGMA foreign_keys = ON;
 CREATE TABLE IF NOT EXISTS users (
     id TEXT NOT NULL PRIMARY KEY DEFAULT(uuidv4()),
     email TEXT NOT NULL UNIQUE,
-    password BLOB NOT NULL,
+    password TEXT NOT NULL,
     nickname TEXT NOT NULL,
     email_verified BOOL NOT NULL DEFAULT false,
     token_salt BLOB NOT NULL UNIQUE,
