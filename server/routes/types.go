@@ -2,8 +2,8 @@ package routes
 
 import (
 	"database/sql"
-	"konbini/db"
-	serverconfig "konbini/server_config"
+	"konbini/server/config"
+	"konbini/server/db"
 
 	"github.com/labstack/echo/v4"
 )
@@ -26,7 +26,7 @@ type EchoInstance interface {
 // RouteConfig represents the configuration that is needed to setup any route.
 type RouteConfig struct {
 	Echo         EchoInstance
-	ServerConfig *serverconfig.Config
+	ServerConfig *config.Config
 	DatabaseConn *sql.DB
 	Queries      *db.Queries
 }

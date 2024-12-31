@@ -1,6 +1,6 @@
 package routes
 
-import "konbini/handlers"
+import "konbini/server/handlers"
 
 // setupHealthRoutes sets all the health related routes
 func setupHealthRoutes(routeConfig *RouteConfig) {

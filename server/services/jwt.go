@@ -1,6 +1,6 @@
 package services
 
-import "konbini/utils"
+import "konbini/server/utils"
 
 const (
 	// JWT_TOKEN_KEY_SIZE represents the size of the byte array for each JWT key/salt

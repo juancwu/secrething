@@ -3,7 +3,7 @@ package handlers
 import (
 	"context"
 	"database/sql"
-	serverconfig "konbini/server_config"
+	"konbini/server/config"
 	"net/http"
 	"time"
 
@@ -20,7 +20,7 @@ type HealthReport struct {
 // HandleHealthCheck handles health check requests.
 // It gets the current running version of the app.
 // It gets the database connection status.
-func HandleHealthCheck(cfg *serverconfig.Config, conn *sql.DB) echo.HandlerFunc {
+func HandleHealthCheck(cfg *config.Config, conn *sql.DB) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		report := HealthReport{
 			Version: cfg.GetVersion(),

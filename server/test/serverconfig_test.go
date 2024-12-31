@@ -1,7 +1,7 @@
 package test
 
 import (
-	serverconfig "konbini/server_config"
+	"konbini/server/config"
 	"os"
 	"testing"
 
@@ -10,7 +10,7 @@ import (
 
 func TestConfig(t *testing.T) {
 	t.Run("new server configuration", func(t *testing.T) {
-		c, err := serverconfig.New()
+		c, err := config.New()
 		require.NoError(t, err)
 
 		url, token := c.GetDatabaseConfig()
@@ -28,7 +28,7 @@ func TestConfig(t *testing.T) {
 		os.Setenv("APP_ENV", "development")
 		defer func(value string) { os.Setenv("APP_ENV", value) }(original)
 
-		c, err := serverconfig.New()
+		c, err := config.New()
 		require.NoError(t, err)
 
 		require.True(t, c.IsDevelopment())
@@ -42,7 +42,7 @@ func TestConfig(t *testing.T) {
 		os.Setenv("APP_ENV", "staging")
 		defer func(value string) { os.Setenv("APP_ENV", value) }(original)
 
-		c, err := serverconfig.New()
+		c, err := config.New()
 		require.NoError(t, err)
 
 		require.True(t, c.IsStaging())
@@ -56,7 +56,7 @@ func TestConfig(t *testing.T) {
 		os.Setenv("APP_ENV", "production")
 		defer func(value string) { os.Setenv("APP_ENV", value) }(original)
 
-		c, err := serverconfig.New()
+		c, err := config.New()
 		require.NoError(t, err)
 
 		require.True(t, c.IsProduction())

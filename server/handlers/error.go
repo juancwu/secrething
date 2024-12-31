@@ -14,8 +14,8 @@ type APIError struct {
 	Errors        []string `json:"errors,omitempty"`
 	RequestId     string   `json:"request_id"`
 
-	PrivateMessage string
-	InternalError  error
+	PrivateMessage string `json:"-"`
+	InternalError  error  `json:"-"`
 }
 
 func (e APIError) Error() string {

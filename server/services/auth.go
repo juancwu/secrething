@@ -2,9 +2,7 @@ package services
 
 import (
 	"context"
-	"konbini/db"
-
-	"golang.org/x/crypto/argon2"
+	"konbini/server/db"
 )
 
 type RegisterUserParams struct {
@@ -24,4 +22,6 @@ func RegisterUser(ctx context.Context, queries *db.Queries, params RegisterUserP
 	}
 
 	queries.CreateUser(ctx, db.CreateUserParams{})
+
+	return nil, nil
 }
