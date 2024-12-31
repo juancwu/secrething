@@ -54,6 +54,10 @@ func setupEnvironmentVariables() error {
 
 	os.Setenv("APP_ENV", "testing")
 
+	os.Setenv("RESEND_API_KEY", "key")
+
+	os.Setenv("NOREPLY_EMAIL", "no-reply@mail.com")
+
 	return nil
 }
 

@@ -26,6 +26,8 @@ var (
 	ErrMissingDatabaseAuthToken error = errors.New("DATABASE_AUTH_TOKEN environment variable must be set")
 	ErrMissingBackendUrl        error = errors.New("BACKEND_URL environment variable must be set")
 	ErrMissingPort              error = errors.New("PORT environment variable must be set")
+	ErrMissingResendApiKey      error = errors.New("RESEND_API_KEY environment varaible must be set")
+	ErrMissingNoReplyEmail      error = errors.New("NOREPLY_EMAIL environment varaible must be set")
 
 	ErrInvalidAppEnv error = errors.New("Invalid value for APP_ENV environment variable")
 
@@ -49,6 +51,8 @@ type EnvConfig struct {
 	backendUrl        string
 	port              string
 	appEnv            AppEnv
+	resendApiKey      string
+	noReplyEmail      string
 }
 
 // Create a new server configuration. This method reads in required environment
@@ -127,6 +131,16 @@ func (c *Config) GetRawPort() string {
 	return c.env.port
 }
 
+// Gets the Resend API key value
+func (c *Config) GetResendApiKey() string {
+	return c.env.resendApiKey
+}
+
+// Gets the no reply email address value
+func (c *Config) GetNoReplyEmail() string {
+	return c.env.noReplyEmail
+}
+
 // Gets the current version of the application.
 func (c *Config) GetVersion() string {
 	return c.version
@@ -170,6 +184,16 @@ func (c *Config) loadEnvironmentVariables() error {
 	c.env.port = os.Getenv("PORT")
 	if c.env.port == "" {
 		return ErrMissingPort
+	}
+
+	c.env.resendApiKey = os.Getenv("RESEND_API_KEY")
+	if c.env.resendApiKey == "" {
+		return ErrMissingResendApiKey
+	}
+
+	c.env.noReplyEmail = os.Getenv("NOREPLY_EMAIL")
+	if c.env.noReplyEmail == "" {
+		return ErrMissingNoReplyEmail
 	}
 
 	// --- end required environment variables ---

@@ -27,6 +27,8 @@ func TestConfig(t *testing.T) {
 		require.Equal(t, os.Getenv("BACKEND_URL"), c.GetBackendUrl())
 		require.Equal(t, os.Getenv("PORT"), c.GetRawPort())
 		require.Equal(t, ":"+os.Getenv("PORT"), c.GetPort())
+		require.Equal(t, os.Getenv("RESEND_API_KEY"), c.GetResendApiKey())
+		require.Equal(t, os.Getenv("NOREPLY_EMAIL"), c.GetNoReplyEmail())
 		require.True(t, c.IsTesting())
 	})
 
