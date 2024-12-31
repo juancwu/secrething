@@ -4,3 +4,6 @@ INSERT INTO users
 VALUES
 (?, ?, ?, ?, ?, ?)
 RETURNING id, email_verified;
+
+-- name: ExistsUserWithEmail :one
+SELECT EXISTS(SELECT 1 FROM users WHERE email = ?);
