@@ -56,6 +56,9 @@ func New() (*Config, error) {
 
 // Gets the database URL and auth token. The return order is the same (url, token)
 func (c *Config) GetDatabaseConfig() (string, string) {
+	if c.IsTesting() {
+		return c.env.databaseUrl, ""
+	}
 	return c.env.databaseUrl, c.env.databaseAuthToken
 }
 

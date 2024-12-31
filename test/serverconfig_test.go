@@ -15,7 +15,8 @@ func TestConfig(t *testing.T) {
 
 		url, token := c.GetDatabaseConfig()
 		require.Equal(t, os.Getenv("DATABASE_URL"), url)
-		require.Equal(t, os.Getenv("DATABASE_AUTH_TOKEN"), token)
+		// expecting empty token string for testing environment
+		require.Equal(t, "", token)
 		require.Equal(t, os.Getenv("BACKEND_URL"), c.GetBackendUrl())
 		require.Equal(t, os.Getenv("PORT"), c.GetRawPort())
 		require.Equal(t, ":"+os.Getenv("PORT"), c.GetPort())
@@ -31,6 +32,9 @@ func TestConfig(t *testing.T) {
 		require.NoError(t, err)
 
 		require.True(t, c.IsDevelopment())
+
+		_, token := c.GetDatabaseConfig()
+		require.Equal(t, os.Getenv("DATABASE_AUTH_TOKEN"), token)
 	})
 
 	t.Run("correct staging app environment", func(t *testing.T) {
@@ -42,6 +46,9 @@ func TestConfig(t *testing.T) {
 		require.NoError(t, err)
 
 		require.True(t, c.IsStaging())
+
+		_, token := c.GetDatabaseConfig()
+		require.Equal(t, os.Getenv("DATABASE_AUTH_TOKEN"), token)
 	})
 
 	t.Run("correct production app environment", func(t *testing.T) {
@@ -53,5 +60,8 @@ func TestConfig(t *testing.T) {
 		require.NoError(t, err)
 
 		require.True(t, c.IsProduction())
+
+		_, token := c.GetDatabaseConfig()
+		require.Equal(t, os.Getenv("DATABASE_AUTH_TOKEN"), token)
 	})
 }
