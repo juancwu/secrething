@@ -4,7 +4,7 @@ import "konbini/utils"
 
 const (
 	// JWT_TOKEN_KEY_SIZE represents the size of the byte array for each JWT key/salt
-	JWT_TOKEN_KEY_SIZE int = 32
+	JWT_TOKEN_KEY_SIZE uint32 = 32
 )
 
 // GetRandomJWTKey generates a cryptographically secure byte array of size 32.
