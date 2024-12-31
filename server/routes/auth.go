@@ -9,7 +9,7 @@ import (
 func setupAuthRoutes(routeConfig *RouteConfig) {
 	routeConfig.Echo.POST(
 		"/auth/register",
-		handlers.HandleRegister(),
+		handlers.HandleRegister(routeConfig.Queries),
 		middlewares.ValidateJson(reflect.TypeOf(handlers.RegisterRequest{})),
 	)
 }
