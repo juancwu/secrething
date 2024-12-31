@@ -19,7 +19,7 @@ RETURNING id, email_verified
 
 type CreateUserParams struct {
 	Email     string
-	Password  []byte
+	Password  string
 	Nickname  string
 	TokenSalt []byte
 	CreatedAt string

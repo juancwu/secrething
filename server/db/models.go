@@ -94,7 +94,7 @@ type Session struct {
 type User struct {
 	ID            string
 	Email         string
-	Password      []byte
+	Password      string
 	Nickname      string
 	EmailVerified bool
 	TokenSalt     []byte
