@@ -2,6 +2,7 @@ package main
 
 import (
 	"konbini/db"
+	"konbini/handlers"
 	"konbini/routes"
 	serverconfig "konbini/server_config"
 
@@ -21,6 +22,9 @@ func main() {
 	queries := db.New(conn)
 
 	e := echo.New()
+
+	// set global error handler
+	e.HTTPErrorHandler = handlers.HandleErrors()
 
 	// v1 routes
 	apiV1 := e.Group("/api/v1")
