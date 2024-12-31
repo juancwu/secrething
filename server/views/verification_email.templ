@@ -1,5 +1,15 @@
 package views
 
-templ VerificationEmail() {
-	<div></div>
+templ VerificationEmail(url string) {
+	<div>
+		<p>
+			Thanks for using Konbini!
+		</p>
+		<p>
+			Please verify your email by clicking the link below.
+		</p>
+		<p>
+			<a href={ templ.SafeURL(url) }>Verify Now</a>
+		</p>
+	</div>
 }
