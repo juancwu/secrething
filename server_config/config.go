@@ -3,6 +3,9 @@ package serverconfig
 import (
 	"errors"
 	"os"
+
+	"github.com/joho/godotenv"
+	"github.com/rs/zerolog/log"
 )
 
 // Using an numerical type to speed up equality comparisons
@@ -32,7 +35,8 @@ var (
 // the public methods from this struct instead of accessing the
 // fields themselves.
 type Config struct {
-	env EnvConfig
+	env     EnvConfig
+	version string
 }
 
 type EnvConfig struct {
@@ -46,7 +50,9 @@ type EnvConfig struct {
 // Create a new server configuration. This method reads in required environment
 // variables too and it will return an error if any is not set.
 func New() (*Config, error) {
-	c := &Config{}
+	c := &Config{
+		version: "development",
+	}
 	err := c.loadEnvironmentVariables()
 	if err != nil {
 		return nil, err
@@ -103,10 +109,30 @@ func (c *Config) GetRawPort() string {
 	return c.env.port
 }
 
+// Gets the current version of the application.
+func (c *Config) GetVersion() string {
+	return c.version
+}
+
 // Load and verify that all required environment variables have been set.
 // It will log a warning for missing optional environment variables.
 func (c *Config) loadEnvironmentVariables() error {
 	// --- start required environment variables ---
+	env := os.Getenv("APP_ENV")
+	if env == "" {
+		return ErrMissingAppEnv
+	}
+	appEnv, err := c.matchAppEnvStrToEnum(env)
+	if err != nil {
+		return err
+	}
+	c.env.appEnv = appEnv
+
+	if c.IsDevelopment() {
+		if err := godotenv.Load(); err != nil {
+			log.Fatal().Err(err).Msg("Failed to load .env file")
+		}
+	}
 
 	c.env.databaseUrl = os.Getenv("DATABASE_URL")
 	if c.env.databaseUrl == "" {
@@ -127,16 +153,6 @@ func (c *Config) loadEnvironmentVariables() error {
 	if c.env.port == "" {
 		return ErrMissingPort
 	}
-
-	env := os.Getenv("APP_ENV")
-	if env == "" {
-		return ErrMissingAppEnv
-	}
-	appEnv, err := c.matchAppEnvStrToEnum(env)
-	if err != nil {
-		return err
-	}
-	c.env.appEnv = appEnv
 
 	// --- end required environment variables ---
 
