@@ -28,7 +28,11 @@ var (
 	ErrMissingPort              error = errors.New("PORT environment variable must be set")
 
 	ErrInvalidAppEnv error = errors.New("Invalid value for APP_ENV environment variable")
+
+	ErrUninitializedGlobalConfig error = errors.New("Global configuration not initialized. Use config.New() to initialize it.")
 )
+
+var globalConfig *Config
 
 // The server configuration struct. This struct should include all
 // the different setups that the server needs. Ideally, just use
@@ -49,15 +53,29 @@ type EnvConfig struct {
 
 // Create a new server configuration. This method reads in required environment
 // variables too and it will return an error if any is not set.
+// This function also sets the global config instance which can be access with Global() function.
+// Multiple calls of this function refreshes the value of the global config. This method
+// is not safe to use in a concurrent setting, so it should only be called once during the server boot.
 func New() (*Config, error) {
-	c := &Config{
-		version: "development",
+	if globalConfig == nil {
+		globalConfig = &Config{
+			version: "development",
+		}
 	}
-	err := c.loadEnvironmentVariables()
+	err := globalConfig.loadEnvironmentVariables()
 	if err != nil {
 		return nil, err
 	}
-	return c, nil
+	return globalConfig, nil
+}
+
+// Global returns the global configuration instance. Preferred way to get the configuration
+// from other parts of the application without passing the pointer through function parameters.
+func Global() (*Config, error) {
+	if globalConfig == nil {
+		return nil, ErrUninitializedGlobalConfig
+	}
+	return globalConfig, nil
 }
 
 // Gets the database URL and auth token. The return order is the same (url, token)
