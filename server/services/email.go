@@ -17,6 +17,10 @@ func SendEmail(ctx context.Context, params *resend.SendEmailRequest) (*resend.Se
 	if err != nil {
 		return nil, err
 	}
+	// skip sending emails in testing environment
+	if c.IsTesting() {
+		return &resend.SendEmailResponse{Id: ""}, nil
+	}
 	client := resend.NewClient(c.GetResendApiKey())
 	sent, err := client.Emails.SendWithContext(ctx, params)
 	return sent, err
@@ -27,11 +31,6 @@ func SendVerificationEmail(ctx context.Context, to string, token string) (*resen
 	c, err := config.Global()
 	if err != nil {
 		return nil, err
-	}
-
-	// skip sending emails in testing environment
-	if c.IsTesting() {
-		return &resend.SendEmailResponse{Id: ""}, nil
 	}
 
 	// change the destination email in development to avoid
