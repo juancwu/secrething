@@ -59,7 +59,6 @@ type EmailToken struct {
 	UserID    string
 	TokenSalt []byte
 	CreatedAt string
-	UpdatedAt string
 	ExpiresAt string
 }
 

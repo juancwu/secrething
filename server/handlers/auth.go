@@ -5,12 +5,13 @@ import (
 	"errors"
 	"konbini/server/db"
 	"konbini/server/middlewares"
+	"konbini/server/services"
 	"konbini/server/utils"
 	"net/http"
 	"time"
 
 	"github.com/labstack/echo/v4"
-	"github.com/rs/zerolog/log"
+	"github.com/rs/zerolog"
 )
 
 // RegisterRequest represents the request body for register route.
@@ -27,6 +28,8 @@ func HandleRegister(queries *db.Queries) echo.HandlerFunc {
 		if !ok {
 			return errors.New("Failed to get JSON body from context.")
 		}
+
+		logger := middlewares.GetLogger(c)
 
 		ctx, cancel := context.WithTimeout(c.Request().Context(), time.Second*30)
 		defer cancel()
@@ -55,10 +58,10 @@ func HandleRegister(queries *db.Queries) echo.HandlerFunc {
 			return err
 		}
 
-		// created at
+		// partialUserInformation at
 		now := time.Now().UTC().Format(time.RFC3339)
 
-		created, err := queries.CreateUser(ctx, db.CreateUserParams{
+		partialUserInformation, err := queries.CreateUser(ctx, db.CreateUserParams{
 			Email:     body.Email,
 			Password:  hash,
 			Nickname:  body.NickName,
@@ -70,7 +73,49 @@ func HandleRegister(queries *db.Queries) echo.HandlerFunc {
 			return err
 		}
 
-		log.Info().Str("user_id", created.ID).Msg("New user created.")
+		logger.Info().Str("user_id", partialUserInformation.ID).Msg("New user partialUserInformation.")
+
+		go func(userId string, userEmail string, logger *zerolog.Logger) {
+			// sending an email shouldn't take more than 1 minute
+			ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+			defer cancel()
+
+			salt, err := utils.RandomBytes(16)
+			if err != nil {
+				logger.Error().Err(err).Msg("Failed to generate email token salt when sending verification email")
+				return
+			}
+
+			now := time.Now().UTC()
+			exp := now.Add(time.Minute * 10).UTC()
+			createEmailTokenParams := db.CreateEmailTokenParams{
+				UserID:    userId,
+				TokenSalt: salt,
+				CreatedAt: now.Format(time.RFC3339),
+				ExpiresAt: exp.Format(time.RFC3339),
+			}
+			id, err := queries.CreateEmailToken(ctx, createEmailTokenParams)
+			if err != nil {
+				logger.Error().Err(err).Msg("Failed to create email token in database when sending verification email")
+				return
+			}
+
+			// TODO: add jwt token generation
+			token := id
+
+			res, err := services.SendVerificationEmail(ctx, userEmail, token)
+			if err != nil {
+				logger.Error().Err(err).Msg("Failed to send verification email")
+				return
+			}
+
+			logger.Info().
+				Str("email_id", res.Id).
+				Str("user_id", userId).
+				Str("user_email", userEmail).
+				Msg("Successfully sent verification email")
+
+		}(partialUserInformation.ID, body.Email, logger)
 
 		return c.NoContent(http.StatusCreated)
 	}
