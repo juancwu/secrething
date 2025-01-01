@@ -58,6 +58,9 @@ func setupEnvironmentVariables() error {
 
 	os.Setenv("NOREPLY_EMAIL", "no-reply@mail.com")
 
+	os.Setenv("BENTO_TOKEN_ISSUER", "bento_token_issuer")
+	os.Setenv("EMAIL_TOKEN_ISSUER", "email_token_issuer")
+
 	return nil
 }
 

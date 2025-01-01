@@ -28,6 +28,8 @@ var (
 	ErrMissingPort              error = errors.New("PORT environment variable must be set")
 	ErrMissingResendApiKey      error = errors.New("RESEND_API_KEY environment varaible must be set")
 	ErrMissingNoReplyEmail      error = errors.New("NOREPLY_EMAIL environment varaible must be set")
+	ErrMissingBentoTokenIssuer  error = errors.New("BENTO_TOKEN_ISSUER environment varaible must be set")
+	ErrMissingEmailTokenIssuer  error = errors.New("EMAIL_TOKEN_ISSUER environment varaible must be set")
 
 	ErrInvalidAppEnv error = errors.New("Invalid value for APP_ENV environment variable")
 
@@ -53,6 +55,8 @@ type EnvConfig struct {
 	appEnv            AppEnv
 	resendApiKey      string
 	noReplyEmail      string
+	bentoTokenIssuer  string
+	emailTokenIssuer  string
 }
 
 // Create a new server configuration. This method reads in required environment
@@ -141,6 +145,16 @@ func (c *Config) GetNoReplyEmail() string {
 	return c.env.noReplyEmail
 }
 
+// Gets the bento token issuer value
+func (c *Config) GetBentoTokenIssuer() string {
+	return c.env.bentoTokenIssuer
+}
+
+// Gets the email token issuer value
+func (c *Config) GetEmailTokenIssuer() string {
+	return c.env.emailTokenIssuer
+}
+
 // Gets the current version of the application.
 func (c *Config) GetVersion() string {
 	return c.version
@@ -194,6 +208,16 @@ func (c *Config) loadEnvironmentVariables() error {
 	c.env.noReplyEmail = os.Getenv("NOREPLY_EMAIL")
 	if c.env.noReplyEmail == "" {
 		return ErrMissingNoReplyEmail
+	}
+
+	c.env.bentoTokenIssuer = os.Getenv("BENTO_TOKEN_ISSUER")
+	if c.env.bentoTokenIssuer == "" {
+		return ErrMissingBentoTokenIssuer
+	}
+
+	c.env.emailTokenIssuer = os.Getenv("EMAIL_TOKEN_ISSUER")
+	if c.env.emailTokenIssuer == "" {
+		return ErrMissingEmailTokenIssuer
 	}
 
 	// --- end required environment variables ---

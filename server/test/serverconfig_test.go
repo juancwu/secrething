@@ -29,6 +29,8 @@ func TestConfig(t *testing.T) {
 		require.Equal(t, ":"+os.Getenv("PORT"), c.GetPort())
 		require.Equal(t, os.Getenv("RESEND_API_KEY"), c.GetResendApiKey())
 		require.Equal(t, os.Getenv("NOREPLY_EMAIL"), c.GetNoReplyEmail())
+		require.Equal(t, os.Getenv("BENTO_TOKEN_ISSUER"), c.GetBentoTokenIssuer())
+		require.Equal(t, os.Getenv("EMAIL_TOKEN_ISSUER"), c.GetEmailTokenIssuer())
 		require.True(t, c.IsTesting())
 	})
 
