@@ -29,6 +29,17 @@ func SendVerificationEmail(ctx context.Context, to string, token string) (*resen
 		return nil, err
 	}
 
+	// skip sending emails in testing environment
+	if c.IsTesting() {
+		return &resend.SendEmailResponse{Id: ""}, nil
+	}
+
+	// change the destination email in development to avoid
+	// hurting the domain's reputation.
+	if c.IsDevelopment() {
+		to = "delivered@resend.dev"
+	}
+
 	url := fmt.Sprintf("%s/api/v1/auth/email/verify?token=%s", c.GetBackendUrl(), token)
 	component := views.VerificationEmail(url)
 	var buffer bytes.Buffer

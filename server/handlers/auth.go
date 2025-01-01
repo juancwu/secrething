@@ -112,7 +112,6 @@ func HandleRegister(connector *db.DBConnector) echo.HandlerFunc {
 				return
 			}
 
-			userEmail = "delivered@resend.dev"
 			res, err := services.SendVerificationEmail(ctx, userEmail, token)
 			if err != nil {
 				logger.Error().Err(err).Msg("Failed to send verification email")
