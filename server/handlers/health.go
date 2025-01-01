@@ -26,6 +26,7 @@ func HandleHealthCheck(cfg *config.Config, connector *db.DBConnector) echo.Handl
 		if err != nil {
 			return err
 		}
+		defer conn.Close()
 		report := HealthReport{
 			Version: cfg.GetVersion(),
 		}

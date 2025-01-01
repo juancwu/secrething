@@ -28,6 +28,7 @@ func HandleRegister(connector *db.DBConnector) echo.HandlerFunc {
 		if err != nil {
 			return err
 		}
+		defer conn.Close()
 		queries := db.New(conn)
 		body, ok := c.Get(middlewares.JSON_BODY_KEY).(*RegisterRequest)
 		if !ok {
