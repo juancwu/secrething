@@ -15,14 +15,12 @@ echo "PID=$LOCAL_TURSO_DB_PID"
 echo "Wait for local db instance to boot..."
 sleep 2
 
-echo "Running migrations..."
-make up DB_URL="$LOCAL_TURSO_DB_URL:$LOCAL_TURSO_DB_PORT"
-# make up DB_URL="sqlite://./test.db"
+echo "Run migrations..."
+GOOSE_DRIVER=turso GOOSE_DBSTRING="$LOCAL_TURSO_DB_URL:$LOCAL_TURSO_DB_PORT" GOOSE_MIGRATION_DIR="./.sqlc/migrations" goose up
 
 echo "Run tests..."
-TURSO_DATABASE_URL="$LOCAL_TURSO_DB_URL:$LOCAL_TURSO_DB_PORT" go test -v -coverprofile=coverage.out ./...
+DATABASE_URL="$LOCAL_TURSO_DB_URL:$LOCAL_TURSO_DB_PORT" go test -v -coverprofile=coverage.out ./...
 go tool cover -html=coverage.out -o coverage.html
-# TURSO_DATABASE_URL="file:./test.db" go test -v ./...
 
 if ps -p $LOCAL_TURSO_DB_PID > /dev/null; then
     echo "Terminating local db instance..."
