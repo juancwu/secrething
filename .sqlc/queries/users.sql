@@ -7,3 +7,6 @@ RETURNING id, email_verified;
 
 -- name: ExistsUserWithEmail :one
 SELECT EXISTS(SELECT 1 FROM users WHERE email = ?);
+
+-- name: DeleteUserById :exec
+DELETE FROM users WHERE id = ?;
