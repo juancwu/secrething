@@ -1,7 +1,6 @@
 package routes
 
 import (
-	"database/sql"
 	"konbini/server/config"
 	"konbini/server/db"
 
@@ -27,6 +26,5 @@ type EchoInstance interface {
 type RouteConfig struct {
 	Echo         EchoInstance
 	ServerConfig *config.Config
-	DatabaseConn *sql.DB
-	Queries      *db.Queries
+	DBConnector  *db.DBConnector
 }

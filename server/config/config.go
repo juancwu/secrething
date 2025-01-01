@@ -21,15 +21,16 @@ const (
 )
 
 var (
-	ErrMissingAppEnv            error = errors.New("APP_ENV environment variable must be set")
-	ErrMissingDatabaseUrl       error = errors.New("DATABASE_URL environment variable must be set")
-	ErrMissingDatabaseAuthToken error = errors.New("DATABASE_AUTH_TOKEN environment variable must be set")
-	ErrMissingBackendUrl        error = errors.New("BACKEND_URL environment variable must be set")
-	ErrMissingPort              error = errors.New("PORT environment variable must be set")
-	ErrMissingResendApiKey      error = errors.New("RESEND_API_KEY environment varaible must be set")
-	ErrMissingNoReplyEmail      error = errors.New("NOREPLY_EMAIL environment varaible must be set")
-	ErrMissingBentoTokenIssuer  error = errors.New("BENTO_TOKEN_ISSUER environment varaible must be set")
-	ErrMissingEmailTokenIssuer  error = errors.New("EMAIL_TOKEN_ISSUER environment varaible must be set")
+	ErrMissingAppEnv             error = errors.New("APP_ENV environment variable must be set")
+	ErrMissingDatabaseUrl        error = errors.New("DATABASE_URL environment variable must be set")
+	ErrMissingDatabaseAuthToken  error = errors.New("DATABASE_AUTH_TOKEN environment variable must be set")
+	ErrMissingBackendUrl         error = errors.New("BACKEND_URL environment variable must be set")
+	ErrMissingPort               error = errors.New("PORT environment variable must be set")
+	ErrMissingResendApiKey       error = errors.New("RESEND_API_KEY environment varaible must be set")
+	ErrMissingVerifyEmailAddress error = errors.New("VERIFY_EMAIL_ADDRESS environment varaible must be set")
+	ErrMissingUserTokenKey       error = errors.New("USER_TOKEN_KEY environment varaible must be set")
+	ErrMissingBentoTokenKey      error = errors.New("BENTO_TOKEN_KEY environment varaible must be set")
+	ErrMissingEmailTokenKey      error = errors.New("EMAIL_TOKEN_KEY environment varaible must be set")
 
 	ErrInvalidAppEnv error = errors.New("Invalid value for APP_ENV environment variable")
 
@@ -48,15 +49,16 @@ type Config struct {
 }
 
 type EnvConfig struct {
-	databaseUrl       string
-	databaseAuthToken string
-	backendUrl        string
-	port              string
-	appEnv            AppEnv
-	resendApiKey      string
-	noReplyEmail      string
-	bentoTokenIssuer  string
-	emailTokenIssuer  string
+	databaseUrl        string
+	databaseAuthToken  string
+	backendUrl         string
+	port               string
+	appEnv             AppEnv
+	resendApiKey       string
+	verifyEmailAddress string
+	userTokenKey       []byte
+	bentoTokenKey      []byte
+	emailTokenKey      []byte
 }
 
 // Create a new server configuration. This method reads in required environment
@@ -141,18 +143,23 @@ func (c *Config) GetResendApiKey() string {
 }
 
 // Gets the no reply email address value
-func (c *Config) GetNoReplyEmail() string {
-	return c.env.noReplyEmail
+func (c *Config) GetVerifyEmailAddress() string {
+	return c.env.verifyEmailAddress
 }
 
-// Gets the bento token issuer value
-func (c *Config) GetBentoTokenIssuer() string {
-	return c.env.bentoTokenIssuer
+// Gets the user token key value
+func (c *Config) GetUserTokenKey() []byte {
+	return c.env.userTokenKey
 }
 
-// Gets the email token issuer value
-func (c *Config) GetEmailTokenIssuer() string {
-	return c.env.emailTokenIssuer
+// Gets the bento token key value
+func (c *Config) GetBentoTokenKey() []byte {
+	return c.env.bentoTokenKey
+}
+
+// Gets the email token key value
+func (c *Config) GetEmailTokenKey() []byte {
+	return c.env.emailTokenKey
 }
 
 // Gets the current version of the application.
@@ -205,19 +212,29 @@ func (c *Config) loadEnvironmentVariables() error {
 		return ErrMissingResendApiKey
 	}
 
-	c.env.noReplyEmail = os.Getenv("NOREPLY_EMAIL")
-	if c.env.noReplyEmail == "" {
-		return ErrMissingNoReplyEmail
+	c.env.verifyEmailAddress = os.Getenv("VERIFY_EMAIL_ADDRESS")
+	if c.env.verifyEmailAddress == "" {
+		return ErrMissingVerifyEmailAddress
 	}
 
-	c.env.bentoTokenIssuer = os.Getenv("BENTO_TOKEN_ISSUER")
-	if c.env.bentoTokenIssuer == "" {
-		return ErrMissingBentoTokenIssuer
+	c.env.verifyEmailAddress = os.Getenv("VERIFY_EMAIL_ADDRESS")
+	if c.env.verifyEmailAddress == "" {
+		return ErrMissingVerifyEmailAddress
 	}
 
-	c.env.emailTokenIssuer = os.Getenv("EMAIL_TOKEN_ISSUER")
-	if c.env.emailTokenIssuer == "" {
-		return ErrMissingEmailTokenIssuer
+	c.env.userTokenKey = []byte(os.Getenv("USER_TOKEN_KEY"))
+	if len(c.env.userTokenKey) == 0 {
+		return ErrMissingUserTokenKey
+	}
+
+	c.env.bentoTokenKey = []byte(os.Getenv("BENTO_TOKEN_KEY"))
+	if len(c.env.bentoTokenKey) == 0 {
+		return ErrMissingBentoTokenKey
+	}
+
+	c.env.emailTokenKey = []byte(os.Getenv("EMAIL_TOKEN_KEY"))
+	if len(c.env.emailTokenKey) == 0 {
+		return ErrMissingEmailTokenKey
 	}
 
 	// --- end required environment variables ---

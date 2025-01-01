@@ -38,10 +38,18 @@ func SendVerificationEmail(ctx context.Context, to string, token string) (*resen
 	}
 
 	params := &resend.SendEmailRequest{
-		From:    c.GetNoReplyEmail(),
+		From:    c.GetVerifyEmailAddress(),
 		To:      []string{to},
 		Subject: "Verify Your Email",
 		Html:    buffer.String(),
+		Text: fmt.Sprintf(
+			`Thanks for using Konbini!
+
+Please verify your email by opening the following link in a browser:
+
+%s`,
+			url,
+		),
 	}
 
 	res, err := SendEmail(ctx, params)

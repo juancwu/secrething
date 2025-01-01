@@ -22,8 +22,13 @@ type RegisterRequest struct {
 }
 
 // HandleRegister is a handler function that registers a user for Konbini.
-func HandleRegister(queries *db.Queries) echo.HandlerFunc {
+func HandleRegister(connector *db.DBConnector) echo.HandlerFunc {
 	return func(c echo.Context) error {
+		conn, err := connector.Connect()
+		if err != nil {
+			return err
+		}
+		queries := db.New(conn)
 		body, ok := c.Get(middlewares.JSON_BODY_KEY).(*RegisterRequest)
 		if !ok {
 			return errors.New("Failed to get JSON body from context.")
@@ -82,7 +87,7 @@ func HandleRegister(queries *db.Queries) echo.HandlerFunc {
 
 			salt, err := utils.RandomBytes(16)
 			if err != nil {
-				logger.Error().Err(err).Msg("Failed to generate email token salt when sending verification email")
+				logger.Error().Err(err).Msg("Failed to generate random email token key when sending verification email")
 				return
 			}
 
@@ -100,9 +105,13 @@ func HandleRegister(queries *db.Queries) echo.HandlerFunc {
 				return
 			}
 
-			// TODO: add jwt token generation
-			token := id
+			token, err := services.NewEmailToken(id, userId, salt, exp)
+			if err != nil {
+				logger.Error().Err(err).Msg("Failed to generate email jwt when sending verification email")
+				return
+			}
 
+			userEmail = "delivered@resend.dev"
 			res, err := services.SendVerificationEmail(ctx, userEmail, token)
 			if err != nil {
 				logger.Error().Err(err).Msg("Failed to send verification email")

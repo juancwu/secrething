@@ -19,9 +19,6 @@ func main() {
 	}
 
 	dbUrl, dbAuthToken := cfg.GetDatabaseConfig()
-	conn, err := db.NewConnection(dbUrl, dbAuthToken)
-	defer conn.Close()
-	queries := db.New(conn)
 
 	e := echo.New()
 
@@ -37,8 +34,7 @@ func main() {
 	routeConfig := &routes.RouteConfig{
 		Echo:         apiV1,
 		ServerConfig: cfg,
-		DatabaseConn: conn,
-		Queries:      queries,
+		DBConnector:  db.NewConnector(dbUrl, dbAuthToken),
 	}
 	routes.SetupRoutesV1(routeConfig)
 

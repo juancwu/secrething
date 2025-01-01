@@ -55,11 +55,11 @@ func setupEnvironmentVariables() error {
 	os.Setenv("APP_ENV", "testing")
 
 	os.Setenv("RESEND_API_KEY", "key")
+	os.Setenv("VERIFY_EMAIL_ADDRESS", "verify@mail.com")
 
-	os.Setenv("NOREPLY_EMAIL", "no-reply@mail.com")
-
-	os.Setenv("BENTO_TOKEN_ISSUER", "bento_token_issuer")
-	os.Setenv("EMAIL_TOKEN_ISSUER", "email_token_issuer")
+	os.Setenv("USER_TOKEN_KEY", "usertokenkey")
+	os.Setenv("BENTO_TOKEN_KEY", "bentotokenkey")
+	os.Setenv("EMAIL_TOKEN_KEY", "emailtokenkey")
 
 	return nil
 }
