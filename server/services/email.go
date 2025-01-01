@@ -47,7 +47,9 @@ func SendVerificationEmail(ctx context.Context, to string, token string) (*resen
 
 Please verify your email by opening the following link in a browser:
 
-%s`,
+%s
+
+Do not reply to this email. This email is not monitored.`,
 			url,
 		),
 	}

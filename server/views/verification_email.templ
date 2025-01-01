@@ -11,5 +11,8 @@ templ VerificationEmail(url string) {
 		<p>
 			<a href={ templ.SafeURL(url) }>Verify Now</a>
 		</p>
+		<p>
+			Do not reply to this email. This email is not monitored.
+		</p>
 	</div>
 }
