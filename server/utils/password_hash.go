@@ -44,21 +44,37 @@ func GeneratePasswordHash(password string) (string, error) {
 		Parallelism: argon2Parallelism,
 		KeyLength:   argon2KeyLength,
 	}
-	hash, salt, err := HashPassword(password, params, nil)
+	hash, salt, err := hashPassword(password, params, nil)
 	if err != nil {
 		return "", err
 	}
 
 	// encode the hash and its parameters
-	encodedResult := EncodePasswordHash(hash, salt, params)
+	encodedResult := encodePasswordHash(hash, salt, params)
 
 	return encodedResult, nil
 }
 
-// HashPassword hashes the given password using the Argon2 algorithm.
+func ComparePasswordAndHash(password string, encodedHash string) (bool, error) {
+	decodedHash, err := decodePasswordHash(encodedHash)
+	if err != nil {
+		return false, err
+	}
+
+	otherHash, _, err := hashPassword(password, decodedHash.Params, decodedHash.Salt)
+	if err != nil {
+		return false, err
+	}
+
+	result := subtle.ConstantTimeCompare(decodedHash.Hash, otherHash)
+
+	return result == 1, nil
+}
+
+// hashPassword hashes the given password using the Argon2 algorithm.
 // Optionally pass a salt byte array or nil to generate a random salt.
 // Returns the hashed byte array and the salt byte array
-func HashPassword(password string, params HashParams, salt []byte) ([]byte, []byte, error) {
+func hashPassword(password string, params HashParams, salt []byte) ([]byte, []byte, error) {
 	var err error
 	if salt == nil {
 		salt, err = RandomBytes(argon2SaltLength)
@@ -79,24 +95,8 @@ func HashPassword(password string, params HashParams, salt []byte) ([]byte, []by
 	return hash, salt, nil
 }
 
-func ComparePasswordAndHash(password string, encodedHash string) (bool, error) {
-	decodedHash, err := DecodePasswordHash(encodedHash)
-	if err != nil {
-		return false, err
-	}
-
-	otherHash, _, err := HashPassword(password, decodedHash.Params, decodedHash.Salt)
-	if err != nil {
-		return false, err
-	}
-
-	result := subtle.ConstantTimeCompare(decodedHash.Hash, otherHash)
-
-	return result == 1, nil
-}
-
-// EncodePasswordHash encodes the given hash and salt into a string.
-func EncodePasswordHash(hash []byte, salt []byte, params HashParams) string {
+// encodePasswordHash encodes the given hash and salt into a string.
+func encodePasswordHash(hash []byte, salt []byte, params HashParams) string {
 	b64Salt := base64.RawStdEncoding.EncodeToString(salt)
 	b64Hash := base64.RawStdEncoding.EncodeToString(hash)
 
@@ -113,9 +113,9 @@ func EncodePasswordHash(hash []byte, salt []byte, params HashParams) string {
 	return encodedResult
 }
 
-// DecodePasswordHash decodes the encoded hash into a DecodedHash struct
+// decodePasswordHash decodes the encoded hash into a DecodedHash struct
 // which has all the fields needed to further compare passwords.
-func DecodePasswordHash(encodedHash string) (*DecodedHash, error) {
+func decodePasswordHash(encodedHash string) (*DecodedHash, error) {
 	var err error
 	var result DecodedHash
 	parts := strings.Split(encodedHash, "$")
