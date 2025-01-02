@@ -96,6 +96,8 @@ type MagicLinkRequestRequest struct {
 	Password string `json:"password" validate:"required"`
 }
 
+const magicLinkCodeLen = 6
+
 func HandleMagicLinkRequest(connector *db.DBConnector) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		conn, err := connector.Connect()
@@ -103,6 +105,7 @@ func HandleMagicLinkRequest(connector *db.DBConnector) echo.HandlerFunc {
 			return err
 		}
 		defer conn.Close()
+
 		body, err := middlewares.GetJsonBody[MagicLinkRequestRequest](c)
 		if err != nil {
 			return err
@@ -125,7 +128,55 @@ func HandleMagicLinkRequest(connector *db.DBConnector) echo.HandlerFunc {
 			}
 		}
 
-		return nil
+		user, err := queries.GetUserByEmail(ctx, body.Email)
+		if err != nil {
+			return err
+		}
+
+		matches, err := utils.ComparePasswordAndHash(body.Password, user.Password)
+		if err != nil {
+			return err
+		}
+
+		if !matches {
+			return APIError{
+				Code:          http.StatusBadRequest,
+				PublicMessage: "Invalid credentials.",
+			}
+		}
+
+		// generate random digit sequence for the magic link
+		digits, err := utils.RandomDigits(magicLinkCodeLen)
+		if err != nil {
+			return err
+		}
+
+		now := time.Now().UTC()
+		exp := now.Add(time.Minute * 10)
+		err = queries.CreateMagicLink(ctx, db.CreateMagicLinkParams{
+			Token:     string(digits),
+			UserID:    user.ID,
+			CreatedAt: now.Format(time.RFC3339),
+			ExpiresAt: exp.Format(time.RFC3339),
+		})
+		if err != nil {
+			return err
+		}
+
+		// logger with request context
+		logger := middlewares.GetLogger(c)
+		go func(to, code, createdAt, expiresAt string, logger *zerolog.Logger) {
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+			defer cancel()
+			res, err := services.SendMagicLinkEmail(ctx, to, code, createdAt, expiresAt)
+			if err != nil {
+				logger.Error().Err(err).Str("to", to).Msg("Failed to send magic link email")
+				return
+			}
+			logger.Info().Str("email_id", res.Id).Msg("Successfully sent magic link email")
+		}(user.Email, string(digits), now.Format("2006/01/02 15:04PM")+" UTC", exp.Format("2006/01/02 15:04PM")+" UTC", logger)
+
+		return c.NoContent(http.StatusOK)
 	}
 }
 

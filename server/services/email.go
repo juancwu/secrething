@@ -21,6 +21,11 @@ func SendEmail(ctx context.Context, params *resend.SendEmailRequest) (*resend.Se
 	if c.IsTesting() {
 		return &resend.SendEmailResponse{Id: ""}, nil
 	}
+	// change the destination email in development to avoid
+	// hurting the domain's reputation.
+	if c.IsDevelopment() {
+		params.To = []string{"delivered@resend.dev"}
+	}
 	client := resend.NewClient(c.GetResendApiKey())
 	sent, err := client.Emails.SendWithContext(ctx, params)
 	return sent, err
@@ -31,12 +36,6 @@ func SendVerificationEmail(ctx context.Context, to string, token string) (*resen
 	c, err := config.Global()
 	if err != nil {
 		return nil, err
-	}
-
-	// change the destination email in development to avoid
-	// hurting the domain's reputation.
-	if c.IsDevelopment() {
-		to = "delivered@resend.dev"
 	}
 
 	url := fmt.Sprintf("%s/api/v1/auth/email/verify?token=%s", c.GetBackendUrl(), token)
@@ -62,6 +61,36 @@ Please verify your email by opening the following link in a browser:
 Do not reply to this email. This email is not monitored.`,
 			url,
 		),
+	}
+
+	res, err := SendEmail(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func SendMagicLinkEmail(ctx context.Context, to string, code string, createdAt, expiresAt string) (*resend.SendEmailResponse, error) {
+	c, err := config.Global()
+	if err != nil {
+		return nil, err
+	}
+
+	url := fmt.Sprintf("%s/api/v1/auth/magic/verify?code=%s", c.GetBackendUrl(), code)
+	component := views.MagicLinkEmail(url, code, expiresAt)
+	var buffer bytes.Buffer
+	err = component.Render(ctx, &buffer)
+	if err != nil {
+		return nil, err
+	}
+
+	params := &resend.SendEmailRequest{
+		From:    c.GetVerifyEmailAddress(),
+		To:      []string{to},
+		Subject: fmt.Sprintf("Log In | Magic Link - %s", createdAt),
+		Html:    buffer.String(),
+		Text:    fmt.Sprintf(views.MagicLinkEmailTextContent, url, code, expiresAt),
 	}
 
 	res, err := SendEmail(ctx, params)
