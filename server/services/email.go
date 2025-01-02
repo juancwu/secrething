@@ -71,13 +71,12 @@ Do not reply to this email. This email is not monitored.`,
 	return res, nil
 }
 
-func SendMagicLinkEmail(ctx context.Context, to string, code string, createdAt, expiresAt string) (*resend.SendEmailResponse, error) {
+func SendMagicLinkEmail(ctx context.Context, to string, code, url string, createdAt, expiresAt string) (*resend.SendEmailResponse, error) {
 	c, err := config.Global()
 	if err != nil {
 		return nil, err
 	}
 
-	url := fmt.Sprintf("%s/api/v1/auth/magic/verify?code=%s", c.GetBackendUrl(), code)
 	component := views.MagicLinkEmail(url, code, expiresAt)
 	var buffer bytes.Buffer
 	err = component.Render(ctx, &buffer)

@@ -3,11 +3,14 @@ package handlers
 import (
 	"context"
 	"errors"
+	"fmt"
+	"konbini/server/config"
 	"konbini/server/db"
 	"konbini/server/middlewares"
 	"konbini/server/services"
 	"konbini/server/utils"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -165,16 +168,45 @@ func HandleMagicLinkRequest(connector *db.DBConnector) echo.HandlerFunc {
 
 		// logger with request context
 		logger := middlewares.GetLogger(c)
-		go func(to, code, createdAt, expiresAt string, logger *zerolog.Logger) {
+		go func(to, code, createdAt, expiresAt, redirectUri, redirectPort string, logger *zerolog.Logger) {
+			c, err := config.Global()
+			if err != nil {
+				logger.Error().Err(err).Str("to", to).Msg("Failed to get server configuration.")
+				return
+			}
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 			defer cancel()
-			res, err := services.SendMagicLinkEmail(ctx, to, code, createdAt, expiresAt)
+
+			// redirectUri and redirectPort, These values are used to create a magic link that a CLI
+			// can use to log in without the need for the user to input the 6 digit code.
+			// It works by having the CLI listening on a URI and PORT
+			// which the magic link verify handler will redirect to
+			// if the values are passed as query paramters to the verify handler.
+			// The user token is then appended to the redirect url as "token"
+			// which then the CLI can access since it is listening on that address and port.
+
+			magicUrl := fmt.Sprintf(
+				"%s/api/v1/auth/magic/verify?code=%s&redirect_uri=%s&redirect_port=%s",
+				c.GetBackendUrl(),
+				code,
+				url.QueryEscape(redirectUri),
+				url.QueryEscape(redirectPort),
+			)
+			res, err := services.SendMagicLinkEmail(ctx, to, code, magicUrl, createdAt, expiresAt)
 			if err != nil {
 				logger.Error().Err(err).Str("to", to).Msg("Failed to send magic link email")
 				return
 			}
 			logger.Info().Str("email_id", res.Id).Msg("Successfully sent magic link email")
-		}(user.Email, string(digits), now.Format("2006/01/02 15:04PM")+" UTC", exp.Format("2006/01/02 15:04PM")+" UTC", logger)
+		}(
+			user.Email,
+			string(digits),
+			now.Format("2006/01/02 15:04PM")+" UTC",
+			exp.Format("2006/01/02 15:04PM")+" UTC",
+			c.QueryParam("redirect_uri"),
+			c.QueryParam("redirect_port"),
+			logger,
+		)
 
 		return c.NoContent(http.StatusOK)
 	}
