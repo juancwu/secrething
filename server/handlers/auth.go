@@ -100,6 +100,7 @@ type MagicLinkRequestRequest struct {
 	Password    string `json:"password" validate:"required"`
 	Client      string `json:"client" validate:"required,oneof=tenin konbi"`
 	RedirectUri string `json:"redirect_uri" validate:"required,http_url"`
+	State       string `json:"state" validate:"required,max=1024"`
 }
 
 const magicLinkCodeLen = 6
@@ -180,6 +181,7 @@ func HandleMagicLinkRequest(connector *db.DBConnector) echo.HandlerFunc {
 				ExpiresAt:   exp.Format(time.RFC3339),
 				Client:      body.Client,
 				RedirectUri: body.RedirectUri,
+				State:       body.State,
 				Logger:      logger,
 			},
 		)
@@ -196,6 +198,7 @@ type magicLinkRoutineParams struct {
 	ExpiresAt   string
 	Client      string
 	RedirectUri string
+	State       string
 	Logger      *zerolog.Logger
 }
 
@@ -208,6 +211,7 @@ func sendMagicLinkRoutine(params magicLinkRoutineParams) {
 	expiresAt := params.ExpiresAt
 	client := params.Client
 	redirectUri := params.RedirectUri
+	state := params.State
 
 	c, err := config.Global()
 	if err != nil {
@@ -239,11 +243,12 @@ func sendMagicLinkRoutine(params magicLinkRoutineParams) {
 	}
 
 	magicUrl := fmt.Sprintf(
-		"%s/api/v1/auth/magic/verify?token=%s&redirect_uri=%s&client=%s",
+		"%s/api/v1/auth/magic/verify?token=%s&redirect_uri=%s&client=%s&state=%s",
 		c.GetBackendUrl(),
 		base64.URLEncoding.EncodeToString(encryptedUserContext),
 		base64.URLEncoding.EncodeToString(encryptedRedirectUri),
 		base64.URLEncoding.EncodeToString(encryptedClient),
+		base64.URLEncoding.EncodeToString([]byte(state)),
 	)
 	res, err := services.SendMagicLinkEmail(ctx, email, magicUrl, createdAt, expiresAt)
 	if err != nil {
@@ -293,6 +298,7 @@ func HandleMagicLinkVerify(connector *db.DBConnector) echo.HandlerFunc {
 				PublicMessage: "Missing redirect_uri in magic link.",
 			}
 		}
+		redirectUri = string(decryptedRedirectUri)
 
 		client := c.QueryParam("client")
 		decodedClientLen := base64.URLEncoding.DecodedLen(len(client))
@@ -311,9 +317,10 @@ func HandleMagicLinkVerify(connector *db.DBConnector) echo.HandlerFunc {
 				PublicMessage: "Missing client in magic link.",
 			}
 		}
+		client = string(decryptedClient)
 
 		// make sure they are valid client and redirect url
-		if err := c.Validate(&magicLinkVerification{Client: string(decryptedClient), RedirectUri: string(decryptedRedirectUri)}); err != nil {
+		if err := c.Validate(&magicLinkVerification{Client: client, RedirectUri: redirectUri}); err != nil {
 			return APIError{
 				Code:           http.StatusBadRequest,
 				PublicMessage:  "Invalid magic link.",
@@ -428,7 +435,7 @@ func HandleMagicLinkVerify(connector *db.DBConnector) echo.HandlerFunc {
 			return err
 		}
 
-		redirectUrl := fmt.Sprintf("%s?token=%s&client=%s", string(decryptedRedirectUri), token, string(decryptedClient))
+		redirectUrl := fmt.Sprintf("%s?token=%s&client=%s", redirectUri, token, client)
 
 		return c.Redirect(http.StatusPermanentRedirect, redirectUrl)
 	}
