@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"konbini/server/config"
@@ -10,7 +11,6 @@ import (
 	"konbini/server/services"
 	"konbini/server/utils"
 	"net/http"
-	"net/url"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -168,7 +168,14 @@ func HandleMagicLinkRequest(connector *db.DBConnector) echo.HandlerFunc {
 
 		// logger with request context
 		logger := middlewares.GetLogger(c)
-		go func(to, code, createdAt, expiresAt, redirectUri, redirectPort string, logger *zerolog.Logger) {
+		// redirectUri and redirectPort, These values are used to create a magic link that a CLI
+		// can use to log in without the need for the user to input the 6 digit code.
+		// It works by having the CLI listening on a URI and PORT
+		// which the magic link verify handler will redirect to
+		// if the values are passed as query paramters to the verify handler.
+		// The user token is then appended to the redirect url as "token"
+		// which then the CLI can access since it is listening on that address and port.
+		go func(to, userId, code, createdAt, expiresAt, redirectUri, redirectPort string, logger *zerolog.Logger) {
 			c, err := config.Global()
 			if err != nil {
 				logger.Error().Err(err).Str("to", to).Msg("Failed to get server configuration.")
@@ -177,20 +184,33 @@ func HandleMagicLinkRequest(connector *db.DBConnector) echo.HandlerFunc {
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 			defer cancel()
 
-			// redirectUri and redirectPort, These values are used to create a magic link that a CLI
-			// can use to log in without the need for the user to input the 6 digit code.
-			// It works by having the CLI listening on a URI and PORT
-			// which the magic link verify handler will redirect to
-			// if the values are passed as query paramters to the verify handler.
-			// The user token is then appended to the redirect url as "token"
-			// which then the CLI can access since it is listening on that address and port.
+			// all query parameters are to be encrypted to avoid revealing any of this information if
+			// the email ends up being seen by some unwanted entity.
+			userContext := userId + "$" + code
+			encryptedUserContext, err := utils.EncryptAES([]byte(userContext), c.GetAesKey())
+			if err != nil {
+				logger.Error().Err(err).Str("to", to).Msg("Failed to encrypt user id and code.")
+				return
+			}
+
+			encryptedRedirectUri, err := utils.EncryptAES([]byte(redirectUri), c.GetAesKey())
+			if err != nil {
+				logger.Error().Err(err).Str("to", to).Msg("Failed to encrypt redirect uri.")
+				return
+			}
+
+			encryptedRedirectPort, err := utils.EncryptAES([]byte(redirectPort), c.GetAesKey())
+			if err != nil {
+				logger.Error().Err(err).Str("to", to).Msg("Failed to encrypt redirect port.")
+				return
+			}
 
 			magicUrl := fmt.Sprintf(
-				"%s/api/v1/auth/magic/verify?code=%s&redirect_uri=%s&redirect_port=%s",
+				"%s/api/v1/auth/magic/verify?token=%s&redirect_uri=%s&redirect_port=%s",
 				c.GetBackendUrl(),
-				code,
-				url.QueryEscape(redirectUri),
-				url.QueryEscape(redirectPort),
+				base64.URLEncoding.EncodeToString(encryptedUserContext),
+				base64.URLEncoding.EncodeToString(encryptedRedirectUri),
+				base64.URLEncoding.EncodeToString(encryptedRedirectPort),
 			)
 			res, err := services.SendMagicLinkEmail(ctx, to, code, magicUrl, createdAt, expiresAt)
 			if err != nil {
@@ -200,6 +220,7 @@ func HandleMagicLinkRequest(connector *db.DBConnector) echo.HandlerFunc {
 			logger.Info().Str("email_id", res.Id).Msg("Successfully sent magic link email")
 		}(
 			user.Email,
+			user.ID,
 			string(digits),
 			now.Format("2006/01/02 15:04PM")+" UTC",
 			exp.Format("2006/01/02 15:04PM")+" UTC",

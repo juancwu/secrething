@@ -56,6 +56,8 @@ func setupEnvironmentVariables() error {
 	os.Setenv("BENTO_TOKEN_KEY", "bentotokenkey")
 	os.Setenv("EMAIL_TOKEN_KEY", "emailtokenkey")
 
+	os.Setenv("AES_KEY", "f1d850bbac1d076100a12ef50be2020d8d8eb4888c174124af66148e34d3c160")
+
 	return nil
 }
 

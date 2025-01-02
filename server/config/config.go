@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/hex"
 	"errors"
 	"os"
 
@@ -31,10 +32,13 @@ var (
 	ErrMissingUserTokenKey       error = errors.New("USER_TOKEN_KEY environment varaible must be set")
 	ErrMissingBentoTokenKey      error = errors.New("BENTO_TOKEN_KEY environment varaible must be set")
 	ErrMissingEmailTokenKey      error = errors.New("EMAIL_TOKEN_KEY environment varaible must be set")
+	ErrMissingAesKey             error = errors.New("AES_KEY environment varaible must be set")
 
 	ErrInvalidAppEnv error = errors.New("Invalid value for APP_ENV environment variable")
 
 	ErrUninitializedGlobalConfig error = errors.New("Global configuration not initialized. Use config.New() to initialize it.")
+
+	ErrInvalidAesKeyLength error = errors.New("AES key must be 32 bytes long.")
 )
 
 var globalConfig *Config
@@ -59,6 +63,7 @@ type EnvConfig struct {
 	userTokenKey       []byte
 	bentoTokenKey      []byte
 	emailTokenKey      []byte
+	aesKey             []byte
 }
 
 // Create a new server configuration. This method reads in required environment
@@ -167,6 +172,10 @@ func (c *Config) GetVersion() string {
 	return c.version
 }
 
+func (c *Config) GetAesKey() []byte {
+	return c.env.aesKey
+}
+
 // Load and verify that all required environment variables have been set.
 // It will log a warning for missing optional environment variables.
 func (c *Config) loadEnvironmentVariables() error {
@@ -236,6 +245,23 @@ func (c *Config) loadEnvironmentVariables() error {
 	if len(c.env.emailTokenKey) == 0 {
 		return ErrMissingEmailTokenKey
 	}
+
+	hexAesKey := os.Getenv("AES_KEY")
+	if hexAesKey == "" {
+		return ErrMissingAesKey
+	}
+	if len(hexAesKey) != 64 {
+		return ErrInvalidAesKeyLength
+	}
+	decodedAesKey := make([]byte, 32)
+	n, err := hex.Decode(decodedAesKey, []byte(hexAesKey))
+	if err != nil {
+		return err
+	}
+	if n != 32 {
+		return ErrInvalidAesKeyLength
+	}
+	c.env.aesKey = decodedAesKey
 
 	// --- end required environment variables ---
 
