@@ -64,3 +64,58 @@ func (q *Queries) ExistsUserWithEmail(ctx context.Context, email string) (int64,
 	err := row.Scan(&column_1)
 	return column_1, err
 }
+
+const getUserByEmail = `-- name: GetUserByEmail :one
+SELECT
+    id,
+    email,
+    email_verified,
+    password,
+    nickname,
+    token_salt,
+    created_at,
+    updated_at
+FROM users
+WHERE email = ?
+`
+
+type GetUserByEmailRow struct {
+	ID            string
+	Email         string
+	EmailVerified bool
+	Password      string
+	Nickname      string
+	TokenSalt     []byte
+	CreatedAt     string
+	UpdatedAt     string
+}
+
+func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEmailRow, error) {
+	row := q.db.QueryRowContext(ctx, getUserByEmail, email)
+	var i GetUserByEmailRow
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.EmailVerified,
+		&i.Password,
+		&i.Nickname,
+		&i.TokenSalt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const setUserEmailVerifiedStatus = `-- name: SetUserEmailVerifiedStatus :exec
+UPDATE users SET email_verified = ? WHERE id = ?
+`
+
+type SetUserEmailVerifiedStatusParams struct {
+	EmailVerified bool
+	ID            string
+}
+
+func (q *Queries) SetUserEmailVerifiedStatus(ctx context.Context, arg SetUserEmailVerifiedStatusParams) error {
+	_, err := q.db.ExecContext(ctx, setUserEmailVerifiedStatus, arg.EmailVerified, arg.ID)
+	return err
+}

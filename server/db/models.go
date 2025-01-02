@@ -78,6 +78,13 @@ type GroupPermission struct {
 	UpdatedAt string
 }
 
+type MagicLink struct {
+	Token     string
+	UserID    string
+	CreatedAt string
+	ExpiresAt string
+}
+
 type Session struct {
 	TokenID        string
 	TokenSalt      []byte

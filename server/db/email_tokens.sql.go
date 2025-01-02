@@ -63,3 +63,27 @@ func (q *Queries) DeleteAllEmailTokensByUserId(ctx context.Context, userID strin
 	}
 	return items, nil
 }
+
+const getEmailTokenById = `-- name: GetEmailTokenById :one
+SELECT
+    id,
+    user_id,
+    token_salt,
+    created_at,
+    expires_at
+FROM email_tokens
+WHERE id = ?
+`
+
+func (q *Queries) GetEmailTokenById(ctx context.Context, id string) (EmailToken, error) {
+	row := q.db.QueryRowContext(ctx, getEmailTokenById, id)
+	var i EmailToken
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.TokenSalt,
+		&i.CreatedAt,
+		&i.ExpiresAt,
+	)
+	return i, err
+}

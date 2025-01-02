@@ -12,4 +12,5 @@ func setupAuthRoutes(routeConfig *RouteConfig) {
 		handlers.HandleRegister(routeConfig.DBConnector),
 		middlewares.ValidateJson(reflect.TypeOf(handlers.RegisterRequest{})),
 	)
+	routeConfig.Echo.GET("/auth/email/verify", handlers.VerifyEmail(routeConfig.DBConnector))
 }

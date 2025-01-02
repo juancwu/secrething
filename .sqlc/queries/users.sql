@@ -10,3 +10,19 @@ SELECT EXISTS(SELECT 1 FROM users WHERE email = ?);
 
 -- name: DeleteUserById :exec
 DELETE FROM users WHERE id = ?;
+
+-- name: GetUserByEmail :one
+SELECT
+    id,
+    email,
+    email_verified,
+    password,
+    nickname,
+    token_salt,
+    created_at,
+    updated_at
+FROM users
+WHERE email = ?;
+
+-- name: SetUserEmailVerifiedStatus :exec
+UPDATE users SET email_verified = ? WHERE id = ?;

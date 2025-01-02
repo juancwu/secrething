@@ -3,6 +3,7 @@ package middlewares
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -13,6 +14,10 @@ import (
 
 const (
 	JSON_BODY_KEY string = "request_validated_json"
+)
+
+var (
+	ErrFailedToGetJsonBody error = errors.New("Failed to get json body from context")
 )
 
 type ValidateJsonConfig struct {
@@ -80,4 +85,12 @@ func ValidateJsonWithConfig(structType reflect.Type, cfg ValidateJsonConfig) ech
 			return next(c)
 		}
 	}
+}
+
+func GetJsonBody[T interface{}](c echo.Context) (*T, error) {
+	body, ok := c.Get(JSON_BODY_KEY).(*T)
+	if !ok {
+		return nil, ErrFailedToGetJsonBody
+	}
+	return body, nil
 }

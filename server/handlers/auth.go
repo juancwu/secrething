@@ -14,6 +14,132 @@ import (
 	"github.com/rs/zerolog"
 )
 
+func VerifyEmail(connector *db.DBConnector) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		token := c.QueryParam("token")
+		if token == "" {
+			return APIError{
+				Code:          http.StatusBadRequest,
+				PublicMessage: "Missing token query parameter.",
+			}
+		}
+
+		logger := middlewares.GetLogger(c)
+
+		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+		defer cancel()
+
+		conn, err := connector.Connect()
+		if err != nil {
+			return err
+		}
+		defer conn.Close()
+
+		claims, err := services.ParseEmailToken(token)
+		if err != nil {
+			return err
+		}
+
+		queries := db.New(conn)
+
+		emailToken, err := queries.GetEmailTokenById(ctx, claims.ID)
+
+		// verify the token, this also verifies that the token hasn't expired yet.
+		_, err = services.VerifyEmailToken(token, emailToken.TokenSalt)
+		if err != nil {
+			return APIError{
+				Code:          http.StatusBadRequest,
+				PublicMessage: "Invalid token. Please request a new verification email.",
+				InternalError: err,
+			}
+		}
+
+		if claims.UserId != emailToken.UserID {
+			return APIError{
+				Code:           http.StatusBadRequest,
+				PublicMessage:  "Invalid token. Please request a new verification email.",
+				PrivateMessage: "The user id in the claims does not match the user id stored in the database.",
+			}
+		}
+
+		tx, err := conn.BeginTx(ctx, nil)
+		if err != nil {
+			return err
+		}
+		defer tx.Rollback()
+
+		queries = queries.WithTx(tx)
+		ids, err := queries.DeleteAllEmailTokensByUserId(ctx, emailToken.UserID)
+		if err != nil {
+			return err
+		}
+
+		logger.Info().Strs("email_token_ids", ids).Msg("Deleted email tokens")
+
+		err = queries.SetUserEmailVerifiedStatus(ctx, db.SetUserEmailVerifiedStatusParams{ID: emailToken.UserID, EmailVerified: true})
+		if err != nil {
+			return err
+		}
+
+		err = tx.Commit()
+		if err != nil {
+			return err
+		}
+
+		return c.NoContent(http.StatusOK)
+	}
+}
+
+// LoginRequest represnets the request body for login route
+type MagicLinkRequestRequest struct {
+	Email    string `json:"email" validate:"required,email"`
+	Password string `json:"password" validate:"required"`
+}
+
+func HandleMagicLinkRequest(connector *db.DBConnector) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		conn, err := connector.Connect()
+		if err != nil {
+			return err
+		}
+		defer conn.Close()
+		body, err := middlewares.GetJsonBody[MagicLinkRequestRequest](c)
+		if err != nil {
+			return err
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+		defer cancel()
+
+		queries := db.New(conn)
+
+		exists, err := queries.ExistsUserWithEmail(ctx, body.Email)
+		if err != nil {
+			return err
+		}
+
+		if exists != 1 {
+			return APIError{
+				Code:          http.StatusBadRequest,
+				PublicMessage: "Invalid credentials.",
+			}
+		}
+
+		return nil
+	}
+}
+
+type MagicLinkVerifyRequest struct {
+	Token string `json:"token" validate:"required,len=6"`
+	Email string `json:"email" validate:"required,email"`
+}
+
+func HandleMagicLinkVerify(connector *db.DBConnector) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		return nil
+	}
+}
+
 // RegisterRequest represents the request body for register route.
 type RegisterRequest struct {
 	Email    string `json:"email" validate:"required,email"`
@@ -85,6 +211,13 @@ func HandleRegister(connector *db.DBConnector) echo.HandlerFunc {
 			// sending an email shouldn't take more than 1 minute
 			ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 			defer cancel()
+
+			conn, err := connector.Connect()
+			if err != nil {
+				logger.Error().Err(err).Msg("Failed to connect to database when sending verification email")
+				return
+			}
+			queries := db.New(conn)
 
 			salt, err := utils.RandomBytes(16)
 			if err != nil {
