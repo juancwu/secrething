@@ -2,7 +2,6 @@ package test
 
 import (
 	"fmt"
-	"konbini/server/config"
 	"os"
 	"testing"
 )
@@ -20,11 +19,11 @@ func TestMain(m *testing.M) {
 
 	code := m.Run()
 
-	// err = cleanup()
-	// if err != nil {
-	// 	fmt.Printf("Failed to cleanup testing environment: %v\n", err)
-	// 	os.Exit(1)
-	// }
+	err = cleanup()
+	if err != nil {
+		fmt.Printf("Failed to cleanup testing environment: %v\n", err)
+		os.Exit(1)
+	}
 
 	os.Exit(code)
 }
@@ -37,20 +36,11 @@ func setup() error {
 		return err
 	}
 
-	// load up the configuration object
-	c, err := config.New()
-	if err != nil {
-		return err
-	}
-
-	err = seedWithTestUsers(c)
-	if err != nil {
-		return err
-	}
 	return nil
 }
 
 func setupEnvironmentVariables() error {
+	os.Setenv("DATABASE_URL", "url")
 	os.Setenv("DATABASE_AUTH_TOKEN", "empty")
 
 	os.Setenv("BACKEND_URL", "http://127.0.0.1:3000")
@@ -71,10 +61,6 @@ func setupEnvironmentVariables() error {
 
 // Cleans up the testing enviroment.
 func cleanup() error {
-	err := os.Remove("./test.db")
-	if err != nil {
-		return err
-	}
 
 	return nil
 }
