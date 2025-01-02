@@ -53,6 +53,7 @@ func setupEnvironmentVariables() error {
 	os.Setenv("VERIFY_EMAIL_ADDRESS", "verify@mail.com")
 
 	os.Setenv("USER_TOKEN_KEY", "usertokenkey")
+	os.Setenv("USER_TOKEN_ISSUER", "usertokenissuer")
 	os.Setenv("BENTO_TOKEN_KEY", "bentotokenkey")
 	os.Setenv("EMAIL_TOKEN_KEY", "emailtokenkey")
 

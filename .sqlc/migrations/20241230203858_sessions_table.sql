@@ -1,7 +1,7 @@
 -- +goose Up
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS sessions (
-    token_id TEXT NOT NULL,
+    token_id TEXT NOT NULL DEFAULT (gen_random_uuid()),
     token_salt BLOB NOT NULL UNIQUE,
     user_id TEXT NOT NULL,
     device_name TEXT,

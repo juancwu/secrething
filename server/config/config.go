@@ -33,6 +33,7 @@ var (
 	ErrMissingBentoTokenKey      error = errors.New("BENTO_TOKEN_KEY environment varaible must be set")
 	ErrMissingEmailTokenKey      error = errors.New("EMAIL_TOKEN_KEY environment varaible must be set")
 	ErrMissingAesKey             error = errors.New("AES_KEY environment varaible must be set")
+	ErrMissingUserTokenIssuer    error = errors.New("USER_TOKEN_ISSUER environment variable must be set")
 
 	ErrInvalidAppEnv error = errors.New("Invalid value for APP_ENV environment variable")
 
@@ -61,6 +62,7 @@ type EnvConfig struct {
 	resendApiKey       string
 	verifyEmailAddress string
 	userTokenKey       []byte
+	userTokenIssuer    string
 	bentoTokenKey      []byte
 	emailTokenKey      []byte
 	aesKey             []byte
@@ -157,6 +159,10 @@ func (c *Config) GetUserTokenKey() []byte {
 	return c.env.userTokenKey
 }
 
+func (c *Config) GetUserTokenIssuer() string {
+	return c.env.userTokenIssuer
+}
+
 // Gets the bento token key value
 func (c *Config) GetBentoTokenKey() []byte {
 	return c.env.bentoTokenKey
@@ -234,6 +240,11 @@ func (c *Config) loadEnvironmentVariables() error {
 	c.env.userTokenKey = []byte(os.Getenv("USER_TOKEN_KEY"))
 	if len(c.env.userTokenKey) == 0 {
 		return ErrMissingUserTokenKey
+	}
+
+	c.env.userTokenIssuer = os.Getenv("USER_TOKEN_ISSUER")
+	if c.env.userTokenIssuer == "" {
+		return ErrMissingUserTokenIssuer
 	}
 
 	c.env.bentoTokenKey = []byte(os.Getenv("BENTO_TOKEN_KEY"))

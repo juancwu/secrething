@@ -5,19 +5,11 @@ import _ "embed"
 //go:embed magic_link_email.txt
 var MagicLinkEmailTextContent string
 
-templ MagicLinkEmail(url, code, exp string) {
+templ MagicLinkEmail(url, exp string) {
 	<div>
 		<p>Hi, here is your magic link to log into Konbini.</p>
 		<div>
 			<a href={ templ.SafeURL(url) }>Log In</a>
-		</div>
-		<p>
-			If you are prompted for a 6 digits code, use the following code:
-		</p>
-		<div>
-			<p style="text-align:center;">
-				{ code }
-			</p>
 		</div>
 		<p>
 			This link will expire at { exp }

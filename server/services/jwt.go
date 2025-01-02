@@ -8,9 +8,90 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+const (
+	USER_TOKEN_TYPE  string = "user_token"
+	EMAIL_TOKEN_TYPE string = "email_token"
+)
+
+type GeneralJwtClaims struct {
+	Type string `json:"type"`
+}
+
+type UserToken struct {
+	Role      string `json:"role"`
+	IssuedFor string `json:"issued_for"`
+	GeneralJwtClaims
+	jwt.RegisteredClaims
+}
+
+func NewUserToken(tokenId, userId, role, issuedFor string, salt []byte, exp time.Time) (string, error) {
+	cfg, err := config.Global()
+	if err != nil {
+		return "", err
+	}
+
+	claims := UserToken{
+		Role:      role,
+		IssuedFor: issuedFor,
+		GeneralJwtClaims: GeneralJwtClaims{
+			Type: USER_TOKEN_TYPE,
+		},
+		RegisteredClaims: jwt.RegisteredClaims{
+			Issuer:  cfg.GetUserTokenIssuer(),
+			Subject: userId,
+			Audience: jwt.ClaimStrings{
+				"https://api.konbini.sh",
+			},
+			NotBefore: jwt.NewNumericDate(time.Now().UTC()),
+			ExpiresAt: jwt.NewNumericDate(exp.UTC()),
+			IssuedAt:  jwt.NewNumericDate(time.Now().UTC()),
+			ID:        tokenId,
+		},
+	}
+
+	token := jwt.NewWithClaims(
+		jwt.SigningMethodHS256,
+		claims,
+	)
+
+	prefix := cfg.GetUserTokenKey()
+	key := combine(prefix, salt)
+
+	return token.SignedString(key)
+}
+
+func ParseUserToken(token string) (*UserToken, error) {
+	parser := jwt.NewParser(jwt.WithoutClaimsValidation())
+	claims := &UserToken{}
+	_, _, err := parser.ParseUnverified(token, claims)
+	if err != nil {
+		return nil, err
+	}
+	return claims, nil
+}
+
+func VerifyUserToken(token string, salt []byte) error {
+	cfg, err := config.Global()
+	if err != nil {
+		return err
+	}
+	prefix := cfg.GetUserTokenKey()
+	key := combine(prefix, salt)
+	_, err = jwt.Parse(token, func(t *jwt.Token) (interface{}, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("Unexpected signing method: %v", t.Header["alg"])
+		}
+		return key, nil
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // EmailToken represents the claims in a email jwt
 type EmailToken struct {
-	UserId string `json:"user_id"`
+	GeneralJwtClaims
 	jwt.RegisteredClaims
 }
 
@@ -22,8 +103,15 @@ func NewEmailToken(emailTokenId string, userId string, salt []byte, exp time.Tim
 	}
 
 	claims := EmailToken{
-		UserId: userId,
+		GeneralJwtClaims: GeneralJwtClaims{
+			Type: EMAIL_TOKEN_TYPE,
+		},
 		RegisteredClaims: jwt.RegisteredClaims{
+			Issuer:  "Konbini",
+			Subject: userId,
+			Audience: jwt.ClaimStrings{
+				"https://api.konbini.sh",
+			},
 			ExpiresAt: jwt.NewNumericDate(exp.UTC()),
 			IssuedAt:  jwt.NewNumericDate(time.Now().UTC()),
 			ID:        emailTokenId,

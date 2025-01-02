@@ -12,10 +12,15 @@ func setupAuthRoutes(routeConfig *RouteConfig) {
 		handlers.HandleRegister(routeConfig.DBConnector),
 		middlewares.ValidateJson(reflect.TypeOf(handlers.RegisterRequest{})),
 	)
+
 	routeConfig.Echo.POST(
 		"/auth/magic/request",
 		handlers.HandleMagicLinkRequest(routeConfig.DBConnector),
 		middlewares.ValidateJson(reflect.TypeOf(handlers.MagicLinkRequestRequest{})),
+	)
+	routeConfig.Echo.GET(
+		"/auth/magic/verify",
+		handlers.HandleMagicLinkVerify(routeConfig.DBConnector),
 	)
 
 	routeConfig.Echo.GET("/auth/email/verify", handlers.VerifyEmail(routeConfig.DBConnector))

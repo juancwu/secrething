@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"database/sql"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -57,7 +58,7 @@ func VerifyEmail(connector *db.DBConnector) echo.HandlerFunc {
 			}
 		}
 
-		if claims.UserId != emailToken.UserID {
+		if claims.Subject != emailToken.UserID {
 			return APIError{
 				Code:           http.StatusBadRequest,
 				PublicMessage:  "Invalid token. Please request a new verification email.",
@@ -95,8 +96,10 @@ func VerifyEmail(connector *db.DBConnector) echo.HandlerFunc {
 
 // LoginRequest represnets the request body for login route
 type MagicLinkRequestRequest struct {
-	Email    string `json:"email" validate:"required,email"`
-	Password string `json:"password" validate:"required"`
+	Email       string `json:"email" validate:"required,email"`
+	Password    string `json:"password" validate:"required"`
+	Client      string `json:"client" validate:"required,oneof=tenin konbi"`
+	RedirectUri string `json:"redirect_uri" validate:"required,http_url"`
 }
 
 const magicLinkCodeLen = 6
@@ -168,80 +171,278 @@ func HandleMagicLinkRequest(connector *db.DBConnector) echo.HandlerFunc {
 
 		// logger with request context
 		logger := middlewares.GetLogger(c)
-		// redirectUri and redirectPort, These values are used to create a magic link that a CLI
-		// can use to log in without the need for the user to input the 6 digit code.
-		// It works by having the CLI listening on a URI and PORT
-		// which the magic link verify handler will redirect to
-		// if the values are passed as query paramters to the verify handler.
-		// The user token is then appended to the redirect url as "token"
-		// which then the CLI can access since it is listening on that address and port.
-		go func(to, userId, code, createdAt, expiresAt, redirectUri, redirectPort string, logger *zerolog.Logger) {
-			c, err := config.Global()
-			if err != nil {
-				logger.Error().Err(err).Str("to", to).Msg("Failed to get server configuration.")
-				return
-			}
-			ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
-			defer cancel()
-
-			// all query parameters are to be encrypted to avoid revealing any of this information if
-			// the email ends up being seen by some unwanted entity.
-			userContext := userId + "$" + code
-			encryptedUserContext, err := utils.EncryptAES([]byte(userContext), c.GetAesKey())
-			if err != nil {
-				logger.Error().Err(err).Str("to", to).Msg("Failed to encrypt user id and code.")
-				return
-			}
-
-			encryptedRedirectUri, err := utils.EncryptAES([]byte(redirectUri), c.GetAesKey())
-			if err != nil {
-				logger.Error().Err(err).Str("to", to).Msg("Failed to encrypt redirect uri.")
-				return
-			}
-
-			encryptedRedirectPort, err := utils.EncryptAES([]byte(redirectPort), c.GetAesKey())
-			if err != nil {
-				logger.Error().Err(err).Str("to", to).Msg("Failed to encrypt redirect port.")
-				return
-			}
-
-			magicUrl := fmt.Sprintf(
-				"%s/api/v1/auth/magic/verify?token=%s&redirect_uri=%s&redirect_port=%s",
-				c.GetBackendUrl(),
-				base64.URLEncoding.EncodeToString(encryptedUserContext),
-				base64.URLEncoding.EncodeToString(encryptedRedirectUri),
-				base64.URLEncoding.EncodeToString(encryptedRedirectPort),
-			)
-			res, err := services.SendMagicLinkEmail(ctx, to, code, magicUrl, createdAt, expiresAt)
-			if err != nil {
-				logger.Error().Err(err).Str("to", to).Msg("Failed to send magic link email")
-				return
-			}
-			logger.Info().Str("email_id", res.Id).Msg("Successfully sent magic link email")
-		}(
-			user.Email,
-			user.ID,
-			string(digits),
-			now.Format("2006/01/02 15:04PM")+" UTC",
-			exp.Format("2006/01/02 15:04PM")+" UTC",
-			c.QueryParam("redirect_uri"),
-			c.QueryParam("redirect_port"),
-			logger,
+		go sendMagicLinkRoutine(
+			magicLinkRoutineParams{
+				Email:       user.Email,
+				UserId:      user.ID,
+				Code:        string(digits),
+				CreatedAt:   now.Format(time.RFC3339),
+				ExpiresAt:   exp.Format(time.RFC3339),
+				Client:      body.Client,
+				RedirectUri: body.RedirectUri,
+				Logger:      logger,
+			},
 		)
 
 		return c.NoContent(http.StatusOK)
 	}
 }
 
-type MagicLinkVerifyRequest struct {
-	Token string `json:"token" validate:"required,len=6"`
-	Email string `json:"email" validate:"required,email"`
+type magicLinkRoutineParams struct {
+	Email       string
+	UserId      string
+	Code        string
+	CreatedAt   string
+	ExpiresAt   string
+	Client      string
+	RedirectUri string
+	Logger      *zerolog.Logger
+}
+
+func sendMagicLinkRoutine(params magicLinkRoutineParams) {
+	logger := params.Logger
+	userId := params.UserId
+	email := params.Email
+	code := params.Code
+	createdAt := params.CreatedAt
+	expiresAt := params.ExpiresAt
+	client := params.Client
+	redirectUri := params.RedirectUri
+
+	c, err := config.Global()
+	if err != nil {
+		logger.Error().Err(err).Str("to", email).Msg("Failed to get server configuration.")
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+	defer cancel()
+
+	// all query parameters are to be encrypted to avoid revealing any of this information if
+	// the email ends up being seen by some unwanted entity.
+	userContext := userId + code
+	encryptedUserContext, err := utils.EncryptAES([]byte(userContext), c.GetAesKey())
+	if err != nil {
+		logger.Error().Err(err).Str("to", email).Msg("Failed to encrypt user id and code.")
+		return
+	}
+
+	encryptedRedirectUri, err := utils.EncryptAES([]byte(redirectUri), c.GetAesKey())
+	if err != nil {
+		logger.Error().Err(err).Str("to", email).Msg("Failed to encrypt redirect uri.")
+		return
+	}
+
+	encryptedClient, err := utils.EncryptAES([]byte(client), c.GetAesKey())
+	if err != nil {
+		logger.Error().Err(err).Str("to", email).Msg("Failed to encrypt client.")
+		return
+	}
+
+	magicUrl := fmt.Sprintf(
+		"%s/api/v1/auth/magic/verify?token=%s&redirect_uri=%s&client=%s",
+		c.GetBackendUrl(),
+		base64.URLEncoding.EncodeToString(encryptedUserContext),
+		base64.URLEncoding.EncodeToString(encryptedRedirectUri),
+		base64.URLEncoding.EncodeToString(encryptedClient),
+	)
+	res, err := services.SendMagicLinkEmail(ctx, email, magicUrl, createdAt, expiresAt)
+	if err != nil {
+		logger.Error().Err(err).Str("to", email).Msg("Failed to send magic link email")
+		return
+	}
+	logger.Info().Str("email_id", res.Id).Msg("Successfully sent magic link email")
+}
+
+// magicLinkVerification is used primarily to verify the query parameters for the magic lin.
+type magicLinkVerification struct {
+	Client      string `validate:"required,oneof=tenin konin"`
+	RedirectUri string `validate:"required,http_url"`
 }
 
 func HandleMagicLinkVerify(connector *db.DBConnector) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		return nil
+		// get all the required query parameters
+		b64Token := c.QueryParam("token")
+		if b64Token == "" {
+			return APIError{
+				Code:          http.StatusBadRequest,
+				PublicMessage: "Missing token in magic link.",
+			}
+		}
+
+		cfg, err := config.Global()
+		if err != nil {
+			return err
+		}
+
+		// make sure that all parameters are valid before querying the database
+		redirectUri := c.QueryParam("redirect_uri")
+		decodedRedirectUriLen := base64.URLEncoding.DecodedLen(len(redirectUri))
+		decodedRedirectUri := make([]byte, decodedRedirectUriLen)
+		_, err = base64.URLEncoding.Decode(decodedRedirectUri, []byte(redirectUri))
+		if err != nil {
+			return err
+		}
+		decryptedRedirectUri, err := utils.DecryptAES(decodedRedirectUri, cfg.GetAesKey())
+		if err != nil {
+			return err
+		}
+		if len(decryptedRedirectUri) == 0 {
+			return APIError{
+				Code:          http.StatusBadRequest,
+				PublicMessage: "Missing redirect_uri in magic link.",
+			}
+		}
+
+		client := c.QueryParam("client")
+		decodedClientLen := base64.URLEncoding.DecodedLen(len(client))
+		decodedClient := make([]byte, decodedClientLen)
+		_, err = base64.URLEncoding.Decode(decodedClient, []byte(client))
+		if err != nil {
+			return err
+		}
+		decryptedClient, err := utils.DecryptAES(decodedClient, cfg.GetAesKey())
+		if err != nil {
+			return err
+		}
+		if len(decryptedClient) == 0 {
+			return APIError{
+				Code:          http.StatusBadRequest,
+				PublicMessage: "Missing client in magic link.",
+			}
+		}
+
+		// make sure they are valid client and redirect url
+		if err := c.Validate(&magicLinkVerification{Client: string(decryptedClient), RedirectUri: string(decryptedRedirectUri)}); err != nil {
+			return APIError{
+				Code:           http.StatusBadRequest,
+				PublicMessage:  "Invalid magic link.",
+				PrivateMessage: "Cient and/or redirect uir is/are invalid.",
+				InternalError:  err,
+			}
+		}
+
+		// decrypt the token and get the context
+		decodedTokenLen := base64.URLEncoding.DecodedLen(len(b64Token))
+		decodedToken := make([]byte, decodedTokenLen)
+		_, err = base64.URLEncoding.Decode(decodedToken, []byte(b64Token))
+		if err != nil {
+			return err
+		}
+		decryptedToken, err := utils.DecryptAES(decodedToken, cfg.GetAesKey())
+		if err != nil {
+			return err
+		}
+		token := string(decryptedToken)
+		// uuid v4 has 36 characters and the code has 6
+		// 36 + 6 = 42
+		if len(token) != 42 {
+			return APIError{
+				Code:          http.StatusBadRequest,
+				PublicMessage: "Invalid token.",
+			}
+		}
+		userId := string(token[:36])
+		code := string(token[36:])
+
+		// get the magic link from the database
+		conn, err := connector.Connect()
+		if err != nil {
+			return err
+		}
+		defer conn.Close()
+		queries := db.New(conn)
+
+		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+		defer cancel()
+
+		magicLink, err := queries.GetMagicLink(ctx, db.GetMagicLinkParams{
+			Token:  code,
+			UserID: userId,
+		})
+		if err != nil {
+			return err
+		}
+
+		// check for expiration
+		now := time.Now().UTC()
+		exp, err := time.Parse(time.RFC3339, magicLink.ExpiresAt)
+		if err != nil {
+			return err
+		}
+		if now.After(exp.UTC()) {
+			// remove the expired magic link in a go routine to not block
+			go removeInvalidMagicLink(connector, magicLink.Token, magicLink.UserID)
+			return APIError{
+				Code:          http.StatusBadRequest,
+				PublicMessage: "Expired magic link.",
+			}
+		}
+
+		// check if code matches
+		if magicLink.Token != code {
+			return APIError{
+				Code:          http.StatusBadRequest,
+				PublicMessage: "Invalid magic link.",
+			}
+		}
+
+		// remove the magic link in go routine to not block
+		go removeInvalidMagicLink(connector, magicLink.Token, magicLink.UserID)
+
+		// create a new session in the database
+		// this helps keep track how many devices the user has signed in
+		// and also allow users to control which session to sign out.
+
+		// Each session has its own token salt making revoking individual sessions possible
+		salt, err := utils.RandomBytes(16)
+		if err != nil {
+			return err
+		}
+
+		// TODO: add code to determine if the same machine is login in again
+		// TODO: Missing information gathering to differentiate sessions for viewing purposes
+
+		// create a new session
+		tokenId, err := queries.CreateSession(ctx, db.CreateSessionParams{
+			TokenSalt:    salt,
+			UserID:       magicLink.UserID,
+			Ip:           sql.NullString{String: c.RealIP(), Valid: true},
+			LastActivity: now.Format(time.RFC3339),
+		})
+		if err != nil {
+			return err
+		}
+
+		// generate new user token
+		exp = now.Add(7 * 24 * time.Hour).UTC() // a week
+		token, err = services.NewUserToken(
+			tokenId,
+			magicLink.UserID,
+			"okyaku-sama",
+			"authentication",
+			salt,
+			exp,
+		)
+		if err != nil {
+			return err
+		}
+
+		redirectUrl := fmt.Sprintf("%s?token=%s&client=%s", string(decryptedRedirectUri), token, string(decryptedClient))
+
+		return c.Redirect(http.StatusPermanentRedirect, redirectUrl)
 	}
+}
+
+func removeInvalidMagicLink(connector *db.DBConnector, token, userId string) {
+	conn, err := connector.Connect()
+	if err != nil {
+		return
+	}
+	defer conn.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+	defer cancel()
+	db.New(conn).RemoveMagicLink(ctx, db.RemoveMagicLinkParams{Token: token, UserID: userId})
 }
 
 // RegisterRequest represents the request body for register route.

@@ -2,8 +2,4 @@ Hi, here is your magic link to log into Konbini.
 
 %s
 
-If you are prompted for a 6 digits code, use the following code:
-
-%s
-
 This link will expire at %s

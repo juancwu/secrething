@@ -34,19 +34,18 @@ func (q *Queries) CreateMagicLink(ctx context.Context, arg CreateMagicLinkParams
 }
 
 const getMagicLink = `-- name: GetMagicLink :one
-SELECT ml.token, ml.user_id, ml.created_at, ml.expires_at
-        FROM magic_links AS ml
-    LEFT JOIN users AS u ON u.email = ?
-    WHERE ml.token = ?
+SELECT token, user_id, created_at, expires_at
+FROM magic_links
+WHERE token = ? AND user_id = ?
 `
 
 type GetMagicLinkParams struct {
-	Email string
-	Token string
+	Token  string
+	UserID string
 }
 
 func (q *Queries) GetMagicLink(ctx context.Context, arg GetMagicLinkParams) (MagicLink, error) {
-	row := q.db.QueryRowContext(ctx, getMagicLink, arg.Email, arg.Token)
+	row := q.db.QueryRowContext(ctx, getMagicLink, arg.Token, arg.UserID)
 	var i MagicLink
 	err := row.Scan(
 		&i.Token,

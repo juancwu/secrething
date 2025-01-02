@@ -5,10 +5,9 @@ VALUES
 (?, ?, ?, ?);
 
 -- name: GetMagicLink :one
-SELECT ml.token, ml.user_id, ml.created_at, ml.expires_at
-        FROM magic_links AS ml
-    LEFT JOIN users AS u ON u.email = ?
-    WHERE ml.token = ?;
+SELECT token, user_id, created_at, expires_at
+FROM magic_links
+WHERE token = ? AND user_id = ?;
 
 -- name: RemoveMagicLink :exec
 DELETE FROM magic_links
