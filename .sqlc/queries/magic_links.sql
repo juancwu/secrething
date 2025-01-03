@@ -6,7 +6,7 @@ VALUES
 RETURNING id;
 
 -- name: GetMagicLink :one
-SELECT id, user_id, state, created_at, expires_at
+SELECT id, user_id, state, created_at, expires_at, validated
 FROM magic_links
 WHERE id = ? AND user_id = ? AND state = ?;
 

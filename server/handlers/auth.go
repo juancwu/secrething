@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"crypto/sha256"
+	"database/sql"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -16,6 +17,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 func VerifyEmail(connector *db.DBConnector) echo.HandlerFunc {
@@ -107,8 +109,6 @@ type MagicLinkRequestRequest struct {
 	State string `json:"state" validate:"required,max=1024"`
 }
 
-const magicLinkCodeLen = 6
-
 func HandleMagicLinkRequest(connector *db.DBConnector) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		conn, err := connector.Connect()
@@ -158,6 +158,7 @@ func HandleMagicLinkRequest(connector *db.DBConnector) echo.HandlerFunc {
 
 		now := time.Now().UTC()
 		exp := now.Add(time.Minute * 10)
+
 		magicLinkId, err := queries.CreateMagicLink(ctx, db.CreateMagicLinkParams{
 			UserID:    user.ID,
 			State:     body.State,
@@ -183,7 +184,7 @@ func HandleMagicLinkRequest(connector *db.DBConnector) echo.HandlerFunc {
 			},
 		)
 
-		return c.NoContent(http.StatusOK)
+		return c.JSON(http.StatusOK, map[string]string{"magic_link_id": magicLinkId})
 	}
 }
 
@@ -218,44 +219,31 @@ func sendMagicLinkRoutine(params magicLinkRoutineParams) {
 
 	// all query parameters are to be encrypted to avoid revealing any of this information if
 	// the email ends up being seen by some unwanted entity.
-	hash := sha256.New()
-	hash.Write([]byte(userId))
-	hash.Write([]byte(linkId))
-	userContextSum := hash.Sum(nil)
 	magicLinkContext := userId + linkId
-	encryptedUserContext, err := utils.EncryptAES([]byte(magicLinkContext), c.GetAesKey())
+	encryptedMagicLinkContext, err := utils.EncryptAES([]byte(magicLinkContext), c.GetAesKey())
 	if err != nil {
 		logger.Error().Err(err).Str("to", email).Msg("Failed to encrypt user id and code.")
 		return
 	}
-	userContextWithHash := utils.CombineBytes(userContextSum, encryptedUserContext)
 
-	hash.Reset()
-	hash.Write([]byte(client))
-	clientSum := hash.Sum(nil)
 	encryptedClient, err := utils.EncryptAES([]byte(client), c.GetAesKey())
 	if err != nil {
 		logger.Error().Err(err).Str("to", email).Msg("Failed to encrypt client.")
 		return
 	}
-	clientWithHash := utils.CombineBytes(clientSum, encryptedClient)
 
-	hash.Reset()
-	hash.Write([]byte(state))
-	stateSum := hash.Sum(nil)
 	encryptedState, err := utils.EncryptAES([]byte(state), c.GetAesKey())
 	if err != nil {
 		logger.Error().Err(err).Str("to", email).Msg("Failed to encrypt state.")
 		return
 	}
-	stateWithHash := utils.CombineBytes(stateSum, encryptedState)
 
 	magicUrl := fmt.Sprintf(
 		"%s/api/v1/auth/magic/verify?token=%s&client=%s&state=%s",
 		c.GetBackendUrl(),
-		base64.URLEncoding.EncodeToString(userContextWithHash),
-		base64.URLEncoding.EncodeToString(clientWithHash),
-		base64.URLEncoding.EncodeToString(stateWithHash),
+		base64.URLEncoding.EncodeToString(encryptedMagicLinkContext),
+		base64.URLEncoding.EncodeToString(encryptedClient),
+		base64.URLEncoding.EncodeToString(encryptedState),
 	)
 	res, err := services.SendMagicLinkEmail(ctx, email, magicUrl, createdAt, expiresAt)
 	if err != nil {
@@ -271,12 +259,16 @@ func HandleMagicLinkVerify(connector *db.DBConnector) echo.HandlerFunc {
 		if err != nil {
 			return err
 		}
+		cache, err := cfg.Cache()
+		if err != nil {
+			return err
+		}
 
 		b64Token := c.QueryParam("token")
 		b64Client := c.QueryParam("client")
 		b64State := c.QueryParam("state")
 
-		if len(b64Token) < 32 || len(b64Client) < 32 || len(b64State) < 32 {
+		if len(b64Token) < 1 || len(b64Client) < 1 || len(b64State) < 1 {
 			return APIError{
 				Code:           http.StatusBadRequest,
 				PublicMessage:  "Invalid magic link",
@@ -288,9 +280,7 @@ func HandleMagicLinkVerify(connector *db.DBConnector) echo.HandlerFunc {
 		if err != nil {
 			return err
 		}
-		// total = 32 + 36 + 36 => sha256 + uuid + uuid
-		tokenHash := decoded[:32] // sha256 hash
-		magicLinkContext, err := utils.DecryptAES(decoded[32:], cfg.GetAesKey())
+		magicLinkContext, err := utils.DecryptAES(decoded, cfg.GetAesKey())
 		if err != nil {
 			return err
 		}
@@ -301,58 +291,35 @@ func HandleMagicLinkVerify(connector *db.DBConnector) echo.HandlerFunc {
 				PrivateMessage: "Magic link context is too short",
 			}
 		}
-		// verify token hash is correct
-		hash := sha256.New()
-		hash.Write(magicLinkContext)
-		if !utils.EqualBytes(tokenHash, hash.Sum(nil)) {
-			return APIError{
-				Code:           http.StatusBadRequest,
-				PublicMessage:  "Invalid magic link",
-				PrivateMessage: "Token hash did not match",
-			}
-		}
-		hash.Reset()
 
 		decoded, err = base64.URLEncoding.DecodeString(b64Client)
 		if err != nil {
 			return err
 		}
-		clientHash := decoded[:32]
-		client, err := utils.DecryptAES(decoded[32:], cfg.GetAesKey())
+		client, err := utils.DecryptAES(decoded, cfg.GetAesKey())
 		if err != nil {
 			return err
 		}
-		hash.Write(client)
-		if !utils.EqualBytes(clientHash, hash.Sum(nil)) {
+		if string(client) != "tenin" && string(client) != "konbi" {
 			return APIError{
-				Code:           http.StatusBadRequest,
-				PublicMessage:  "Invalid magic link",
-				PrivateMessage: "Client hash did not match",
+				Code:          http.StatusBadRequest,
+				PublicMessage: "Invalid client value in magic link",
 			}
 		}
-		hash.Reset()
 
 		decoded, err = base64.URLEncoding.DecodeString(b64State)
 		if err != nil {
 			return err
 		}
-		stateHash := decoded[:32]
-		state, err := utils.DecryptAES(decoded[32:], cfg.GetAesKey())
+		state, err := utils.DecryptAES(decoded, cfg.GetAesKey())
 		if err != nil {
 			return err
 		}
-		hash.Write(state)
-		if utils.EqualBytes(stateHash, hash.Sum(nil)) {
-			return APIError{
-				Code:           http.StatusBadRequest,
-				PublicMessage:  "Invalid magic link",
-				PrivateMessage: "State hash did not match",
-			}
-		}
-		hash.Reset()
+
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+		defer cancel()
 
 		// connect to database
-		ctx, cancel := context.WithTimeout()
 		conn, err := connector.Connect()
 		if err != nil {
 			return err
@@ -364,9 +331,49 @@ func HandleMagicLinkVerify(connector *db.DBConnector) echo.HandlerFunc {
 		// grab the magic link in database
 		userId := magicLinkContext[:36]
 		magicLinkId := magicLinkContext[36:]
-		magicLink, err := queries.GetMagicLink()
+		magicLink, err := queries.GetMagicLink(ctx, db.GetMagicLinkParams{ID: string(magicLinkId), UserID: string(userId), State: string(state)})
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return APIError{
+					Code:          http.StatusBadRequest,
+					PublicMessage: "Invalid magic link",
+					InternalError: err,
+				}
+			}
+			return err
+		}
 
-		return nil
+		// NOTE: skip check on state since state should be the same otherwise the query wouldn't return anything
+
+		// check magic link expiration
+		exp, err := time.Parse(time.RFC3339, magicLink.ExpiresAt)
+		if err != nil {
+			return err
+		}
+
+		if time.Now().UTC().After(exp) {
+			// make sure to remove old magic link
+			go removeInvalidMagicLink(connector, magicLink.ID, magicLink.UserID, magicLink.State)
+			return APIError{
+				Code:          http.StatusBadGateway,
+				PublicMessage: "Expired magic link",
+			}
+		}
+
+		// at this point, the magic link is valid and we should remove it since it has been used
+		go removeInvalidMagicLink(connector, magicLink.ID, magicLink.UserID, magicLink.State)
+
+		hash := sha256.New()
+		hash.Write(magicLinkId)
+		hash.Write(client)
+		hash.Write(state)
+		key := hash.Sum(nil)
+		log.Info().Str("key", string(key)).Str("id", string(magicLinkId)).Str("client", string(client)).Str("state", string(state)).Msg("from verify")
+		// store that the magic link has been validated
+		// give clients 1 minute to get their access token
+		cache.Set(string(key), true, time.Minute)
+
+		return c.String(http.StatusOK, "success")
 	}
 }
 
@@ -379,6 +386,43 @@ func removeInvalidMagicLink(connector *db.DBConnector, id, userId, state string)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 	defer cancel()
 	db.New(conn).RemoveMagicLink(ctx, db.RemoveMagicLinkParams{ID: id, UserID: userId, State: state})
+}
+
+type MagicLinkStatusRequest struct {
+	Id     string `json:"id" validate:"required,uuid"`
+	Client string `json:"client" validate:"required,oneof=tenin konbi"`
+	State  string `json:"state" validate:"required,max=1024"`
+}
+
+// Handle requests to check if a magic link status has been verified or not
+func HandleMagicLinkStatus() echo.HandlerFunc {
+	return func(c echo.Context) error {
+		cfg, err := config.Global()
+		if err != nil {
+			return err
+		}
+		cache, err := cfg.Cache()
+		if err != nil {
+			return err
+		}
+		body, err := middlewares.GetJsonBody[MagicLinkStatusRequest](c)
+		if err != nil {
+			return err
+		}
+		hash := sha256.New()
+		hash.Write([]byte(body.Id))
+		hash.Write([]byte(body.Client))
+		hash.Write([]byte(body.State))
+		key := hash.Sum(nil)
+		log.Info().Str("key", string(key)).Str("id", body.Id).Str("client", body.Client).Str("state", body.State).Msg("from status")
+		_, found := cache.Get(string(key))
+		if found {
+			// one time use only
+			cache.Delete(string(key))
+			return c.NoContent(http.StatusOK)
+		}
+		return c.NoContent(http.StatusBadRequest)
+	}
 }
 
 // RegisterRequest represents the request body for register route.
