@@ -79,8 +79,9 @@ type GroupPermission struct {
 }
 
 type MagicLink struct {
-	Token     string
+	ID        string
 	UserID    string
+	State     string
 	CreatedAt string
 	ExpiresAt string
 }

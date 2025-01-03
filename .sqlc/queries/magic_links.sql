@@ -1,14 +1,15 @@
--- name: CreateMagicLink :exec
+-- name: CreateMagicLink :one
 INSERT INTO magic_links
-(token, user_id, created_at, expires_at)
+(user_id, state, created_at, expires_at)
 VALUES
-(?, ?, ?, ?);
+(?, ?, ?, ?)
+RETURNING id;
 
 -- name: GetMagicLink :one
-SELECT token, user_id, created_at, expires_at
+SELECT id, user_id, state, created_at, expires_at
 FROM magic_links
-WHERE token = ? AND user_id = ?;
+WHERE id = ? AND user_id = ? AND state = ?;
 
 -- name: RemoveMagicLink :exec
 DELETE FROM magic_links
-WHERE token = ? AND user_id = ?;
+WHERE id = ? AND user_id = ? AND state = ?;
