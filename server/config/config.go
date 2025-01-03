@@ -4,8 +4,10 @@ import (
 	"encoding/hex"
 	"errors"
 	"os"
+	"time"
 
 	"github.com/joho/godotenv"
+	"github.com/patrickmn/go-cache"
 	"github.com/rs/zerolog/log"
 )
 
@@ -38,6 +40,7 @@ var (
 	ErrInvalidAppEnv error = errors.New("Invalid value for APP_ENV environment variable")
 
 	ErrUninitializedGlobalConfig error = errors.New("Global configuration not initialized. Use config.New() to initialize it.")
+	ErrUninitializedMemCache     error = errors.New("Memory cache hasn't been initialized. Use config.New() to initialize it.")
 
 	ErrInvalidAesKeyLength error = errors.New("AES key must be 32 bytes long.")
 )
@@ -51,6 +54,7 @@ var globalConfig *Config
 type Config struct {
 	env     EnvConfig
 	version string
+	cache   *cache.Cache
 }
 
 type EnvConfig struct {
@@ -83,6 +87,7 @@ func New() (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+	globalConfig.cache = cache.New(5*time.Minute, 10*time.Minute)
 	return globalConfig, nil
 }
 
@@ -93,6 +98,14 @@ func Global() (*Config, error) {
 		return nil, ErrUninitializedGlobalConfig
 	}
 	return globalConfig, nil
+}
+
+// Cache returns the memory cache instance.
+func (c *Config) Cache() (*cache.Cache, error) {
+	if c.cache == nil {
+		return nil, ErrUninitializedMemCache
+	}
+	return c.cache, nil
 }
 
 // Gets the database URL and auth token. The return order is the same (url, token)
