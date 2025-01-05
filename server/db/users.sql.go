@@ -15,7 +15,7 @@ INSERT INTO users
 (email, password, nickname, token_salt, created_at, updated_at)
 VALUES
 (?, ?, ?, ?, ?, ?)
-RETURNING id, email_verified
+RETURNING id
 `
 
 type CreateUserParams struct {
@@ -27,12 +27,7 @@ type CreateUserParams struct {
 	UpdatedAt string
 }
 
-type CreateUserRow struct {
-	ID            string
-	EmailVerified bool
-}
-
-func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateUserRow, error) {
+func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (string, error) {
 	row := q.db.QueryRowContext(ctx, createUser,
 		arg.Email,
 		arg.Password,
@@ -41,9 +36,9 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateU
 		arg.CreatedAt,
 		arg.UpdatedAt,
 	)
-	var i CreateUserRow
-	err := row.Scan(&i.ID, &i.EmailVerified)
-	return i, err
+	var id string
+	err := row.Scan(&id)
+	return id, err
 }
 
 const deleteUserById = `-- name: DeleteUserById :exec

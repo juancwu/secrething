@@ -63,10 +63,10 @@ func HandleRegister(connector *db.DBConnector) echo.HandlerFunc {
 			return err
 		}
 
-		// idAndEmailVerified at
+		// userId at
 		now := time.Now().UTC().Format(time.RFC3339)
 
-		idAndEmailVerified, err := queries.CreateUser(ctx, db.CreateUserParams{
+		userId, err := queries.CreateUser(ctx, db.CreateUserParams{
 			Email:     body.Email,
 			Password:  hash,
 			Nickname:  body.NickName,
@@ -78,8 +78,8 @@ func HandleRegister(connector *db.DBConnector) echo.HandlerFunc {
 			return err
 		}
 
-		logger.Info().Str("user_id", idAndEmailVerified.ID).Msg("New user registered.")
-		go sendVerificationEmail(idAndEmailVerified.ID, body.Email, logger)
+		logger.Info().Str("user_id", userId).Msg("New user registered.")
+		go sendVerificationEmail(userId, body.Email, logger)
 
 		return c.NoContent(http.StatusCreated)
 	}
