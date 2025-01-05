@@ -14,7 +14,7 @@ func setupAuthRoutes(routeConfig *RouteConfig) {
 	)
 	routeConfig.Echo.POST(
 		"/auth/register",
-		handlers.HandleRegister(routeConfig.DBConnector),
+		handlers.Register(routeConfig.DBConnector),
 		middlewares.ValidateJson(reflect.TypeOf(handlers.RegisterRequest{})),
 	)
 

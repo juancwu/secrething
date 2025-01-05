@@ -20,8 +20,8 @@ type RegisterRequest struct {
 	NickName string `json:"nickname" validate:"required,min=3,max=32"`
 }
 
-// HandleRegister is a handler function that registers a user for Konbini.
-func HandleRegister(connector *db.DBConnector) echo.HandlerFunc {
+// Register is a handler function that registers a user for Konbini.
+func Register(connector *db.DBConnector) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		conn, err := connector.Connect()
 		if err != nil {
