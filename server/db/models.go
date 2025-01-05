@@ -92,7 +92,6 @@ type User struct {
 	Password      string
 	Nickname      string
 	EmailVerified bool
-	TokenSalt     []byte
 	TotpSecret    sql.NullString
 	CreatedAt     string
 	UpdatedAt     string

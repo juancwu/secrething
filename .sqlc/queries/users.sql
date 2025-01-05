@@ -1,8 +1,8 @@
 -- name: CreateUser :one
 INSERT INTO users
-(email, password, nickname, token_salt, created_at, updated_at)
+(email, password, nickname, created_at, updated_at)
 VALUES
-(?, ?, ?, ?, ?, ?)
+(?, ?, ?, ?, ?)
 RETURNING id;
 
 -- name: ExistsUserWithEmail :one
@@ -19,7 +19,6 @@ SELECT
     password,
     nickname,
     totp_secret,
-    token_salt,
     created_at,
     updated_at
 FROM users

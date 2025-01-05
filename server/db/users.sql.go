@@ -12,9 +12,9 @@ import (
 
 const createUser = `-- name: CreateUser :one
 INSERT INTO users
-(email, password, nickname, token_salt, created_at, updated_at)
+(email, password, nickname, created_at, updated_at)
 VALUES
-(?, ?, ?, ?, ?, ?)
+(?, ?, ?, ?, ?)
 RETURNING id
 `
 
@@ -22,7 +22,6 @@ type CreateUserParams struct {
 	Email     string
 	Password  string
 	Nickname  string
-	TokenSalt []byte
 	CreatedAt string
 	UpdatedAt string
 }
@@ -32,7 +31,6 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (string,
 		arg.Email,
 		arg.Password,
 		arg.Nickname,
-		arg.TokenSalt,
 		arg.CreatedAt,
 		arg.UpdatedAt,
 	)
@@ -69,7 +67,6 @@ SELECT
     password,
     nickname,
     totp_secret,
-    token_salt,
     created_at,
     updated_at
 FROM users
@@ -83,7 +80,6 @@ type GetUserByEmailRow struct {
 	Password      string
 	Nickname      string
 	TotpSecret    sql.NullString
-	TokenSalt     []byte
 	CreatedAt     string
 	UpdatedAt     string
 }
@@ -98,7 +94,6 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEm
 		&i.Password,
 		&i.Nickname,
 		&i.TotpSecret,
-		&i.TokenSalt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

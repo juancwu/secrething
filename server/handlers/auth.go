@@ -57,12 +57,6 @@ func Register(connector *db.DBConnector) echo.HandlerFunc {
 			return err
 		}
 
-		// random jwt salt
-		salt, err := utils.RandomBytes(32)
-		if err != nil {
-			return err
-		}
-
 		// userId at
 		now := time.Now().UTC().Format(time.RFC3339)
 
@@ -70,7 +64,6 @@ func Register(connector *db.DBConnector) echo.HandlerFunc {
 			Email:     body.Email,
 			Password:  hash,
 			Nickname:  body.NickName,
-			TokenSalt: salt,
 			CreatedAt: now,
 			UpdatedAt: now,
 		})
