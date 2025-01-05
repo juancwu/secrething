@@ -54,6 +54,14 @@ type BentoToken struct {
 	ExpiresAt  sql.NullString
 }
 
+type FullToken struct {
+	ID        string
+	UserID    string
+	CreatedAt string
+	UpdatedAt string
+	ExpiresAt string
+}
+
 type Group struct {
 	ID        string
 	Name      string
@@ -68,6 +76,14 @@ type GroupPermission struct {
 	Level     int64
 	CreatedAt string
 	UpdatedAt string
+}
+
+type PartialToken struct {
+	ID        string
+	UserID    string
+	CreatedAt string
+	UpdatedAt string
+	ExpiresAt interface{}
 }
 
 type User struct {
