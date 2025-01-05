@@ -18,6 +18,7 @@ SELECT
     email_verified,
     password,
     nickname,
+    totp_secret,
     token_salt,
     created_at,
     updated_at

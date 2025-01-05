@@ -4,10 +4,8 @@ import (
 	"encoding/hex"
 	"errors"
 	"os"
-	"time"
 
 	"github.com/joho/godotenv"
-	"github.com/patrickmn/go-cache"
 	"github.com/rs/zerolog/log"
 )
 
@@ -54,7 +52,6 @@ var globalConfig *Config
 type Config struct {
 	env     EnvConfig
 	version string
-	cache   *cache.Cache
 }
 
 type EnvConfig struct {
@@ -87,7 +84,6 @@ func New() (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	globalConfig.cache = cache.New(5*time.Minute, 10*time.Minute)
 	return globalConfig, nil
 }
 
@@ -98,14 +94,6 @@ func Global() (*Config, error) {
 		return nil, ErrUninitializedGlobalConfig
 	}
 	return globalConfig, nil
-}
-
-// Cache returns the memory cache instance.
-func (c *Config) Cache() (*cache.Cache, error) {
-	if c.cache == nil {
-		return nil, ErrUninitializedMemCache
-	}
-	return c.cache, nil
 }
 
 // Gets the database URL and auth token. The return order is the same (url, token)
@@ -250,46 +238,66 @@ func (c *Config) loadEnvironmentVariables() error {
 		return ErrMissingVerifyEmailAddress
 	}
 
-	c.env.userTokenKey = []byte(os.Getenv("USER_TOKEN_KEY"))
-	if len(c.env.userTokenKey) == 0 {
+	hexUserTokenKey := os.Getenv("USER_TOKEN_KEY")
+	if hexUserTokenKey == "" {
 		return ErrMissingUserTokenKey
 	}
+	decodedUserTokenKey, err := decodeHexKey(hexUserTokenKey)
+	if err != nil {
+		return err
+	}
+	c.env.userTokenKey = decodedUserTokenKey
 
 	c.env.userTokenIssuer = os.Getenv("USER_TOKEN_ISSUER")
 	if c.env.userTokenIssuer == "" {
 		return ErrMissingUserTokenIssuer
 	}
 
-	c.env.bentoTokenKey = []byte(os.Getenv("BENTO_TOKEN_KEY"))
-	if len(c.env.bentoTokenKey) == 0 {
+	hexBentoTokenKey := os.Getenv("BENTO_TOKEN_KEY")
+	if hexBentoTokenKey == "" {
 		return ErrMissingBentoTokenKey
 	}
+	decodedBentoTokenKey, err := decodeHexKey(hexBentoTokenKey)
+	if err != nil {
+		return err
+	}
+	c.env.bentoTokenKey = decodedBentoTokenKey
 
-	c.env.emailTokenKey = []byte(os.Getenv("EMAIL_TOKEN_KEY"))
-	if len(c.env.emailTokenKey) == 0 {
+	hexEmailTokenKey := os.Getenv("EMAIL_TOKEN_KEY")
+	if hexEmailTokenKey == "" {
 		return ErrMissingEmailTokenKey
 	}
+	decodedEmailTokenKey, err := decodeHexKey(hexEmailTokenKey)
+	if err != nil {
+		return err
+	}
+	c.env.emailTokenKey = decodedEmailTokenKey
 
 	hexAesKey := os.Getenv("AES_KEY")
 	if hexAesKey == "" {
 		return ErrMissingAesKey
 	}
-	if len(hexAesKey) != 64 {
-		return ErrInvalidAesKeyLength
-	}
-	decodedAesKey := make([]byte, 32)
-	n, err := hex.Decode(decodedAesKey, []byte(hexAesKey))
+	decodedAesKey, err := decodeHexKey(hexAesKey)
 	if err != nil {
 		return err
-	}
-	if n != 32 {
-		return ErrInvalidAesKeyLength
 	}
 	c.env.aesKey = decodedAesKey
 
 	// --- end required environment variables ---
 
 	return nil
+}
+
+func decodeHexKey(value string) ([]byte, error) {
+	decoded := make([]byte, 32)
+	n, err := hex.Decode(decoded, []byte(value))
+	if err != nil {
+		return nil, err
+	}
+	if n != 32 {
+		return nil, ErrInvalidAesKeyLength
+	}
+	return decoded, nil
 }
 
 // Matches the string representation of app environment. The string representation

@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS users (
     nickname TEXT NOT NULL,
     email_verified BOOL NOT NULL DEFAULT false,
     token_salt BLOB NOT NULL UNIQUE,
+    totp_secret TEXT,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );

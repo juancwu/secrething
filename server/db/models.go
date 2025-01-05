@@ -54,14 +54,6 @@ type BentoToken struct {
 	ExpiresAt  sql.NullString
 }
 
-type EmailToken struct {
-	ID        string
-	UserID    string
-	TokenSalt []byte
-	CreatedAt string
-	ExpiresAt string
-}
-
 type Group struct {
 	ID        string
 	Name      string
@@ -78,26 +70,6 @@ type GroupPermission struct {
 	UpdatedAt string
 }
 
-type MagicLink struct {
-	ID        string
-	UserID    string
-	State     string
-	CreatedAt string
-	ExpiresAt string
-}
-
-type Session struct {
-	TokenID        string
-	TokenSalt      []byte
-	UserID         string
-	DeviceName     sql.NullString
-	DeviceOs       sql.NullString
-	DeviceHostname sql.NullString
-	Ip             sql.NullString
-	Location       sql.NullString
-	LastActivity   string
-}
-
 type User struct {
 	ID            string
 	Email         string
@@ -105,6 +77,7 @@ type User struct {
 	Nickname      string
 	EmailVerified bool
 	TokenSalt     []byte
+	TotpSecret    sql.NullString
 	CreatedAt     string
 	UpdatedAt     string
 }

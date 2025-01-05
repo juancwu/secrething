@@ -7,6 +7,7 @@ package db
 
 import (
 	"context"
+	"database/sql"
 )
 
 const createUser = `-- name: CreateUser :one
@@ -72,6 +73,7 @@ SELECT
     email_verified,
     password,
     nickname,
+    totp_secret,
     token_salt,
     created_at,
     updated_at
@@ -85,6 +87,7 @@ type GetUserByEmailRow struct {
 	EmailVerified bool
 	Password      string
 	Nickname      string
+	TotpSecret    sql.NullString
 	TokenSalt     []byte
 	CreatedAt     string
 	UpdatedAt     string
@@ -99,6 +102,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEm
 		&i.EmailVerified,
 		&i.Password,
 		&i.Nickname,
+		&i.TotpSecret,
 		&i.TokenSalt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
