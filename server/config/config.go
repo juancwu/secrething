@@ -44,6 +44,12 @@ var (
 )
 
 var globalConfig *Config
+var version string
+
+// Version is an alias and faster way to get the current server version.
+func Version() string {
+	return version
+}
 
 // The server configuration struct. This struct should include all
 // the different setups that the server needs. Ideally, just use
@@ -62,8 +68,8 @@ type EnvConfig struct {
 	appEnv             AppEnv
 	resendApiKey       string
 	verifyEmailAddress string
-	userTokenKey       []byte
-	userTokenIssuer    string
+	partialTokenKey    []byte
+	fullTokenKey       []byte
 	bentoTokenKey      []byte
 	emailTokenKey      []byte
 	aesKey             []byte
@@ -77,7 +83,7 @@ type EnvConfig struct {
 func New() (*Config, error) {
 	if globalConfig == nil {
 		globalConfig = &Config{
-			version: "development",
+			version: version,
 		}
 	}
 	err := globalConfig.loadEnvironmentVariables()
@@ -155,13 +161,12 @@ func (c *Config) GetVerifyEmailAddress() string {
 	return c.env.verifyEmailAddress
 }
 
-// Gets the user token key value
-func (c *Config) GetUserTokenKey() []byte {
-	return c.env.userTokenKey
+func (c *Config) GetFullTokenKey() []byte {
+	return c.env.fullTokenKey
 }
 
-func (c *Config) GetUserTokenIssuer() string {
-	return c.env.userTokenIssuer
+func (c *Config) GetPartialTokenKey() []byte {
+	return c.env.partialTokenKey
 }
 
 // Gets the bento token key value
@@ -238,20 +243,25 @@ func (c *Config) loadEnvironmentVariables() error {
 		return ErrMissingVerifyEmailAddress
 	}
 
-	hexUserTokenKey := os.Getenv("USER_TOKEN_KEY")
-	if hexUserTokenKey == "" {
+	hexPartialTokenKey := os.Getenv("PARTIAL_TOKEN_KEY")
+	if hexPartialTokenKey == "" {
 		return ErrMissingUserTokenKey
 	}
-	decodedUserTokenKey, err := decodeHexKey(hexUserTokenKey)
+	decodedPartialTokenKey, err := decodeHexKey(hexPartialTokenKey)
 	if err != nil {
 		return err
 	}
-	c.env.userTokenKey = decodedUserTokenKey
+	c.env.partialTokenKey = decodedPartialTokenKey
 
-	c.env.userTokenIssuer = os.Getenv("USER_TOKEN_ISSUER")
-	if c.env.userTokenIssuer == "" {
-		return ErrMissingUserTokenIssuer
+	hexFullTokenKey := os.Getenv("FULL_TOKEN_KEY")
+	if hexFullTokenKey == "" {
+		return ErrMissingUserTokenKey
 	}
+	decodedFullTokenKey, err := decodeHexKey(hexFullTokenKey)
+	if err != nil {
+		return err
+	}
+	c.env.fullTokenKey = decodedFullTokenKey
 
 	hexBentoTokenKey := os.Getenv("BENTO_TOKEN_KEY")
 	if hexBentoTokenKey == "" {
