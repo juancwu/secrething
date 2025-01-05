@@ -2,14 +2,16 @@ package handlers
 
 import (
 	"context"
-	"fmt"
-	"konbini/server/memcache"
 	"konbini/server/services"
 	"time"
 
 	"github.com/rs/zerolog"
 )
 
+// sendVerificationEmail is a helper function that sends a verification email to the given user email.
+// The function is intended to be used as a go routine and it will log any error with the provided logger.
+// The function will create a new email token and store the token in memory cache using storeEmailTokenInCache.
+// The stored email token can later to retrieved by getEmailTokenFromCache using the id.
 func sendVerificationEmail(userId string, userEmail string, logger *zerolog.Logger) {
 	// sending an email shouldn't take more than 1 minute
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
@@ -44,25 +46,4 @@ func sendVerificationEmail(userId string, userEmail string, logger *zerolog.Logg
 		Str("user_id", userId).
 		Str("user_email", userEmail).
 		Msg("Successfully sent verification email")
-}
-
-func storeEmailTokenInCache(token *services.EmailToken) error {
-	cache := memcache.Cache()
-	return cache.Add("email_token_"+token.Id, token, time.Minute*10)
-}
-
-func getEmailTokenFromCache(id string) (*services.EmailToken, error) {
-	cache := memcache.Cache()
-	k, exp, found := cache.GetWithExpiration("email_token_" + id)
-	if !found {
-		return nil, fmt.Errorf("No email token found with id: %s", id)
-	}
-	if time.Now().UTC().After(exp) {
-		return nil, fmt.Errorf("Email token cache expired. ID: %s", id)
-	}
-	token, ok := k.(*services.EmailToken)
-	if !ok {
-		return nil, fmt.Errorf("Invalid email token type.")
-	}
-	return token, nil
 }
