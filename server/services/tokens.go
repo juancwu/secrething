@@ -28,13 +28,29 @@ type JWTClaims struct {
 	jwt.RegisteredClaims
 }
 
-// NewJWT generates a new JWT and signs it with HS256.
-// An id must be provided since it is what relates the JWT to the
-// row stored in the database.
-func NewJWT(id, tokType string, expiresAt time.Time) (string, error) {
+type JWT struct {
+	Claims JWTClaims
+}
+
+func (j *JWT) SignedString() (string, error) {
 	cfg, err := config.Global()
 	if err != nil {
 		return "", err
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, j.Claims)
+	key, err := getJWTKeyByType(j.Claims.Type, cfg)
+	if err != nil {
+		return "", err
+	}
+	return token.SignedString(key)
+}
+
+// NewJWT generates a new JWT and signs it with HS256.
+// An id must be provided since it is what relates the JWT to the
+// row stored in the database.
+func NewJWT(id, tokType string, expiresAt time.Time) (*JWT, error) {
+	if !isValidJWTType(tokType) {
+		return nil, ErrInvalidTokenType
 	}
 
 	claims := JWTClaims{
@@ -48,15 +64,17 @@ func NewJWT(id, tokType string, expiresAt time.Time) (string, error) {
 			Audience:  []string{customer},
 		},
 	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	key, err := getJWTKeyByType(tokType, cfg)
-	if err != nil {
-		return "", err
-	}
-	return token.SignedString(key)
+	j := &JWT{Claims: claims}
+	return j, nil
 }
 
+// isValidJWTType checks if the given string is a valid JWT type string
+func isValidJWTType(tokType string) bool {
+	return tokType == PARTIAL_USER_TOKEN_TYPE || tokType == FULL_USER_TOKEN_TYPE
+}
+
+// getJWTKeyByType gets the correct key based on the given JWT type string.
+// Returns an error if the token type is not valid.
 func getJWTKeyByType(tokType string, cfg *config.Config) ([]byte, error) {
 	switch tokType {
 	case FULL_USER_TOKEN_TYPE:

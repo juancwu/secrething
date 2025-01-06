@@ -118,7 +118,46 @@ func Login(connector *db.DBConnector) echo.HandlerFunc {
 			}
 		}
 
-		return nil
+		now := time.Now().UTC()
+		exp := now.Add(time.Hour * 24 * 7)
+		var token string
+		var tokType string
+		if !user.TotpSecret.Valid {
+			tokType = services.PARTIAL_USER_TOKEN_TYPE
+		} else {
+			tokType = services.FULL_USER_TOKEN_TYPE
+		}
+
+		var j *services.JWT
+		if tokType == services.PARTIAL_USER_TOKEN_TYPE {
+			// store a partial token
+			id, err := queries.NewPartialToken(ctx, db.NewPartialTokenParams{
+				UserID:    user.ID,
+				CreatedAt: now.Format(time.RFC3339),
+				UpdatedAt: now.Format(time.RFC3339),
+				ExpiresAt: exp.Format(time.RFC3339),
+			})
+			j, err = services.NewJWT(id, tokType, exp)
+			if err != nil {
+				return err
+			}
+		} else {
+			// store a full token
+			id, err := queries.NewFullToken(ctx, db.NewFullTokenParams{
+				UserID:    user.ID,
+				CreatedAt: now.Format(time.RFC3339),
+				UpdatedAt: now.Format(time.RFC3339),
+				ExpiresAt: exp.Format(time.RFC3339),
+			})
+			j, err = services.NewJWT(id, tokType, exp)
+			if err != nil {
+				return err
+			}
+		}
+
+		// store the jwt in memory cache for quick retrievals
+
+		return c.JSON(http.StatusOK, map[string]string{"token": token, "type": tokType})
 	}
 }
 
