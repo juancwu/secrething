@@ -118,9 +118,6 @@ func Login(connector *db.DBConnector) echo.HandlerFunc {
 			}
 		}
 
-		now := time.Now().UTC()
-		exp := now.Add(time.Hour * 24 * 7)
-		var token string
 		var tokType string
 		if !user.TotpSecret.Valid {
 			tokType = services.PARTIAL_USER_TOKEN_TYPE
@@ -128,6 +125,8 @@ func Login(connector *db.DBConnector) echo.HandlerFunc {
 			tokType = services.FULL_USER_TOKEN_TYPE
 		}
 
+		now := time.Now().UTC()
+		exp := now.Add(time.Hour * 24 * 7)
 		var j *services.JWT
 		if tokType == services.PARTIAL_USER_TOKEN_TYPE {
 			// store a partial token
@@ -153,6 +152,11 @@ func Login(connector *db.DBConnector) echo.HandlerFunc {
 			if err != nil {
 				return err
 			}
+		}
+
+		token, err := j.SignedString()
+		if err != nil {
+			return err
 		}
 
 		// store the jwt in memory cache for quick retrievals
