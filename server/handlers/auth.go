@@ -160,6 +160,7 @@ func Login(connector *db.DBConnector) echo.HandlerFunc {
 		}
 
 		// store the jwt in memory cache for quick retrievals
+		go storeJwtInCache(j.Claims.ID, j)
 
 		return c.JSON(http.StatusOK, map[string]string{"token": token, "type": tokType})
 	}
