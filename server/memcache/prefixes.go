@@ -9,4 +9,5 @@ package memcache
 const (
 	EmailTokenCacheKeyPrefix string = "email_token_"
 	JwtCacheKeyPrefix        string = "jwt_"
+	UserCacheKeyPrefix       string = "user_"
 )

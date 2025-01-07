@@ -1,14 +1,19 @@
 package services
 
 import (
+	"context"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"konbini/server/config"
+	"konbini/server/db"
+	"konbini/server/memcache"
 	"konbini/server/utils"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -66,6 +71,71 @@ func NewJWT(id, tokType string, expiresAt time.Time) (*JWT, error) {
 	}
 	j := &JWT{Claims: claims}
 	return j, nil
+}
+
+func ParseUnverifyJWT(token string) (*JWTClaims, error) {
+	parser := jwt.NewParser(jwt.WithoutClaimsValidation())
+	claims := &JWTClaims{}
+	_, _, err := parser.ParseUnverified(token, claims)
+	if err != nil {
+		return nil, err
+	}
+	return claims, nil
+}
+
+func VerifyJWTString(ctx context.Context, token string, connector *db.DBConnector) (*db.Jwt, error) {
+	cfg, err := config.Global()
+	if err != nil {
+		return nil, err
+	}
+
+	parser := jwt.NewParser(jwt.WithoutClaimsValidation())
+	claims := &JWTClaims{}
+	_, _, err = parser.ParseUnverified(token, claims)
+	if err != nil {
+		return nil, err
+	}
+
+	// verify
+	_, err = jwt.Parse(token, func(t *jwt.Token) (interface{}, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("Unexpected jwt signing method: %v", t.Header["alg"])
+		}
+		// get key by type
+		var key []byte
+		switch claims.Type {
+		case FULL_USER_TOKEN_TYPE:
+			key = cfg.GetFullTokenKey()
+		case PARTIAL_USER_TOKEN_TYPE:
+			key = cfg.GetPartialTokenKey()
+		default:
+			return nil, fmt.Errorf("Invalid jwt type: %s", claims.Type)
+		}
+		return key, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	memJwt, err := memcache.GetJWT(claims.ID)
+	if err != nil {
+		log.Warn().Err(err).Msg("Failed to get jwt item in memory cache from tokens service.")
+		// try to find the token in db
+		conn, err := connector.Connect()
+		if err != nil {
+			return nil, err
+		}
+		defer conn.Close()
+		q := db.New(conn)
+		dbJwt, err := q.GetJwtById(ctx, claims.ID)
+		if err != nil {
+			return nil, err
+		}
+		memcache.CacheJWT(&dbJwt)
+		memJwt = &dbJwt
+	}
+
+	return memJwt, nil
 }
 
 // isValidJWTType checks if the given string is a valid JWT type string

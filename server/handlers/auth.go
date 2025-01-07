@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"konbini/server/db"
+	"konbini/server/memcache"
 	"konbini/server/middlewares"
 	"konbini/server/services"
 	"konbini/server/utils"
@@ -128,30 +129,15 @@ func Login(connector *db.DBConnector) echo.HandlerFunc {
 		now := time.Now().UTC()
 		exp := now.Add(time.Hour * 24 * 7)
 		var j *services.JWT
-		if tokType == services.PARTIAL_USER_TOKEN_TYPE {
-			// store a partial token
-			id, err := queries.NewPartialToken(ctx, db.NewPartialTokenParams{
-				UserID:    user.ID,
-				CreatedAt: now.Format(time.RFC3339),
-				UpdatedAt: now.Format(time.RFC3339),
-				ExpiresAt: exp.Format(time.RFC3339),
-			})
-			j, err = services.NewJWT(id, tokType, exp)
-			if err != nil {
-				return err
-			}
-		} else {
-			// store a full token
-			id, err := queries.NewFullToken(ctx, db.NewFullTokenParams{
-				UserID:    user.ID,
-				CreatedAt: now.Format(time.RFC3339),
-				UpdatedAt: now.Format(time.RFC3339),
-				ExpiresAt: exp.Format(time.RFC3339),
-			})
-			j, err = services.NewJWT(id, tokType, exp)
-			if err != nil {
-				return err
-			}
+		dbJwt, err := queries.NewJWT(ctx, db.NewJWTParams{
+			UserID:    user.ID,
+			TokenType: tokType,
+			CreatedAt: now.Format(time.RFC3339),
+			ExpiresAt: exp.Format(time.RFC3339),
+		})
+		j, err = services.NewJWT(dbJwt.ID, tokType, exp)
+		if err != nil {
+			return err
 		}
 
 		token, err := j.SignedString()
@@ -159,8 +145,7 @@ func Login(connector *db.DBConnector) echo.HandlerFunc {
 			return err
 		}
 
-		// store the jwt in memory cache for quick retrievals
-		go storeJwtInCache(j.Claims.ID, j)
+		memcache.CacheJWT(&dbJwt)
 
 		return c.JSON(http.StatusOK, map[string]string{"token": token, "type": tokType})
 	}

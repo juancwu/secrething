@@ -7,7 +7,6 @@ package db
 
 import (
 	"context"
-	"database/sql"
 )
 
 const createUser = `-- name: CreateUser :one
@@ -60,39 +59,40 @@ func (q *Queries) ExistsUserWithEmail(ctx context.Context, email string) (int64,
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT
-    id,
-    email,
-    email_verified,
-    password,
-    nickname,
-    totp_secret,
-    created_at,
-    updated_at
-FROM users
+SELECT id, email, password, nickname, email_verified, totp_secret, created_at, updated_at FROM users
 WHERE email = ?
 `
 
-type GetUserByEmailRow struct {
-	ID            string
-	Email         string
-	EmailVerified bool
-	Password      string
-	Nickname      string
-	TotpSecret    sql.NullString
-	CreatedAt     string
-	UpdatedAt     string
-}
-
-func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEmailRow, error) {
+func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
 	row := q.db.QueryRowContext(ctx, getUserByEmail, email)
-	var i GetUserByEmailRow
+	var i User
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
-		&i.EmailVerified,
 		&i.Password,
 		&i.Nickname,
+		&i.EmailVerified,
+		&i.TotpSecret,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getUserById = `-- name: GetUserById :one
+SELECT id, email, password, nickname, email_verified, totp_secret, created_at, updated_at FROM users
+WHERE id = ?
+`
+
+func (q *Queries) GetUserById(ctx context.Context, id string) (User, error) {
+	row := q.db.QueryRowContext(ctx, getUserById, id)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.Password,
+		&i.Nickname,
+		&i.EmailVerified,
 		&i.TotpSecret,
 		&i.CreatedAt,
 		&i.UpdatedAt,
