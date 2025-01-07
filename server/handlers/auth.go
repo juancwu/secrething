@@ -119,7 +119,7 @@ func Login(connector *db.DBConnector) echo.HandlerFunc {
 		}
 
 		var tokType string
-		if !user.TotpSecret.Valid {
+		if !user.TotpSecret.Valid || !user.EmailVerified {
 			tokType = services.PARTIAL_USER_TOKEN_TYPE
 		} else {
 			tokType = services.FULL_USER_TOKEN_TYPE
