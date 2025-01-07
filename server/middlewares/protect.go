@@ -7,7 +7,6 @@ import (
 	"konbini/server/services"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/labstack/echo/v4"
 )
@@ -17,9 +16,15 @@ const (
 	EXTRACT_FROM_BEARER uint32 = 0
 )
 
+var (
+	ErrNoJwtFound  error = errors.New("No jwt found")
+	ErrNoUserFound error = errors.New("No user found")
+)
+
 type ProtectConfig struct {
 	AllowTokens []string
 	ExtractFrom uint32
+	ExtractUser bool
 	Connector   *db.DBConnector
 }
 
@@ -28,6 +33,7 @@ func ProtectFull(connector *db.DBConnector) echo.MiddlewareFunc {
 	return ProtectWithConfig(ProtectConfig{
 		AllowTokens: []string{services.FULL_USER_TOKEN_TYPE},
 		ExtractFrom: EXTRACT_FROM_BEARER,
+		ExtractUser: true,
 		Connector:   connector,
 	})
 }
@@ -37,6 +43,7 @@ func ProtectPartial(connector *db.DBConnector) echo.MiddlewareFunc {
 	return ProtectWithConfig(ProtectConfig{
 		AllowTokens: []string{services.PARTIAL_USER_TOKEN_TYPE},
 		ExtractFrom: EXTRACT_FROM_BEARER,
+		ExtractUser: true,
 		Connector:   connector,
 	})
 }
@@ -46,6 +53,7 @@ func ProtectAll(connector *db.DBConnector) echo.MiddlewareFunc {
 	return ProtectWithConfig(ProtectConfig{
 		AllowTokens: []string{services.PARTIAL_USER_TOKEN_TYPE, services.FULL_USER_TOKEN_TYPE},
 		ExtractFrom: EXTRACT_FROM_BEARER,
+		ExtractUser: true,
 		Connector:   connector,
 	})
 }
@@ -86,29 +94,57 @@ func ProtectWithConfig(cfg ProtectConfig) echo.MiddlewareFunc {
 			}
 
 			// verify
-			memJwt, err := services.VerifyJWTString(c.Request().Context(), token, cfg.Connector)
+			j, err := services.VerifyJWTString(c.Request().Context(), token, cfg.Connector)
 			if err != nil {
 				logger.Error().Err(err).Msg("Failed to verify jwt")
 				return echo.NewHTTPError(http.StatusUnauthorized, http.StatusText(http.StatusUnauthorized))
 			}
-
 			// cache the jwt item for faster access in next verification
-			now := time.Now().UTC()
-			exp, err := time.Parse(time.RFC3339, memJwt.ExpiresAt)
-			if err == nil {
-				diff := exp.UTC().Sub(now)
-				if diff < 0 {
-					diff = -diff
+			memcache.CacheJWT(j)
+			c.Set("jwt_id", j.ID)
+
+			if cfg.ExtractUser {
+				user, err := memcache.GetUser(j.UserID)
+				if err != nil {
+					logger.Warn().Err(err).Msg("Failed to get user from memory cache. Trying to get from database.")
+					conn, err := cfg.Connector.Connect()
+					if err != nil {
+						return err
+					}
+					q := db.New(conn)
+					dbUser, err := q.GetUserById(c.Request().Context(), j.UserID)
+					if err != nil {
+						conn.Close()
+						return err
+					}
+
+					user = &dbUser
+					conn.Close()
 				}
-				if diff <= time.Minute*10 {
-					// re-cache the jwt
-					memcache.CacheJWT(memJwt)
-				}
-			} else {
-				logger.Warn().Err(err).Msg("Failed to parse jwt expiry time when trying to check if expiry is <= 10 minutes in protect middleware.")
+
+				// renew cache for the user since it has been accessed
+				memcache.CacheUser(user)
+
+				c.Set("user_id", user.ID)
 			}
 
 			return next(c)
 		}
 	}
+}
+
+func GetJWT(c echo.Context) (*db.Jwt, error) {
+	id, ok := c.Get("jwt_id").(string)
+	if !ok {
+		return nil, ErrNoJwtFound
+	}
+	return memcache.GetJWT(id)
+}
+
+func GetUser(c echo.Context) (*db.User, error) {
+	id, ok := c.Get("user_id").(string)
+	if !ok {
+		return nil, ErrNoUserFound
+	}
+	return memcache.GetUser(id)
 }

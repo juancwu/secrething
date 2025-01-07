@@ -203,6 +203,20 @@ func VerifyEmail(connector *db.DBConnector) echo.HandlerFunc {
 	}
 }
 
+func ResendVerificationEmail(connector *db.DBConnector) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		user, err := middlewares.GetUser(c)
+		if err != nil {
+			return err
+		}
+
+		logger := middlewares.GetLogger(c)
+		go sendVerificationEmail(user.ID, user.Email, logger)
+
+		return nil
+	}
+}
+
 func SetupTOTP(connector *db.DBConnector) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		return nil

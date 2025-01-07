@@ -34,4 +34,9 @@ func setupAuthRoutes(routeConfig *RouteConfig) {
 	// )
 
 	routeConfig.Echo.GET("/auth/email/verify", handlers.VerifyEmail(routeConfig.DBConnector))
+	routeConfig.Echo.POST(
+		"/auth/email/resend-verification",
+		handlers.ResendVerificationEmail(routeConfig.DBConnector),
+		middlewares.ProtectAll(routeConfig.DBConnector),
+	)
 }
