@@ -1,30 +1,33 @@
-package handlers
+package memcache
 
 import (
 	"fmt"
-	"konbini/server/memcache"
 	"konbini/server/services"
 	"time"
 )
 
-// emailTokenCacheKeyPrefix is the prefix that is added when an email token is stored in cache
-const emailTokenCacheKeyPrefix string = "email_token_"
-const jwtCacheKeyPrefix string = "jwt_"
+/*
+   This file is dedicated to define prefixes for each different type of cache items and helper functions
+   that are used in this server. This makes a centralized place where all packages can get access to.
+*/
 
-// storeEmailTokenInCache is a helper function that stores the given email token in memory cache.
+const (
+	EmailTokenCacheKeyPrefix string = "email_token_"
+	JwtCacheKeyPrefix        string = "jwt_"
+)
+
+// StoreEmailTokenInCache is a helper function that stores the given email token in memory cache.
 // The function uses the emailTokenCacheKeyPrefix to prefix the key before storing it.
 // The function returns an error if the key already exists in cache.
-func storeEmailTokenInCache(token *services.EmailToken) error {
-	cache := memcache.Cache()
-	return cache.Add(emailTokenCacheKeyPrefix+token.Id, token, time.Minute*10)
+func StoreEmailTokenInCache(token *services.EmailToken) error {
+	return cache.Add(EmailTokenCacheKeyPrefix+token.Id, token, time.Minute*10)
 }
 
-// getEmailTokenFromCache is a helper function that retrieves the token email with the given id.
+// GetEmailTokenFromCache is a helper function that retrieves the token email with the given id.
 // The function returns an error if the key does not exists, expired cache or stored value is not
 // a valid service.EmailToken struct.
-func getEmailTokenFromCache(id string) (*services.EmailToken, error) {
-	cache := memcache.Cache()
-	k, exp, found := cache.GetWithExpiration(emailTokenCacheKeyPrefix + id)
+func GetEmailTokenFromCache(id string) (*services.EmailToken, error) {
+	k, exp, found := cache.GetWithExpiration(EmailTokenCacheKeyPrefix + id)
 	if !found {
 		return nil, fmt.Errorf("No email token found with id: %s", id)
 	}
@@ -38,20 +41,18 @@ func getEmailTokenFromCache(id string) (*services.EmailToken, error) {
 	return token, nil
 }
 
-// storeJwtInCache stores the JWT in cache using a prefix "jwt_" + id + id
+// StoreJwtInCache stores the JWT in cache using a prefix "jwt_" + id + id
 // The JWT is cached for 1 hour.
-func storeJwtInCache(id string, jwt *services.JWT) error {
-	cache := memcache.Cache()
-	return cache.Add(jwtCacheKeyPrefix+id, jwt, time.Hour)
+func StoreJwtInCache(id string, jwt *services.JWT) error {
+	return cache.Add(JwtCacheKeyPrefix+id, jwt, time.Hour)
 }
 
-// getJwtFromCache retrieves the JWT stored in memory cache.
+// GetJwtFromCache retrieves the JWT stored in memory cache.
 // This function will also check if the JWT is about to expired (10 minutes)
 // and renews the expiration date. Allows the easy access of the JWT
 // for a long continuous time.
-func getJwtFromCache(id string) (*services.JWT, error) {
-	cache := memcache.Cache()
-	k, exp, found := cache.GetWithExpiration(jwtCacheKeyPrefix + id)
+func GetJwtFromCache(id string) (*services.JWT, error) {
+	k, exp, found := cache.GetWithExpiration(JwtCacheKeyPrefix + id)
 	if !found {
 		return nil, fmt.Errorf("No JWT found with id: %s", id)
 	}
@@ -69,7 +70,7 @@ func getJwtFromCache(id string) (*services.JWT, error) {
 	}
 	if diff <= 10*time.Minute {
 		// update the time
-		cache.Replace(jwtCacheKeyPrefix+id, jwt, time.Hour)
+		cache.Replace(JwtCacheKeyPrefix+id, jwt, time.Hour)
 	}
 	return jwt, nil
 }
