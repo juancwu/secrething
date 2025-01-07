@@ -29,7 +29,8 @@ var (
 	ErrMissingPort               error = errors.New("PORT environment variable must be set")
 	ErrMissingResendApiKey       error = errors.New("RESEND_API_KEY environment varaible must be set")
 	ErrMissingVerifyEmailAddress error = errors.New("VERIFY_EMAIL_ADDRESS environment varaible must be set")
-	ErrMissingUserTokenKey       error = errors.New("USER_TOKEN_KEY environment varaible must be set")
+	ErrMissingFullTokenKey       error = errors.New("FULL_TOKEN_KEY environment varaible must be set")
+	ErrMissingPartialTokenKey    error = errors.New("PARTIAL_TOKEN_KEY environment varaible must be set")
 	ErrMissingBentoTokenKey      error = errors.New("BENTO_TOKEN_KEY environment varaible must be set")
 	ErrMissingEmailTokenKey      error = errors.New("EMAIL_TOKEN_KEY environment varaible must be set")
 	ErrMissingAesKey             error = errors.New("AES_KEY environment varaible must be set")
@@ -43,8 +44,10 @@ var (
 	ErrInvalidAesKeyLength error = errors.New("AES key must be 32 bytes long.")
 )
 
-var globalConfig *Config
-var version string
+var (
+	globalConfig *Config
+	version      string
+)
 
 // Version is an alias and faster way to get the current server version.
 func Version() string {
@@ -245,7 +248,7 @@ func (c *Config) loadEnvironmentVariables() error {
 
 	hexPartialTokenKey := os.Getenv("PARTIAL_TOKEN_KEY")
 	if hexPartialTokenKey == "" {
-		return ErrMissingUserTokenKey
+		return ErrMissingPartialTokenKey
 	}
 	decodedPartialTokenKey, err := decodeHexKey(hexPartialTokenKey)
 	if err != nil {
@@ -255,7 +258,7 @@ func (c *Config) loadEnvironmentVariables() error {
 
 	hexFullTokenKey := os.Getenv("FULL_TOKEN_KEY")
 	if hexFullTokenKey == "" {
-		return ErrMissingUserTokenKey
+		return ErrMissingFullTokenKey
 	}
 	decodedFullTokenKey, err := decodeHexKey(hexFullTokenKey)
 	if err != nil {
