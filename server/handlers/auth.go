@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"konbini/server/db"
+	"konbini/server/memcache"
 	"konbini/server/middlewares"
 	"konbini/server/services"
 	"konbini/server/utils"
@@ -58,7 +59,7 @@ func Register(connector *db.DBConnector) echo.HandlerFunc {
 		}
 
 		// userId at
-		now := time.Now().UTC().Format(time.RFC3339)
+		now := time.Now().UTC().Format(time.RFC3339Nano)
 
 		userId, err := queries.CreateUser(ctx, db.CreateUserParams{
 			Email:     body.Email,
@@ -131,15 +132,15 @@ func Login(connector *db.DBConnector) echo.HandlerFunc {
 		dbJwt, err := queries.NewJWT(ctx, db.NewJWTParams{
 			UserID:    user.ID,
 			TokenType: tokType.String(),
-			CreatedAt: now.Format(time.RFC3339),
-			ExpiresAt: exp.Format(time.RFC3339),
+			CreatedAt: now.Format(time.RFC3339Nano),
+			ExpiresAt: exp.Format(time.RFC3339Nano),
 		})
 		authToken, err = services.NewAuthToken(dbJwt.ID, user.ID, tokType, exp)
 		if err != nil {
 			return err
 		}
 
-		token, err := authToken.EncryptedString()
+		token, err := authToken.Package()
 		if err != nil {
 			return err
 		}
@@ -188,6 +189,9 @@ func VerifyEmail(connector *db.DBConnector) echo.HandlerFunc {
 				PublicMessage: "Expired.",
 			}
 		}
+
+		// remove cache
+		memcache.Cache().Delete("user_" + emailToken.UserId)
 
 		userId := emailToken.UserId
 		queries := db.New(conn)

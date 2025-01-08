@@ -1,11 +1,14 @@
 package middlewares
 
 import (
+	"database/sql"
 	"errors"
 	"konbini/server/db"
+	"konbini/server/memcache"
 	"konbini/server/services"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/labstack/echo/v4"
 )
@@ -16,7 +19,7 @@ const (
 )
 
 var (
-	ErrNoJwtFound  error = errors.New("No jwt found")
+	ErrNoJwtFound  error = errors.New("No authToken found")
 	ErrNoUserFound error = errors.New("No user found")
 )
 
@@ -53,8 +56,8 @@ func ProtectAll(connector *db.DBConnector) echo.MiddlewareFunc {
 	})
 }
 
-// ProtectWithConfig is a middleware that checks for a jwt in the request and validates it.
-// The middleware also refreshes the cache for the jwt in memory if the expiry <= 10 minutes.
+// ProtectWithConfig is a middleware that checks for a authToken in the request and validates it.
+// The middleware also refreshes the cache for the authToken in memory if the expiry <= 10 minutes.
 func ProtectWithConfig(cfg ProtectConfig) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
@@ -73,7 +76,7 @@ func ProtectWithConfig(cfg ProtectConfig) echo.MiddlewareFunc {
 			}
 
 			// verify the token
-			jwt, err := services.VerifyAuthToken(token)
+			authToken, err := services.VerifyAuthToken(token)
 			if err != nil {
 				logger.Error().Err(err).Msg("Failed to verify AuthToken")
 				return echo.NewHTTPError(http.StatusUnauthorized, http.StatusText(http.StatusUnauthorized))
@@ -81,7 +84,7 @@ func ProtectWithConfig(cfg ProtectConfig) echo.MiddlewareFunc {
 
 			allowed := false
 			for _, t := range cfg.AllowTokens {
-				if jwt.TokenType == t {
+				if authToken.TokenType == t {
 					allowed = true
 					break
 				}
@@ -99,29 +102,51 @@ func ProtectWithConfig(cfg ProtectConfig) echo.MiddlewareFunc {
 
 			q := db.New(conn)
 
-			exists, err := q.ExistsJwtById(c.Request().Context(), jwt.ID)
-			if err != nil {
-				conn.Close()
-				logger.Error().Err(err).Msg("Failed to fetch AuthToken from database. Reject.")
-				return err
-			}
-			if exists != 1 {
-				conn.Close()
-				logger.Error().Msg("AuthToken does not exists in database. Reject.")
-				return echo.NewHTTPError(http.StatusUnauthorized, http.StatusText(http.StatusUnauthorized))
+			// before querying, check memory cache
+			_, found := memcache.Cache().Get("auth_token_" + authToken.ID)
+			if !found {
+				exists, err := q.ExistsJwtById(c.Request().Context(), authToken.ID)
+				if err != nil {
+					conn.Close()
+					if err == sql.ErrNoRows {
+						return echo.NewHTTPError(http.StatusUnauthorized, http.StatusText(http.StatusUnauthorized))
+					}
+					logger.Error().Err(err).Msg("Failed to fetch AuthToken from database. Reject.")
+					return err
+				}
+				if exists != 1 {
+					conn.Close()
+					logger.Error().Msg("AuthToken does not exists in database. Reject.")
+					return echo.NewHTTPError(http.StatusUnauthorized, http.StatusText(http.StatusUnauthorized))
+				}
+				memcache.Cache().Set("auth_token_"+authToken.ID, authToken.ID, time.Minute*10)
 			}
 
-			user, err := q.GetUserById(c.Request().Context(), jwt.UserID)
-			if err != nil {
+			var user db.User
+			k, found := memcache.Cache().Get("user_" + authToken.UserID)
+			if !found {
+				user, err = q.GetUserById(c.Request().Context(), authToken.UserID)
+				if err != nil {
+					conn.Close()
+					if err == sql.ErrNoRows {
+						logger.Error().Msg("No user found in database")
+						return echo.NewHTTPError(http.StatusUnauthorized, http.StatusText(http.StatusUnauthorized))
+					}
+					logger.Error().Msg("Failed to fetch user from database. Reject.")
+					return err
+				}
+				memcache.Cache().Set("user_"+user.ID, user, time.Minute*10)
+			} else if u, ok := k.(db.User); ok {
+				user = u
+			} else {
 				conn.Close()
-				logger.Error().Msg("Failed to fetch user from database. Reject.")
-				return echo.NewHTTPError(http.StatusUnauthorized, http.StatusText(http.StatusUnauthorized))
+				return errors.New("Failed to get user from database or memory cache. Reject.")
 			}
 
 			// close connection after use
 			conn.Close()
 
-			c.Set("jwt", jwt)
+			c.Set("authToken", authToken)
 			c.Set("user", user)
 
 			return next(c)
@@ -130,11 +155,11 @@ func ProtectWithConfig(cfg ProtectConfig) echo.MiddlewareFunc {
 }
 
 func GetJWT(c echo.Context) (*services.AuthToken, error) {
-	jwt, ok := c.Get("jwt").(*services.AuthToken)
+	authToken, ok := c.Get("authToken").(*services.AuthToken)
 	if !ok {
 		return nil, ErrNoJwtFound
 	}
-	return jwt, nil
+	return authToken, nil
 }
 
 func GetUser(c echo.Context) (db.User, error) {

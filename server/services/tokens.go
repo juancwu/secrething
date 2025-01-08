@@ -8,46 +8,20 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/rs/zerolog/log"
 )
 
-type TokenType byte
+type TokenType string
 
 const (
-	FULL_USER_TOKEN_TYPE    TokenType = 1
-	PARTIAL_USER_TOKEN_TYPE TokenType = 0
+	FULL_USER_TOKEN_TYPE    TokenType = "full_token"
+	PARTIAL_USER_TOKEN_TYPE TokenType = "partial_token"
 	EMAIL_TOKEN_TYPE        string    = "email_token"
 
 	customer string = "customer"
 )
 
-func TokenTypeFromByte(b byte) (TokenType, error) {
-	t := TokenType(b)
-	if !t.Valid() {
-		return 0, ErrInvalidTokenType
-	}
-	return t, nil
-}
-
-func TokenTypeFromString(s string) (TokenType, error) {
-	switch s {
-	case "full_token":
-		return FULL_USER_TOKEN_TYPE, nil
-	case "partial_token":
-		return PARTIAL_USER_TOKEN_TYPE, nil
-	}
-	return TokenType(0), ErrInvalidTokenType
-}
-
 func (t TokenType) Valid() bool {
 	return t == PARTIAL_USER_TOKEN_TYPE || t == FULL_USER_TOKEN_TYPE
-}
-
-func (t TokenType) Byte() byte {
-	if t == FULL_USER_TOKEN_TYPE {
-		return 1
-	}
-	return 0
 }
 
 func (t TokenType) String() string {
@@ -58,8 +32,9 @@ func (t TokenType) String() string {
 }
 
 var (
-	ErrInvalidTokenType error = errors.New("Invalid token type. Use constants to not make a mistake.")
-	ErrExpiredJWT       error = errors.New("AuthToken has expired.")
+	ErrInvalidTokenType    error = errors.New("Invalid token type. Use constants to not make a mistake.")
+	ErrExpiredJWT          error = errors.New("AuthToken has expired.")
+	ErrInvalidAuthTokenLen error = errors.New("Invalid token length (>102)")
 )
 
 type AuthToken struct {
@@ -69,32 +44,29 @@ type AuthToken struct {
 	ExpiresAt time.Time
 }
 
-func (j *AuthToken) EncryptedString() (string, error) {
+func (t *AuthToken) Package() (string, error) {
 	cfg, err := config.Global()
 	if err != nil {
 		return "", err
 	}
 
-	id := []byte(j.ID)
-	userID := []byte(j.UserID)
-	expiresAt := []byte(j.ExpiresAt.Format(time.RFC3339))
+	id := []byte(t.ID)
+	userID := []byte(t.UserID)
+	expiresAt := []byte(t.ExpiresAt.Format(time.RFC3339Nano))
+	tokenType := []byte(t.TokenType)
 
-	// 1 for the token type
-	data := make([]byte, len(id)+len(userID)+len(expiresAt)+1)
-	data[0] = j.TokenType.Byte()
-	offset := 1
-	copy(data[offset:], id)
-	offset += len(id)
-	copy(data[offset:], userID)
-	offset += len(userID)
-	copy(data[offset:], expiresAt)
+	// id + userID + expiresAt + tokenType
+	// 36 + 36 + 30 + len(tokenType)
+	data := make([]byte, 102+len(tokenType))
+	copy(data[0:], id)
+	copy(data[36:], userID)
+	copy(data[72:], expiresAt)
+	copy(data[102:], []byte(tokenType))
 
 	ciphertext, err := utils.EncryptAES(data, cfg.GetFullTokenKey())
 	if err != nil {
 		return "", err
 	}
-
-	log.Info().Bytes("ciphertext", ciphertext).Msg("debug")
 
 	// encode in base64
 	b64Cipher := base64.URLEncoding.EncodeToString(ciphertext)
@@ -133,21 +105,20 @@ func VerifyAuthToken(token string) (*AuthToken, error) {
 		return nil, err
 	}
 
-	tokenType, err := TokenTypeFromByte(plaintext[0])
+	if len(plaintext) <= 102 {
+		return nil, ErrInvalidAuthTokenLen
+	}
+
+	id := plaintext[0:36]
+	userID := plaintext[36:72]
+	expiresAtBytes := plaintext[72:102]
+	expiresAt, err := time.Parse(time.RFC3339Nano, string(expiresAtBytes))
 	if err != nil {
 		return nil, err
 	}
-
-	offset := 1
-	uuidv4Len := 36
-	id := plaintext[offset : offset+uuidv4Len]
-	offset += uuidv4Len
-	userID := plaintext[offset : offset+uuidv4Len]
-	offset += uuidv4Len
-	expiresAtBytes := plaintext[offset:]
-	expiresAt, err := time.Parse(time.RFC3339, string(expiresAtBytes))
-	if err != nil {
-		return nil, err
+	tokenType := TokenType(string(plaintext[102:]))
+	if !tokenType.Valid() {
+		return nil, ErrInvalidTokenType
 	}
 
 	if time.Now().After(expiresAt) {
