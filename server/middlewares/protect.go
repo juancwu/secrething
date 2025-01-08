@@ -3,7 +3,6 @@ package middlewares
 import (
 	"errors"
 	"konbini/server/db"
-	"konbini/server/memcache"
 	"konbini/server/services"
 	"net/http"
 	"strings"
@@ -22,18 +21,16 @@ var (
 )
 
 type ProtectConfig struct {
-	AllowTokens []string
+	AllowTokens []services.TokenType
 	ExtractFrom uint32
-	ExtractUser bool
 	Connector   *db.DBConnector
 }
 
 // ProtectFull is a shortcut function to protect a route which only allow full tokens.
 func ProtectFull(connector *db.DBConnector) echo.MiddlewareFunc {
 	return ProtectWithConfig(ProtectConfig{
-		AllowTokens: []string{services.FULL_USER_TOKEN_TYPE},
+		AllowTokens: []services.TokenType{services.FULL_USER_TOKEN_TYPE},
 		ExtractFrom: EXTRACT_FROM_BEARER,
-		ExtractUser: true,
 		Connector:   connector,
 	})
 }
@@ -41,9 +38,8 @@ func ProtectFull(connector *db.DBConnector) echo.MiddlewareFunc {
 // ProtectPartial is a shortcut function to protect a route which only allow partial tokens.
 func ProtectPartial(connector *db.DBConnector) echo.MiddlewareFunc {
 	return ProtectWithConfig(ProtectConfig{
-		AllowTokens: []string{services.PARTIAL_USER_TOKEN_TYPE},
+		AllowTokens: []services.TokenType{services.PARTIAL_USER_TOKEN_TYPE},
 		ExtractFrom: EXTRACT_FROM_BEARER,
-		ExtractUser: true,
 		Connector:   connector,
 	})
 }
@@ -51,9 +47,8 @@ func ProtectPartial(connector *db.DBConnector) echo.MiddlewareFunc {
 // ProtectAll is a shortcut function to protect a route which only allow partial and full tokens.
 func ProtectAll(connector *db.DBConnector) echo.MiddlewareFunc {
 	return ProtectWithConfig(ProtectConfig{
-		AllowTokens: []string{services.PARTIAL_USER_TOKEN_TYPE, services.FULL_USER_TOKEN_TYPE},
+		AllowTokens: []services.TokenType{services.PARTIAL_USER_TOKEN_TYPE, services.FULL_USER_TOKEN_TYPE},
 		ExtractFrom: EXTRACT_FROM_BEARER,
-		ExtractUser: true,
 		Connector:   connector,
 	})
 }
@@ -77,74 +72,75 @@ func ProtectWithConfig(cfg ProtectConfig) echo.MiddlewareFunc {
 				return errors.New("Invalid ExtractFrom value in Protect middleware configuration.")
 			}
 
-			claims, err := services.ParseUnverifyJWT(token)
+			// verify the token
+			jwt, err := services.VerifyJWT(token)
 			if err != nil {
-				logger.Error().Err(err).Msg("Failed to parse unverified jwt")
+				logger.Error().Err(err).Msg("Failed to verify JWT")
 				return echo.NewHTTPError(http.StatusUnauthorized, http.StatusText(http.StatusUnauthorized))
 			}
-			isAllowed := false
-			for _, allow := range cfg.AllowTokens {
-				if allow == claims.Type {
-					isAllowed = true
+
+			allowed := false
+			for _, t := range cfg.AllowTokens {
+				if jwt.TokenType == t {
+					allowed = true
 					break
 				}
 			}
-			if !isAllowed {
-				return echo.NewHTTPError(http.StatusUnauthorized, "Token type not allowed.")
-			}
-
-			// verify
-			j, err := services.VerifyJWTString(c.Request().Context(), token, cfg.Connector)
-			if err != nil {
-				logger.Error().Err(err).Msg("Failed to verify jwt")
+			if !allowed {
+				logger.Error().Err(err).Msg("Request made with token type that is NOT allowed.")
 				return echo.NewHTTPError(http.StatusUnauthorized, http.StatusText(http.StatusUnauthorized))
 			}
-			// cache the jwt item for faster access in next verification
-			memcache.CacheJWT(j)
-			c.Set("jwt_id", j.ID)
 
-			if cfg.ExtractUser {
-				user, err := memcache.GetUser(j.UserID)
-				if err != nil {
-					logger.Warn().Err(err).Msg("Failed to get user from memory cache. Trying to get from database.")
-					conn, err := cfg.Connector.Connect()
-					if err != nil {
-						return err
-					}
-					q := db.New(conn)
-					dbUser, err := q.GetUserById(c.Request().Context(), j.UserID)
-					if err != nil {
-						conn.Close()
-						return err
-					}
-
-					user = &dbUser
-					conn.Close()
-				}
-
-				// renew cache for the user since it has been accessed
-				memcache.CacheUser(user)
-
-				c.Set("user_id", user.ID)
+			// check database if token exists
+			conn, err := cfg.Connector.Connect()
+			if err != nil {
+				return err
 			}
+
+			q := db.New(conn)
+
+			exists, err := q.ExistsJwtById(c.Request().Context(), jwt.ID)
+			if err != nil {
+				conn.Close()
+				logger.Error().Err(err).Msg("Failed to fetch JWT from database. Reject.")
+				return err
+			}
+			if exists != 1 {
+				conn.Close()
+				logger.Error().Msg("JWT does not exists in database. Reject.")
+				return echo.NewHTTPError(http.StatusUnauthorized, http.StatusText(http.StatusUnauthorized))
+			}
+
+			user, err := q.GetUserById(c.Request().Context(), jwt.UserID)
+			if err != nil {
+				conn.Close()
+				logger.Error().Msg("Failed to fetch user from database. Reject.")
+				return echo.NewHTTPError(http.StatusUnauthorized, http.StatusText(http.StatusUnauthorized))
+			}
+
+			// close connection after use
+			conn.Close()
+
+			c.Set("jwt", jwt)
+			c.Set("user", user)
 
 			return next(c)
 		}
 	}
 }
 
-func GetJWT(c echo.Context) (*db.Jwt, error) {
-	id, ok := c.Get("jwt_id").(string)
+func GetJWT(c echo.Context) (*services.JWT, error) {
+	jwt, ok := c.Get("jwt").(*services.JWT)
 	if !ok {
 		return nil, ErrNoJwtFound
 	}
-	return memcache.GetJWT(id)
+	return jwt, nil
 }
 
-func GetUser(c echo.Context) (*db.User, error) {
-	id, ok := c.Get("user_id").(string)
+func GetUser(c echo.Context) (db.User, error) {
+	user, ok := c.Get("user").(db.User)
 	if !ok {
-		return nil, ErrNoUserFound
+		return db.User{}, ErrNoUserFound
 	}
-	return memcache.GetUser(id)
+	return user, nil
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"konbini/server/db"
-	"konbini/server/memcache"
 	"konbini/server/middlewares"
 	"konbini/server/services"
 	"konbini/server/utils"
@@ -119,7 +118,7 @@ func Login(connector *db.DBConnector) echo.HandlerFunc {
 			}
 		}
 
-		var tokType string
+		var tokType services.TokenType
 		if !user.TotpSecret.Valid || !user.EmailVerified {
 			tokType = services.PARTIAL_USER_TOKEN_TYPE
 		} else {
@@ -131,23 +130,21 @@ func Login(connector *db.DBConnector) echo.HandlerFunc {
 		var j *services.JWT
 		dbJwt, err := queries.NewJWT(ctx, db.NewJWTParams{
 			UserID:    user.ID,
-			TokenType: tokType,
+			TokenType: tokType.String(),
 			CreatedAt: now.Format(time.RFC3339),
 			ExpiresAt: exp.Format(time.RFC3339),
 		})
-		j, err = services.NewJWT(dbJwt.ID, tokType, exp)
+		j, err = services.NewJWT(dbJwt.ID, user.ID, tokType, exp)
 		if err != nil {
 			return err
 		}
 
-		token, err := j.SignedString()
+		token, err := j.EncryptedString()
 		if err != nil {
 			return err
 		}
 
-		memcache.CacheJWT(&dbJwt)
-
-		return c.JSON(http.StatusOK, map[string]string{"token": token, "type": tokType})
+		return c.JSON(http.StatusOK, map[string]string{"token": token, "type": tokType.String()})
 	}
 }
 
@@ -208,6 +205,10 @@ func ResendVerificationEmail(connector *db.DBConnector) echo.HandlerFunc {
 		user, err := middlewares.GetUser(c)
 		if err != nil {
 			return err
+		}
+
+		if user.EmailVerified {
+			return c.String(http.StatusBadRequest, "Email already verified.")
 		}
 
 		logger := middlewares.GetLogger(c)

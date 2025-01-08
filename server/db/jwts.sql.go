@@ -27,6 +27,17 @@ func (q *Queries) DeleteUserJwts(ctx context.Context, userID string) error {
 	return err
 }
 
+const existsJwtById = `-- name: ExistsJwtById :one
+SELECT EXISTS(SELECT 1 FROM jwts WHERE id = ?)
+`
+
+func (q *Queries) ExistsJwtById(ctx context.Context, id string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, existsJwtById, id)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const getJwtById = `-- name: GetJwtById :one
 SELECT id, user_id, created_at, expires_at, token_type FROM jwts
 WHERE id = ?

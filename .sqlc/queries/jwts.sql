@@ -5,6 +5,9 @@ VALUES
 (?, ?, ?, ?)
 RETURNING *; 
 
+-- name: ExistsJwtById :one
+SELECT EXISTS(SELECT 1 FROM jwts WHERE id = ?);
+
 -- name: GetJwtById :one
 SELECT * FROM jwts
 WHERE id = ?;

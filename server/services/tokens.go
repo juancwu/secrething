@@ -1,159 +1,165 @@
 package services
 
 import (
-	"context"
 	"encoding/base64"
 	"errors"
-	"fmt"
 	"konbini/server/config"
-	"konbini/server/db"
-	"konbini/server/memcache"
 	"konbini/server/utils"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 )
 
+type TokenType byte
+
 const (
-	FULL_USER_TOKEN_TYPE    string = "full_user_token"
-	PARTIAL_USER_TOKEN_TYPE string = "partial_user_token"
-	EMAIL_TOKEN_TYPE        string = "email_token"
+	FULL_USER_TOKEN_TYPE    TokenType = 1
+	PARTIAL_USER_TOKEN_TYPE TokenType = 0
+	EMAIL_TOKEN_TYPE        string    = "email_token"
 
 	customer string = "customer"
 )
 
+func TokenTypeFromByte(b byte) (TokenType, error) {
+	t := TokenType(b)
+	if !t.Valid() {
+		return 0, ErrInvalidTokenType
+	}
+	return t, nil
+}
+
+func TokenTypeFromString(s string) (TokenType, error) {
+	switch s {
+	case "full_token":
+		return FULL_USER_TOKEN_TYPE, nil
+	case "partial_token":
+		return PARTIAL_USER_TOKEN_TYPE, nil
+	}
+	return TokenType(0), ErrInvalidTokenType
+}
+
+func (t TokenType) Valid() bool {
+	return t == PARTIAL_USER_TOKEN_TYPE || t == FULL_USER_TOKEN_TYPE
+}
+
+func (t TokenType) Byte() byte {
+	if t == FULL_USER_TOKEN_TYPE {
+		return 1
+	}
+	return 0
+}
+
+func (t TokenType) String() string {
+	if t == FULL_USER_TOKEN_TYPE {
+		return "full_token"
+	}
+	return "partial_token"
+}
+
 var (
 	ErrInvalidTokenType error = errors.New("Invalid token type. Use constants to not make a mistake.")
+	ErrExpiredJWT       error = errors.New("JWT has expired.")
 )
 
-type JWTClaims struct {
-	Type string `json:"type"`
-	jwt.RegisteredClaims
-}
-
 type JWT struct {
-	Claims JWTClaims
+	ID        string
+	UserID    string
+	TokenType TokenType
+	ExpiresAt time.Time
 }
 
-func (j *JWT) SignedString() (string, error) {
+func (j *JWT) EncryptedString() (string, error) {
 	cfg, err := config.Global()
 	if err != nil {
 		return "", err
 	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, j.Claims)
-	key, err := getJWTKeyByType(j.Claims.Type, cfg)
+
+	id := []byte(j.ID)
+	userID := []byte(j.UserID)
+	expiresAt := []byte(j.ExpiresAt.Format(time.RFC3339))
+
+	// 1 for the token type
+	data := make([]byte, len(id)+len(userID)+len(expiresAt)+1)
+	data[0] = j.TokenType.Byte()
+	offset := 1
+	copy(data[offset:], id)
+	offset += len(id)
+	copy(data[offset:], userID)
+	offset += len(userID)
+	copy(data[offset:], expiresAt)
+
+	ciphertext, err := utils.EncryptAES(data, cfg.GetFullTokenKey())
 	if err != nil {
 		return "", err
 	}
-	return token.SignedString(key)
+
+	log.Info().Bytes("ciphertext", ciphertext).Msg("debug")
+
+	// encode in base64
+	b64Cipher := base64.URLEncoding.EncodeToString(ciphertext)
+
+	return b64Cipher, nil
 }
 
-// NewJWT generates a new JWT and signs it with HS256.
-// An id must be provided since it is what relates the JWT to the
-// row stored in the database.
-func NewJWT(id, tokType string, expiresAt time.Time) (*JWT, error) {
-	if !isValidJWTType(tokType) {
+func NewJWT(id, userID string, tokenType TokenType, exp time.Time) (*JWT, error) {
+	if !tokenType.Valid() {
 		return nil, ErrInvalidTokenType
 	}
 
-	claims := JWTClaims{
-		Type: tokType,
-		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:    "Konbini",
-			ID:        id,
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
-			NotBefore: jwt.NewNumericDate(time.Now()),
-			ExpiresAt: jwt.NewNumericDate(expiresAt),
-			Audience:  []string{customer},
-		},
+	j := &JWT{
+		ID:        id,
+		UserID:    userID,
+		TokenType: tokenType,
+		ExpiresAt: exp,
 	}
-	j := &JWT{Claims: claims}
+
 	return j, nil
 }
 
-func ParseUnverifyJWT(token string) (*JWTClaims, error) {
-	parser := jwt.NewParser(jwt.WithoutClaimsValidation())
-	claims := &JWTClaims{}
-	_, _, err := parser.ParseUnverified(token, claims)
-	if err != nil {
-		return nil, err
-	}
-	return claims, nil
-}
-
-func VerifyJWTString(ctx context.Context, token string, connector *db.DBConnector) (*db.Jwt, error) {
+func VerifyJWT(token string) (*JWT, error) {
 	cfg, err := config.Global()
 	if err != nil {
 		return nil, err
 	}
 
-	parser := jwt.NewParser(jwt.WithoutClaimsValidation())
-	claims := &JWTClaims{}
-	_, _, err = parser.ParseUnverified(token, claims)
+	plaintext, err := base64.URLEncoding.DecodeString(token)
 	if err != nil {
 		return nil, err
 	}
 
-	// verify
-	_, err = jwt.Parse(token, func(t *jwt.Token) (interface{}, error) {
-		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("Unexpected jwt signing method: %v", t.Header["alg"])
-		}
-		// get key by type
-		var key []byte
-		switch claims.Type {
-		case FULL_USER_TOKEN_TYPE:
-			key = cfg.GetFullTokenKey()
-		case PARTIAL_USER_TOKEN_TYPE:
-			key = cfg.GetPartialTokenKey()
-		default:
-			return nil, fmt.Errorf("Invalid jwt type: %s", claims.Type)
-		}
-		return key, nil
-	})
+	plaintext, err = utils.DecryptAES(plaintext, cfg.GetFullTokenKey())
 	if err != nil {
 		return nil, err
 	}
 
-	memJwt, err := memcache.GetJWT(claims.ID)
+	tokenType, err := TokenTypeFromByte(plaintext[0])
 	if err != nil {
-		log.Warn().Err(err).Msg("Failed to get jwt item in memory cache from tokens service.")
-		// try to find the token in db
-		conn, err := connector.Connect()
-		if err != nil {
-			return nil, err
-		}
-		defer conn.Close()
-		q := db.New(conn)
-		dbJwt, err := q.GetJwtById(ctx, claims.ID)
-		if err != nil {
-			return nil, err
-		}
-		memcache.CacheJWT(&dbJwt)
-		memJwt = &dbJwt
+		return nil, err
 	}
 
-	return memJwt, nil
-}
-
-// isValidJWTType checks if the given string is a valid JWT type string
-func isValidJWTType(tokType string) bool {
-	return tokType == PARTIAL_USER_TOKEN_TYPE || tokType == FULL_USER_TOKEN_TYPE
-}
-
-// getJWTKeyByType gets the correct key based on the given JWT type string.
-// Returns an error if the token type is not valid.
-func getJWTKeyByType(tokType string, cfg *config.Config) ([]byte, error) {
-	switch tokType {
-	case FULL_USER_TOKEN_TYPE:
-		return cfg.GetFullTokenKey(), nil
-	case PARTIAL_USER_TOKEN_TYPE:
-		return cfg.GetPartialTokenKey(), nil
+	offset := 1
+	uuidv4Len := 36
+	id := plaintext[offset : offset+uuidv4Len]
+	offset += uuidv4Len
+	userID := plaintext[offset : offset+uuidv4Len]
+	offset += uuidv4Len
+	expiresAtBytes := plaintext[offset:]
+	expiresAt, err := time.Parse(time.RFC3339, string(expiresAtBytes))
+	if err != nil {
+		return nil, err
 	}
 
-	return nil, ErrInvalidTokenType
+	if time.Now().After(expiresAt) {
+		return nil, ErrExpiredJWT
+	}
+
+	return &JWT{
+		ID:        string(id),
+		UserID:    string(userID),
+		TokenType: tokenType,
+		ExpiresAt: expiresAt.UTC(),
+	}, nil
 }
 
 type EmailToken struct {
