@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"konbini/server/db"
+	"konbini/server/memcache"
 	"konbini/server/middlewares"
 	"konbini/server/services"
 	"konbini/server/utils"
@@ -179,6 +180,14 @@ func VerifyEmail(connector *db.DBConnector) echo.HandlerFunc {
 
 		emailToken, err := getEmailTokenFromCache(id)
 		if err != nil {
+			if err == memcache.ErrNotFound {
+				return APIError{
+					Code:           http.StatusBadRequest,
+					PublicMessage:  "Invalid link",
+					PrivateMessage: "email token not found in memory cache.",
+					InternalError:  err,
+				}
+			}
 			return err
 		}
 
