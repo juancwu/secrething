@@ -13,5 +13,5 @@ CREATE TABLE IF NOT EXISTS jwts (
 
 -- +goose Down
 -- +goose StatementBegin
-DROP TABLE IF EXISTS partial_tokens;
+DROP TABLE IF EXISTS jwts;
 -- +goose StatementEnd
