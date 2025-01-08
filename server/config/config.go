@@ -34,7 +34,6 @@ var (
 	ErrMissingBentoTokenKey      error = errors.New("BENTO_TOKEN_KEY environment varaible must be set")
 	ErrMissingEmailTokenKey      error = errors.New("EMAIL_TOKEN_KEY environment varaible must be set")
 	ErrMissingAesKey             error = errors.New("AES_KEY environment varaible must be set")
-	ErrMissingUserTokenIssuer    error = errors.New("USER_TOKEN_ISSUER environment variable must be set")
 
 	ErrInvalidAppEnv error = errors.New("Invalid value for APP_ENV environment variable")
 
