@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"context"
+	"database/sql"
+	"encoding/hex"
 	"errors"
 	"konbini/server/db"
 	"konbini/server/memcache"
@@ -12,6 +14,7 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
+	"github.com/pquerna/otp/totp"
 )
 
 // RegisterRequest represents the request body for register route.
@@ -80,8 +83,9 @@ func Register(connector *db.DBConnector) echo.HandlerFunc {
 }
 
 type LoginRequest struct {
-	Email    string `json:"email" validate:"required,email"`
-	Password string `json:"password" validate:"required"`
+	Email    string  `json:"email" validate:"required,email"`
+	Password string  `json:"password" validate:"required"`
+	TOTPCode *string `json:"totp_code,omitempty" validate:"omitnil,omitempty,required,len=6"`
 }
 
 func Login(connector *db.DBConnector) echo.HandlerFunc {
@@ -122,6 +126,19 @@ func Login(connector *db.DBConnector) echo.HandlerFunc {
 		var tokType services.TokenType
 		if !user.TotpSecret.Valid || !user.EmailVerified {
 			tokType = services.PARTIAL_USER_TOKEN_TYPE
+		} else if user.TotpLocked && user.TotpSecret.Valid {
+			if body.TOTPCode == nil {
+				return APIError{
+					Code:          http.StatusBadRequest,
+					PublicMessage: "User has TOTP setup, code is required. Make a new login request with the totp_code field in the body.",
+				}
+			}
+			if !totp.Validate(*body.TOTPCode, user.TotpSecret.String) {
+				return APIError{
+					Code:          http.StatusBadRequest,
+					PublicMessage: "Invalid TOTP code.",
+				}
+			}
 		} else {
 			tokType = services.FULL_USER_TOKEN_TYPE
 		}
@@ -244,14 +261,230 @@ func ResendVerificationEmail(connector *db.DBConnector) echo.HandlerFunc {
 	}
 }
 
+// SetupTOTP start TOTP setup for a registered user.
 func SetupTOTP(connector *db.DBConnector) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		return nil
+		user, err := middlewares.GetUser(c)
+		if err != nil {
+			return err
+		}
+
+		if user.TotpLocked {
+			return APIError{
+				Code:          http.StatusBadRequest,
+				PublicMessage: "To re-setup TOTP please remove the TOTP first.",
+			}
+		}
+
+		issuer := "Konbini"
+		accountName := user.Email
+
+		key, err := totp.Generate(totp.GenerateOpts{
+			Issuer:      issuer,
+			AccountName: accountName,
+		})
+		if err != nil {
+			return APIError{
+				Code:           http.StatusInternalServerError,
+				PublicMessage:  "Failed to setup TOTP. Please try again.",
+				PrivateMessage: "Error generating TOTP",
+				InternalError:  err,
+			}
+		}
+
+		conn, err := connector.Connect()
+		if err != nil {
+			return APIError{
+				Code:           http.StatusInternalServerError,
+				PublicMessage:  "Failed to setup TOTP. Please try again.",
+				PrivateMessage: "Error connecting to database",
+				InternalError:  err,
+			}
+		}
+		defer conn.Close()
+
+		q := db.New(conn)
+
+		err = q.SetUserTOTPSecret(c.Request().Context(), db.SetUserTOTPSecretParams{
+			TotpSecret: sql.NullString{
+				String: key.Secret(),
+				Valid:  true,
+			},
+		})
+		if err != nil {
+			return APIError{
+				Code:           http.StatusInternalServerError,
+				PublicMessage:  "Failed to setup TOTP. Please try again.",
+				PrivateMessage: "Error saving user TOTP secret.",
+				InternalError:  err,
+			}
+		}
+
+		url := key.URL()
+
+		return c.JSON(http.StatusOK, map[string]string{"url": url})
 	}
 }
 
-func VerifyTOTP(connector *db.DBConnector) echo.HandlerFunc {
+type SetupTOTPLockRequest struct {
+	Code string `json:"code" validate:"required,len=6"`
+}
+
+// SetupTOTPLock finishes the TOTP setup and generates backup codes for the client.
+func SetupTOTPLock(connector *db.DBConnector) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		return nil
+		user, err := middlewares.GetUser(c)
+		if err != nil {
+			return err
+		}
+
+		if user.TotpLocked {
+			return APIError{
+				Code:          http.StatusBadRequest,
+				PublicMessage: "To re-setup TOTP please remove it first.",
+			}
+		}
+
+		body, err := middlewares.GetJsonBody[SetupTOTPLockRequest](c)
+		if err != nil {
+			return APIError{
+				Code:           http.StatusInternalServerError,
+				PrivateMessage: "Failed to get the validated json body",
+				InternalError:  err,
+			}
+		}
+
+		if !totp.Validate(body.Code, user.TotpSecret.String) {
+			return APIError{
+				Code:          http.StatusBadRequest,
+				PublicMessage: "Invalid code.",
+			}
+		}
+
+		codes := make([]string, 6)
+		for i := 0; i < 6; i++ {
+			code, err := utils.RandomBytes(16)
+			if err != nil {
+				return APIError{
+					Code:           http.StatusInternalServerError,
+					PublicMessage:  "Failed to validate TOTP code.",
+					PrivateMessage: "Failed when generating new random bytes for recovery code",
+					InternalError:  err,
+				}
+			}
+			codes[i] = hex.EncodeToString(code)
+		}
+
+		conn, err := connector.Connect()
+		if err != nil {
+			return APIError{
+				Code:          http.StatusInternalServerError,
+				InternalError: err,
+			}
+		}
+		defer conn.Close()
+
+		q := db.New(conn)
+		err = q.NewRecoveryCodes(c.Request().Context(), db.NewRecoveryCodesParams{
+			UserID:    user.ID,
+			CreatedAt: time.Now().UTC().Format(time.RFC3339Nano),
+			Code:      codes[0],
+			Code_2:    codes[1],
+			Code_3:    codes[2],
+			Code_4:    codes[3],
+			Code_5:    codes[4],
+			Code_6:    codes[5],
+		})
+		if err != nil {
+			return APIError{
+				Code:           http.StatusInternalServerError,
+				PublicMessage:  "Failed to verify TOTP code.",
+				PrivateMessage: "Failed to store the recovery codes in the database.",
+				InternalError:  err,
+			}
+		}
+
+		return c.JSON(http.StatusOK, map[string][]string{
+			"recover_codes": codes,
+		})
+	}
+}
+
+// RemoveTOTP removes the TOTP that has been setup for the requesting user.
+func RemoveTOTP(connector *db.DBConnector) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		user, err := middlewares.GetUser(c)
+		if err != nil {
+			return err
+		}
+
+		if !user.TotpLocked || !user.TotpSecret.Valid {
+			return APIError{
+				Code:          http.StatusBadRequest,
+				PublicMessage: "No TOTP setup.",
+			}
+		}
+
+		conn, err := connector.Connect()
+		if err != nil {
+			return err
+		}
+		defer conn.Close()
+		tx, err := conn.Begin()
+		if err != nil {
+			return err
+		}
+
+		q := db.New(conn)
+		q = q.WithTx(tx)
+
+		err = q.RemoveUserRecoveryCodes(c.Request().Context(), user.ID)
+		if err != nil {
+			tx.Rollback()
+			return APIError{
+				Code:           http.StatusInternalServerError,
+				PublicMessage:  "Failed to remove TOTP",
+				PrivateMessage: "Failed to remove the user recovery codes from database",
+				InternalError:  err,
+			}
+		}
+
+		err = q.RemoveUserTOTPSecret(
+			c.Request().Context(),
+			db.RemoveUserTOTPSecretParams{ID: user.ID, UpdatedAt: time.Now().UTC().Format(time.RFC3339Nano)},
+		)
+		if err != nil {
+			tx.Rollback()
+			return APIError{
+				Code:           http.StatusInternalServerError,
+				PublicMessage:  "Failed to remove TOTP",
+				PrivateMessage: "Failed to update the user totp secret and locked properites in database",
+				InternalError:  err,
+			}
+		}
+
+		// invalidate all tokens that has been served to the user
+		err = q.DeleteUserJwts(c.Request().Context(), user.ID)
+		if err != nil {
+			tx.Rollback()
+			return APIError{
+				Code:           http.StatusInternalServerError,
+				PublicMessage:  "Failed to remove TOTP",
+				PrivateMessage: "Failed to invalidate all tokens in database",
+				InternalError:  err,
+			}
+		}
+
+		err = tx.Commit()
+		if err != nil {
+			return APIError{
+				Code:           http.StatusInternalServerError,
+				PublicMessage:  "Failed to remove TOTP",
+				PrivateMessage: "Failed to commit changes to completely remove TOTP",
+				InternalError:  err,
+			}
+		}
+
+		return c.NoContent(http.StatusOK)
 	}
 }

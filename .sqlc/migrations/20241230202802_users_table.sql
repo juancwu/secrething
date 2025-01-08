@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS users (
     nickname TEXT NOT NULL,
     email_verified BOOL NOT NULL DEFAULT false,
     totp_secret TEXT,
+    totp_locked BOOL NOT NULL DEFAULT false,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );

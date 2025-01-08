@@ -78,6 +78,14 @@ type Jwt struct {
 	TokenType string
 }
 
+type TotpRecoveryCode struct {
+	ID        string
+	UserID    string
+	Code      string
+	Used      bool
+	CreatedAt string
+}
+
 type User struct {
 	ID            string
 	Email         string
@@ -85,6 +93,7 @@ type User struct {
 	Nickname      string
 	EmailVerified bool
 	TotpSecret    sql.NullString
+	TotpLocked    bool
 	CreatedAt     string
 	UpdatedAt     string
 }

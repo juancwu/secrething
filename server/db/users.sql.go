@@ -7,6 +7,7 @@ package db
 
 import (
 	"context"
+	"database/sql"
 )
 
 const createUser = `-- name: CreateUser :one
@@ -59,7 +60,7 @@ func (q *Queries) ExistsUserWithEmail(ctx context.Context, email string) (int64,
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, email, password, nickname, email_verified, totp_secret, created_at, updated_at FROM users
+SELECT id, email, password, nickname, email_verified, totp_secret, totp_locked, created_at, updated_at FROM users
 WHERE email = ?
 `
 
@@ -73,6 +74,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.Nickname,
 		&i.EmailVerified,
 		&i.TotpSecret,
+		&i.TotpLocked,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -80,7 +82,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 }
 
 const getUserById = `-- name: GetUserById :one
-SELECT id, email, password, nickname, email_verified, totp_secret, created_at, updated_at FROM users
+SELECT id, email, password, nickname, email_verified, totp_secret, totp_locked, created_at, updated_at FROM users
 WHERE id = ?
 `
 
@@ -94,6 +96,7 @@ func (q *Queries) GetUserById(ctx context.Context, id string) (User, error) {
 		&i.Nickname,
 		&i.EmailVerified,
 		&i.TotpSecret,
+		&i.TotpLocked,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -111,6 +114,24 @@ func (q *Queries) IsUserEmailVerified(ctx context.Context, id string) (bool, err
 	return email_verified, err
 }
 
+const removeUserTOTPSecret = `-- name: RemoveUserTOTPSecret :exec
+UPDATE users SET
+totp_secret = NULL,
+totp_locked = false,
+updated_at = ?
+WHERE id = ?
+`
+
+type RemoveUserTOTPSecretParams struct {
+	UpdatedAt string
+	ID        string
+}
+
+func (q *Queries) RemoveUserTOTPSecret(ctx context.Context, arg RemoveUserTOTPSecretParams) error {
+	_, err := q.db.ExecContext(ctx, removeUserTOTPSecret, arg.UpdatedAt, arg.ID)
+	return err
+}
+
 const setUserEmailVerifiedStatus = `-- name: SetUserEmailVerifiedStatus :exec
 UPDATE users SET email_verified = ?, updated_at = ? WHERE id = ?
 `
@@ -123,5 +144,23 @@ type SetUserEmailVerifiedStatusParams struct {
 
 func (q *Queries) SetUserEmailVerifiedStatus(ctx context.Context, arg SetUserEmailVerifiedStatusParams) error {
 	_, err := q.db.ExecContext(ctx, setUserEmailVerifiedStatus, arg.EmailVerified, arg.UpdatedAt, arg.ID)
+	return err
+}
+
+const setUserTOTPSecret = `-- name: SetUserTOTPSecret :exec
+UPDATE users SET
+totp_secret = ?,
+updated_at = ?
+WHERE id = ?
+`
+
+type SetUserTOTPSecretParams struct {
+	TotpSecret sql.NullString
+	UpdatedAt  string
+	ID         string
+}
+
+func (q *Queries) SetUserTOTPSecret(ctx context.Context, arg SetUserTOTPSecretParams) error {
+	_, err := q.db.ExecContext(ctx, setUserTOTPSecret, arg.TotpSecret, arg.UpdatedAt, arg.ID)
 	return err
 }

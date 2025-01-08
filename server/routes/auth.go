@@ -18,6 +18,23 @@ func setupAuthRoutes(routeConfig *RouteConfig) {
 		middlewares.ValidateJson(reflect.TypeOf(handlers.RegisterRequest{})),
 	)
 
+	routeConfig.Echo.POST(
+		"/auth/totp/setup",
+		handlers.SetupTOTP(routeConfig.DBConnector),
+		middlewares.ProtectAll(routeConfig.DBConnector),
+	)
+	routeConfig.Echo.POST(
+		"/auth/totp/lock",
+		handlers.SetupTOTPLock(routeConfig.DBConnector),
+		middlewares.ProtectAll(routeConfig.DBConnector),
+	)
+	routeConfig.Echo.DELETE(
+		"/auth/totp",
+		handlers.RemoveTOTP(routeConfig.DBConnector),
+		middlewares.ProtectFull(routeConfig.DBConnector),
+		middlewares.ValidateJson(reflect.TypeOf(handlers.SetupTOTPLockRequest{})),
+	)
+
 	routeConfig.Echo.GET("/auth/email/verify", handlers.VerifyEmail(routeConfig.DBConnector))
 	routeConfig.Echo.POST(
 		"/auth/email/resend-verification",

@@ -24,3 +24,16 @@ UPDATE users SET email_verified = ?, updated_at = ? WHERE id = ?;
 
 -- name: IsUserEmailVerified :one
 SELECT email_verified FROM users WHERE id = ?;
+
+-- name: SetUserTOTPSecret :exec
+UPDATE users SET
+totp_secret = ?,
+updated_at = ?
+WHERE id = ?;
+
+-- name: RemoveUserTOTPSecret :exec
+UPDATE users SET
+totp_secret = NULL,
+totp_locked = false,
+updated_at = ?
+WHERE id = ?;
