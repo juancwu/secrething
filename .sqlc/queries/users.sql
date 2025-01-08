@@ -20,4 +20,4 @@ SELECT * FROM users
 WHERE id = ?;
 
 -- name: SetUserEmailVerifiedStatus :exec
-UPDATE users SET email_verified = ? WHERE id = ?;
+UPDATE users SET email_verified = ?, updated_at = ? WHERE id = ?;

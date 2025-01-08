@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"konbini/server/db"
-	"konbini/server/memcache"
 	"konbini/server/middlewares"
 	"konbini/server/services"
 	"konbini/server/utils"
@@ -190,12 +189,16 @@ func VerifyEmail(connector *db.DBConnector) echo.HandlerFunc {
 			}
 		}
 
-		// remove cache
-		memcache.Cache().Delete("user_" + emailToken.UserId)
-
 		userId := emailToken.UserId
 		queries := db.New(conn)
-		err = queries.SetUserEmailVerifiedStatus(ctx, db.SetUserEmailVerifiedStatusParams{ID: userId, EmailVerified: true})
+		err = queries.SetUserEmailVerifiedStatus(
+			ctx,
+			db.SetUserEmailVerifiedStatusParams{
+				ID:            userId,
+				EmailVerified: true,
+				UpdatedAt:     time.Now().UTC().Format(time.RFC3339Nano),
+			},
+		)
 		if err != nil {
 			return err
 		}

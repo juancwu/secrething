@@ -101,15 +101,16 @@ func (q *Queries) GetUserById(ctx context.Context, id string) (User, error) {
 }
 
 const setUserEmailVerifiedStatus = `-- name: SetUserEmailVerifiedStatus :exec
-UPDATE users SET email_verified = ? WHERE id = ?
+UPDATE users SET email_verified = ?, updated_at = ? WHERE id = ?
 `
 
 type SetUserEmailVerifiedStatusParams struct {
 	EmailVerified bool
+	UpdatedAt     string
 	ID            string
 }
 
 func (q *Queries) SetUserEmailVerifiedStatus(ctx context.Context, arg SetUserEmailVerifiedStatusParams) error {
-	_, err := q.db.ExecContext(ctx, setUserEmailVerifiedStatus, arg.EmailVerified, arg.ID)
+	_, err := q.db.ExecContext(ctx, setUserEmailVerifiedStatus, arg.EmailVerified, arg.UpdatedAt, arg.ID)
 	return err
 }

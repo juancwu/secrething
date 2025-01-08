@@ -122,25 +122,15 @@ func ProtectWithConfig(cfg ProtectConfig) echo.MiddlewareFunc {
 				memcache.Cache().Set("auth_token_"+authToken.ID, authToken.ID, time.Minute*10)
 			}
 
-			var user db.User
-			k, found := memcache.Cache().Get("user_" + authToken.UserID)
-			if !found {
-				user, err = q.GetUserById(c.Request().Context(), authToken.UserID)
-				if err != nil {
-					conn.Close()
-					if err == sql.ErrNoRows {
-						logger.Error().Msg("No user found in database")
-						return echo.NewHTTPError(http.StatusUnauthorized, http.StatusText(http.StatusUnauthorized))
-					}
-					logger.Error().Msg("Failed to fetch user from database. Reject.")
-					return err
-				}
-				memcache.Cache().Set("user_"+user.ID, user, time.Minute*10)
-			} else if u, ok := k.(db.User); ok {
-				user = u
-			} else {
+			user, err := q.GetUserById(c.Request().Context(), authToken.UserID)
+			if err != nil {
 				conn.Close()
-				return errors.New("Failed to get user from database or memory cache. Reject.")
+				if err == sql.ErrNoRows {
+					logger.Error().Msg("No user found in database")
+					return echo.NewHTTPError(http.StatusUnauthorized, http.StatusText(http.StatusUnauthorized))
+				}
+				logger.Error().Msg("Failed to fetch user from database. Reject.")
+				return err
 			}
 
 			// close connection after use
