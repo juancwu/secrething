@@ -100,6 +100,17 @@ func (q *Queries) GetUserById(ctx context.Context, id string) (User, error) {
 	return i, err
 }
 
+const isUserEmailVerified = `-- name: IsUserEmailVerified :one
+SELECT email_verified FROM users WHERE id = ?
+`
+
+func (q *Queries) IsUserEmailVerified(ctx context.Context, id string) (bool, error) {
+	row := q.db.QueryRowContext(ctx, isUserEmailVerified, id)
+	var email_verified bool
+	err := row.Scan(&email_verified)
+	return email_verified, err
+}
+
 const setUserEmailVerifiedStatus = `-- name: SetUserEmailVerifiedStatus :exec
 UPDATE users SET email_verified = ?, updated_at = ? WHERE id = ?
 `

@@ -21,3 +21,6 @@ WHERE id = ?;
 
 -- name: SetUserEmailVerifiedStatus :exec
 UPDATE users SET email_verified = ?, updated_at = ? WHERE id = ?;
+
+-- name: IsUserEmailVerified :one
+SELECT email_verified FROM users WHERE id = ?;

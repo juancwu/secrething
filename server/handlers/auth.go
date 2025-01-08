@@ -98,7 +98,7 @@ func Login(connector *db.DBConnector) echo.HandlerFunc {
 
 		queries := db.New(conn)
 
-		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+		ctx, cancel := context.WithTimeout(c.Request().Context(), time.Minute)
 		defer cancel()
 
 		user, err := queries.GetUserByEmail(ctx, body.Email)
@@ -158,7 +158,7 @@ func VerifyEmail(connector *db.DBConnector) echo.HandlerFunc {
 			}
 		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+		ctx, cancel := context.WithTimeout(c.Request().Context(), time.Minute)
 		defer cancel()
 
 		conn, err := connector.Connect()
@@ -191,6 +191,16 @@ func VerifyEmail(connector *db.DBConnector) echo.HandlerFunc {
 
 		userId := emailToken.UserId
 		queries := db.New(conn)
+
+		isVerified, err := queries.IsUserEmailVerified(ctx, userId)
+		if err != nil {
+			return err
+		}
+
+		if isVerified {
+			return c.String(http.StatusOK, "verified")
+		}
+
 		err = queries.SetUserEmailVerifiedStatus(
 			ctx,
 			db.SetUserEmailVerifiedStatusParams{
