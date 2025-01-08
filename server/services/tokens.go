@@ -59,17 +59,17 @@ func (t TokenType) String() string {
 
 var (
 	ErrInvalidTokenType error = errors.New("Invalid token type. Use constants to not make a mistake.")
-	ErrExpiredJWT       error = errors.New("JWT has expired.")
+	ErrExpiredJWT       error = errors.New("AuthToken has expired.")
 )
 
-type JWT struct {
+type AuthToken struct {
 	ID        string
 	UserID    string
 	TokenType TokenType
 	ExpiresAt time.Time
 }
 
-func (j *JWT) EncryptedString() (string, error) {
+func (j *AuthToken) EncryptedString() (string, error) {
 	cfg, err := config.Global()
 	if err != nil {
 		return "", err
@@ -102,12 +102,12 @@ func (j *JWT) EncryptedString() (string, error) {
 	return b64Cipher, nil
 }
 
-func NewJWT(id, userID string, tokenType TokenType, exp time.Time) (*JWT, error) {
+func NewAuthToken(id, userID string, tokenType TokenType, exp time.Time) (*AuthToken, error) {
 	if !tokenType.Valid() {
 		return nil, ErrInvalidTokenType
 	}
 
-	j := &JWT{
+	j := &AuthToken{
 		ID:        id,
 		UserID:    userID,
 		TokenType: tokenType,
@@ -117,7 +117,7 @@ func NewJWT(id, userID string, tokenType TokenType, exp time.Time) (*JWT, error)
 	return j, nil
 }
 
-func VerifyJWT(token string) (*JWT, error) {
+func VerifyAuthToken(token string) (*AuthToken, error) {
 	cfg, err := config.Global()
 	if err != nil {
 		return nil, err
@@ -154,7 +154,7 @@ func VerifyJWT(token string) (*JWT, error) {
 		return nil, ErrExpiredJWT
 	}
 
-	return &JWT{
+	return &AuthToken{
 		ID:        string(id),
 		UserID:    string(userID),
 		TokenType: tokenType,

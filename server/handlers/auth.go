@@ -127,19 +127,19 @@ func Login(connector *db.DBConnector) echo.HandlerFunc {
 
 		now := time.Now().UTC()
 		exp := now.Add(time.Hour * 24 * 7)
-		var j *services.JWT
+		var authToken *services.AuthToken
 		dbJwt, err := queries.NewJWT(ctx, db.NewJWTParams{
 			UserID:    user.ID,
 			TokenType: tokType.String(),
 			CreatedAt: now.Format(time.RFC3339),
 			ExpiresAt: exp.Format(time.RFC3339),
 		})
-		j, err = services.NewJWT(dbJwt.ID, user.ID, tokType, exp)
+		authToken, err = services.NewAuthToken(dbJwt.ID, user.ID, tokType, exp)
 		if err != nil {
 			return err
 		}
 
-		token, err := j.EncryptedString()
+		token, err := authToken.EncryptedString()
 		if err != nil {
 			return err
 		}

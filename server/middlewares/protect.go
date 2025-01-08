@@ -73,9 +73,9 @@ func ProtectWithConfig(cfg ProtectConfig) echo.MiddlewareFunc {
 			}
 
 			// verify the token
-			jwt, err := services.VerifyJWT(token)
+			jwt, err := services.VerifyAuthToken(token)
 			if err != nil {
-				logger.Error().Err(err).Msg("Failed to verify JWT")
+				logger.Error().Err(err).Msg("Failed to verify AuthToken")
 				return echo.NewHTTPError(http.StatusUnauthorized, http.StatusText(http.StatusUnauthorized))
 			}
 
@@ -102,12 +102,12 @@ func ProtectWithConfig(cfg ProtectConfig) echo.MiddlewareFunc {
 			exists, err := q.ExistsJwtById(c.Request().Context(), jwt.ID)
 			if err != nil {
 				conn.Close()
-				logger.Error().Err(err).Msg("Failed to fetch JWT from database. Reject.")
+				logger.Error().Err(err).Msg("Failed to fetch AuthToken from database. Reject.")
 				return err
 			}
 			if exists != 1 {
 				conn.Close()
-				logger.Error().Msg("JWT does not exists in database. Reject.")
+				logger.Error().Msg("AuthToken does not exists in database. Reject.")
 				return echo.NewHTTPError(http.StatusUnauthorized, http.StatusText(http.StatusUnauthorized))
 			}
 
@@ -129,8 +129,8 @@ func ProtectWithConfig(cfg ProtectConfig) echo.MiddlewareFunc {
 	}
 }
 
-func GetJWT(c echo.Context) (*services.JWT, error) {
-	jwt, ok := c.Get("jwt").(*services.JWT)
+func GetJWT(c echo.Context) (*services.AuthToken, error) {
+	jwt, ok := c.Get("jwt").(*services.AuthToken)
 	if !ok {
 		return nil, ErrNoJwtFound
 	}
