@@ -105,7 +105,7 @@ func ProtectWithConfig(cfg ProtectConfig) echo.MiddlewareFunc {
 			// before querying, check memory cache
 			_, found := memcache.Cache().Get("auth_token_" + authToken.ID)
 			if !found {
-				exists, err := q.ExistsJwtById(c.Request().Context(), authToken.ID)
+				exists, err := q.ExistsAuthTokenById(c.Request().Context(), authToken.ID)
 				if err != nil {
 					conn.Close()
 					if err == sql.ErrNoRows {

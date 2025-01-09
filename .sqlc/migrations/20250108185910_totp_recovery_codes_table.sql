@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS totp_recovery_codes (
     code TEXT NOT NULL,
     used BOOL NOT NULL DEFAULT false,
     created_at TEXT NOT NULL,
+    used_at TEXT,
 
     CONSTRAINT unique_user_recovery_code UNIQUE (user_id, code),
     CONSTRAINT fk_user_id FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE

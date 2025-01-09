@@ -9,6 +9,30 @@ import (
 	"context"
 )
 
+const getRecoveryCode = `-- name: GetRecoveryCode :one
+SELECT id, user_id, code, used, created_at, used_at FROM totp_recovery_codes
+WHERE user_id = ? AND code = ?
+`
+
+type GetRecoveryCodeParams struct {
+	UserID string `db:"user_id"`
+	Code   string `db:"code"`
+}
+
+func (q *Queries) GetRecoveryCode(ctx context.Context, arg GetRecoveryCodeParams) (TotpRecoveryCode, error) {
+	row := q.db.QueryRowContext(ctx, getRecoveryCode, arg.UserID, arg.Code)
+	var i TotpRecoveryCode
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Code,
+		&i.Used,
+		&i.CreatedAt,
+		&i.UsedAt,
+	)
+	return i, err
+}
+
 const newRecoveryCodes = `-- name: NewRecoveryCodes :exec
 INSERT INTO totp_recovery_codes
 (user_id, created_at, code)
@@ -53,5 +77,19 @@ WHERE user_id = ?
 
 func (q *Queries) RemoveUserRecoveryCodes(ctx context.Context, userID string) error {
 	_, err := q.db.ExecContext(ctx, removeUserRecoveryCodes, userID)
+	return err
+}
+
+const useRecoveryCode = `-- name: UseRecoveryCode :exec
+UPDATE totp_recovery_codes SET used = true WHERE user_id = ? AND code = ?
+`
+
+type UseRecoveryCodeParams struct {
+	UserID string `db:"user_id"`
+	Code   string `db:"code"`
+}
+
+func (q *Queries) UseRecoveryCode(ctx context.Context, arg UseRecoveryCodeParams) error {
+	_, err := q.db.ExecContext(ctx, useRecoveryCode, arg.UserID, arg.Code)
 	return err
 }

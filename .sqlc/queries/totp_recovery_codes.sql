@@ -12,3 +12,10 @@ VALUES
 -- name: RemoveUserRecoveryCodes :exec
 DELETE FROM totp_recovery_codes
 WHERE user_id = ?;
+
+-- name: GetRecoveryCode :one
+SELECT * FROM totp_recovery_codes
+WHERE user_id = ? AND code = ?;
+
+-- name: UseRecoveryCode :exec
+UPDATE totp_recovery_codes SET used = true WHERE user_id = ? AND code = ?;

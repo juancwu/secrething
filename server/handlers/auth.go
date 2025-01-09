@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"database/sql"
 	"encoding/hex"
 	"errors"
 	"konbini/server/db"
@@ -79,7 +80,7 @@ func Register(connector *db.DBConnector) echo.HandlerFunc {
 		now := time.Now().UTC()
 		exp := now.Add(time.Hour * 24 * 7)
 		var authToken *services.AuthToken
-		dbJwt, err := queries.NewJWT(ctx, db.NewJWTParams{
+		dbJwt, err := queries.NewAuthToken(ctx, db.NewAuthTokenParams{
 			UserID:    userId,
 			TokenType: services.PARTIAL_USER_TOKEN_TYPE.String(),
 			CreatedAt: now.Format(time.RFC3339Nano),
@@ -105,7 +106,7 @@ func Register(connector *db.DBConnector) echo.HandlerFunc {
 type LoginRequest struct {
 	Email    string  `json:"email" validate:"required,email"`
 	Password string  `json:"password" validate:"required"`
-	TOTPCode *string `json:"totp_code,omitempty" validate:"omitnil,omitempty,required,len=6"`
+	TOTPCode *string `json:"totp_code,omitempty" validate:"omitnil,omitempty,required,len=6|len=32"`
 }
 
 func Login(connector *db.DBConnector) echo.HandlerFunc {
@@ -153,27 +154,62 @@ func Login(connector *db.DBConnector) echo.HandlerFunc {
 					PublicMessage: "User has TOTP setup, code is required. Make a new login request with the totp_code field in the body.",
 				}
 			}
-			if !totp.Validate(*body.TOTPCode, *user.TotpSecret) {
+
+			// recovery code
+			if len(*body.TOTPCode) == 32 {
+				// check database for recovery code
+				recoveryCode, err := queries.GetRecoveryCode(ctx, db.GetRecoveryCodeParams{
+					UserID: user.ID,
+					Code:   *body.TOTPCode,
+				})
+				if err != nil {
+					if err == sql.ErrNoRows {
+						return APIError{
+							Code:           http.StatusBadRequest,
+							PublicMessage:  "Invalid recovery code.",
+							PrivateMessage: "No recovery code found in database.",
+							InternalError:  err,
+						}
+					}
+					return APIError{
+						Code:           http.StatusInternalServerError,
+						PrivateMessage: "Failed to get recovery code from database.",
+						InternalError:  err,
+					}
+				}
+
+				if recoveryCode.Used {
+					return APIError{
+						Code:           http.StatusBadRequest,
+						PublicMessage:  "Recovery code has been used before. Please use another one.",
+						PrivateMessage: "Used recovery code. Reject.",
+					}
+				}
+
+				err = queries.UseRecoveryCode(ctx, db.UseRecoveryCodeParams{
+					UserID: user.ID,
+					Code:   recoveryCode.Code,
+				})
+				if err != nil {
+					return APIError{
+						Code:           http.StatusInternalServerError,
+						PrivateMessage: "Failed to use recovery code.",
+						InternalError:  err,
+					}
+				}
+			} else if !totp.Validate(*body.TOTPCode, *user.TotpSecret) {
 				return APIError{
 					Code:          http.StatusBadRequest,
 					PublicMessage: "Invalid TOTP code.",
 				}
 			}
+
 			tokType = services.FULL_USER_TOKEN_TYPE
 		} else {
 			tokType = services.FULL_USER_TOKEN_TYPE
 		}
 
-		now := time.Now().UTC()
-		exp := now.Add(time.Hour * 24 * 7)
-		var authToken *services.AuthToken
-		dbJwt, err := queries.NewJWT(ctx, db.NewJWTParams{
-			UserID:    user.ID,
-			TokenType: tokType.String(),
-			CreatedAt: now.Format(time.RFC3339Nano),
-			ExpiresAt: exp.Format(time.RFC3339Nano),
-		})
-		authToken, err = services.NewAuthToken(dbJwt.ID, user.ID, tokType, exp)
+		authToken, err := newAuthToken(ctx, queries, user.ID, tokType)
 		if err != nil {
 			return err
 		}
@@ -467,26 +503,7 @@ func SetupTOTPLock(connector *db.DBConnector) echo.HandlerFunc {
 		var token string
 		if user.EmailVerified {
 			// generate a full token for the user to start using instead of the partial token
-			now := time.Now().UTC()
-			exp := now.Add(time.Hour * 24 * 7)
-			var authToken *services.AuthToken
-			dbJwt, err := q.NewJWT(c.Request().Context(), db.NewJWTParams{
-				UserID:    user.ID,
-				TokenType: services.FULL_USER_TOKEN_TYPE.String(),
-				CreatedAt: now.Format(time.RFC3339Nano),
-				ExpiresAt: exp.Format(time.RFC3339Nano),
-			})
-			if err != nil {
-				if err := tx.Rollback(); err != nil {
-					logger.Error().Err(err).Msg("Failed to rollback")
-				}
-				return APIError{
-					Code:           http.StatusInternalServerError,
-					PrivateMessage: "Failed to create new full token",
-					InternalError:  err,
-				}
-			}
-			authToken, err = services.NewAuthToken(dbJwt.ID, user.ID, services.FULL_USER_TOKEN_TYPE, exp)
+			authToken, err := newAuthToken(c.Request().Context(), q, user.ID, services.FULL_USER_TOKEN_TYPE)
 			if err != nil {
 				if err := tx.Rollback(); err != nil {
 					logger.Error().Err(err).Msg("Failed to rollback")
@@ -607,7 +624,7 @@ func RemoveTOTP(connector *db.DBConnector) echo.HandlerFunc {
 		}
 
 		// invalidate all tokens that has been served to the user
-		err = q.DeleteUserJwts(c.Request().Context(), user.ID)
+		err = q.DeleteUserAuthTokens(c.Request().Context(), user.ID)
 		if err != nil {
 			tx.Rollback()
 			return APIError{

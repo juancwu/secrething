@@ -15,6 +15,14 @@ type AccessLog struct {
 	AccessedAt   string      `db:"accessed_at"`
 }
 
+type AuthToken struct {
+	ID        string `db:"id"`
+	UserID    string `db:"user_id"`
+	CreatedAt string `db:"created_at"`
+	ExpiresAt string `db:"expires_at"`
+	TokenType string `db:"token_type"`
+}
+
 type Bento struct {
 	ID        string `db:"id"`
 	UserID    string `db:"user_id"`
@@ -66,20 +74,13 @@ type GroupPermission struct {
 	UpdatedAt string `db:"updated_at"`
 }
 
-type Jwt struct {
-	ID        string `db:"id"`
-	UserID    string `db:"user_id"`
-	CreatedAt string `db:"created_at"`
-	ExpiresAt string `db:"expires_at"`
-	TokenType string `db:"token_type"`
-}
-
 type TotpRecoveryCode struct {
-	ID        string `db:"id"`
-	UserID    string `db:"user_id"`
-	Code      string `db:"code"`
-	Used      bool   `db:"used"`
-	CreatedAt string `db:"created_at"`
+	ID        string  `db:"id"`
+	UserID    string  `db:"user_id"`
+	Code      string  `db:"code"`
+	Used      bool    `db:"used"`
+	CreatedAt string  `db:"created_at"`
+	UsedAt    *string `db:"used_at"`
 }
 
 type User struct {

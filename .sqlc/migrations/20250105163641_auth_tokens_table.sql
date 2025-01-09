@@ -1,6 +1,6 @@
 -- +goose Up
 -- +goose StatementBegin
-CREATE TABLE IF NOT EXISTS jwts (
+CREATE TABLE IF NOT EXISTS auth_tokens (
     id TEXT NOT NULL PRIMARY KEY DEFAULT (gen_random_uuid()),
     user_id TEXT NOT NULL,
     created_at TEXT NOT NULL,
@@ -13,5 +13,5 @@ CREATE TABLE IF NOT EXISTS jwts (
 
 -- +goose Down
 -- +goose StatementBegin
-DROP TABLE IF EXISTS jwts;
+DROP TABLE IF EXISTS auth_tokens;
 -- +goose StatementEnd

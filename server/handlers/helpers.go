@@ -12,7 +12,7 @@ import (
 // The function returns an error if the key already exists in cache.
 func storeEmailTokenInCache(token *services.EmailToken) error {
 	cache := memcache.Cache()
-	return cache.Add(memcache.EmailTokenCacheKeyPrefix+token.Id, token, time.Minute*10)
+	return cache.Add("ve_"+token.Id, token, time.Minute*10)
 }
 
 // getEmailTokenFromCache is a helper function that retrieves the token email with the given id.
@@ -20,7 +20,7 @@ func storeEmailTokenInCache(token *services.EmailToken) error {
 // a valid service.EmailToken struct.
 func getEmailTokenFromCache(id string) (*services.EmailToken, error) {
 	cache := memcache.Cache()
-	k, exp, found := cache.GetWithExpiration(memcache.EmailTokenCacheKeyPrefix + id)
+	k, exp, found := cache.GetWithExpiration("ve_" + id)
 	if !found {
 		return nil, memcache.ErrNotFound
 	}
