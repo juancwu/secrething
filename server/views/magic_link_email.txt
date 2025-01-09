@@ -1,5 +1,0 @@
-Hi, here is your magic link to log into Konbini.
-
-%s
-
-This link will expire at %s
