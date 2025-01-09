@@ -62,12 +62,13 @@ func Register(connector *db.DBConnector) echo.HandlerFunc {
 			return err
 		}
 
+		now := time.Now()
 		userId, err := queries.CreateUser(ctx, db.CreateUserParams{
 			Email:     body.Email,
 			Password:  hash,
 			Nickname:  body.NickName,
-			CreatedAt: utils.NowString(),
-			UpdatedAt: utils.NowString(),
+			CreatedAt: utils.FormatRFC3339NanoFixed(now),
+			UpdatedAt: utils.FormatRFC3339NanoFixed(now),
 		})
 		if err != nil {
 			return err
@@ -77,14 +78,13 @@ func Register(connector *db.DBConnector) echo.HandlerFunc {
 		go sendVerificationEmail(userId, body.Email, logger)
 
 		// generate a partial token so that the user can immediately setup TOTP
-		now := time.Now().UTC()
 		exp := now.Add(time.Hour * 24 * 7)
 		var authToken *services.AuthToken
 		dbJwt, err := queries.NewAuthToken(ctx, db.NewAuthTokenParams{
 			UserID:    userId,
 			TokenType: services.PARTIAL_USER_TOKEN_TYPE.String(),
-			CreatedAt: now.Format(time.RFC3339Nano),
-			ExpiresAt: exp.Format(time.RFC3339Nano),
+			CreatedAt: utils.FormatRFC3339NanoFixed(now),
+			ExpiresAt: utils.FormatRFC3339NanoFixed(exp),
 		})
 		if err != nil {
 			return err
@@ -289,7 +289,7 @@ func VerifyEmail(connector *db.DBConnector) echo.HandlerFunc {
 			db.SetUserEmailVerifiedStatusParams{
 				ID:            userId,
 				EmailVerified: true,
-				UpdatedAt:     time.Now().UTC().Format(time.RFC3339Nano),
+				UpdatedAt:     utils.FormatRFC3339NanoFixed(time.Now()),
 			},
 		)
 		if err != nil {
@@ -365,7 +365,7 @@ func SetupTOTP(connector *db.DBConnector) echo.HandlerFunc {
 		secret := key.Secret()
 		err = q.SetUserTOTPSecret(c.Request().Context(), db.SetUserTOTPSecretParams{
 			TotpSecret: &secret,
-			UpdatedAt:  utils.NowString(),
+			UpdatedAt:  utils.FormatRFC3339NanoFixed(time.Now()),
 			ID:         user.ID,
 		})
 		if err != nil {
@@ -465,7 +465,7 @@ func SetupTOTPLock(connector *db.DBConnector) echo.HandlerFunc {
 
 		err = q.NewRecoveryCodes(c.Request().Context(), db.NewRecoveryCodesParams{
 			UserID:    user.ID,
-			CreatedAt: time.Now().UTC().Format(time.RFC3339Nano),
+			CreatedAt: utils.FormatRFC3339NanoFixed(time.Now()),
 			Code:      codes[0],
 			Code_2:    codes[1],
 			Code_3:    codes[2],
@@ -486,7 +486,7 @@ func SetupTOTPLock(connector *db.DBConnector) echo.HandlerFunc {
 		}
 
 		err = q.LockUserTOTP(c.Request().Context(), db.LockUserTOTPParams{
-			UpdatedAt: utils.NowString(),
+			UpdatedAt: utils.FormatRFC3339NanoFixed(time.Now()),
 			ID:        user.ID,
 		})
 		if err != nil {
@@ -611,7 +611,10 @@ func RemoveTOTP(connector *db.DBConnector) echo.HandlerFunc {
 
 		err = q.RemoveUserTOTPSecret(
 			c.Request().Context(),
-			db.RemoveUserTOTPSecretParams{ID: user.ID, UpdatedAt: time.Now().UTC().Format(time.RFC3339Nano)},
+			db.RemoveUserTOTPSecretParams{
+				ID:        user.ID,
+				UpdatedAt: utils.FormatRFC3339NanoFixed(time.Now()),
+			},
 		)
 		if err != nil {
 			tx.Rollback()

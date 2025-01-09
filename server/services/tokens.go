@@ -52,7 +52,7 @@ func (t *AuthToken) Package() (string, error) {
 
 	id := []byte(t.ID)
 	userID := []byte(t.UserID)
-	expiresAt := []byte(t.ExpiresAt.Format(time.RFC3339Nano))
+	expiresAt := []byte(utils.FormatRFC3339NanoFixed(t.ExpiresAt))
 	tokenType := []byte(t.TokenType)
 
 	// id + userID + expiresAt + tokenType
