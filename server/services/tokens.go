@@ -63,7 +63,7 @@ func (t *AuthToken) Package() (string, error) {
 	copy(data[72:], expiresAt)
 	copy(data[102:], []byte(tokenType))
 
-	ciphertext, err := utils.EncryptAES(data, cfg.GetFullTokenKey())
+	ciphertext, err := utils.EncryptAES(data, cfg.GetAuthTokenKey())
 	if err != nil {
 		return "", err
 	}
@@ -100,7 +100,7 @@ func VerifyAuthToken(token string) (*AuthToken, error) {
 		return nil, err
 	}
 
-	plaintext, err = utils.DecryptAES(plaintext, cfg.GetFullTokenKey())
+	plaintext, err = utils.DecryptAES(plaintext, cfg.GetAuthTokenKey())
 	if err != nil {
 		return nil, err
 	}

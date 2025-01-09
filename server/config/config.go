@@ -29,8 +29,7 @@ var (
 	ErrMissingPort               error = errors.New("PORT environment variable must be set")
 	ErrMissingResendApiKey       error = errors.New("RESEND_API_KEY environment varaible must be set")
 	ErrMissingVerifyEmailAddress error = errors.New("VERIFY_EMAIL_ADDRESS environment varaible must be set")
-	ErrMissingFullTokenKey       error = errors.New("FULL_TOKEN_KEY environment varaible must be set")
-	ErrMissingPartialTokenKey    error = errors.New("PARTIAL_TOKEN_KEY environment varaible must be set")
+	ErrMissingAuthTokenKey       error = errors.New("AUTH_TOKEN_KEY environment varaible must be set")
 	ErrMissingBentoTokenKey      error = errors.New("BENTO_TOKEN_KEY environment varaible must be set")
 	ErrMissingEmailTokenKey      error = errors.New("EMAIL_TOKEN_KEY environment varaible must be set")
 	ErrMissingAesKey             error = errors.New("AES_KEY environment varaible must be set")
@@ -70,7 +69,7 @@ type EnvConfig struct {
 	appEnv             AppEnv
 	resendApiKey       string
 	verifyEmailAddress string
-	partialTokenKey    []byte
+	authTokenKey       []byte
 	fullTokenKey       []byte
 	bentoTokenKey      []byte
 	emailTokenKey      []byte
@@ -163,12 +162,8 @@ func (c *Config) GetVerifyEmailAddress() string {
 	return c.env.verifyEmailAddress
 }
 
-func (c *Config) GetFullTokenKey() []byte {
-	return c.env.fullTokenKey
-}
-
-func (c *Config) GetPartialTokenKey() []byte {
-	return c.env.partialTokenKey
+func (c *Config) GetAuthTokenKey() []byte {
+	return c.env.authTokenKey
 }
 
 // Gets the bento token key value
@@ -245,25 +240,15 @@ func (c *Config) loadEnvironmentVariables() error {
 		return ErrMissingVerifyEmailAddress
 	}
 
-	hexPartialTokenKey := os.Getenv("PARTIAL_TOKEN_KEY")
-	if hexPartialTokenKey == "" {
-		return ErrMissingPartialTokenKey
+	hexAuthTokenKey := os.Getenv("AUTH_TOKEN_KEY")
+	if hexAuthTokenKey == "" {
+		return ErrMissingAuthTokenKey
 	}
-	decodedPartialTokenKey, err := decodeHexKey(hexPartialTokenKey)
+	decodedAuthTokenKey, err := decodeHexKey(hexAuthTokenKey)
 	if err != nil {
 		return err
 	}
-	c.env.partialTokenKey = decodedPartialTokenKey
-
-	hexFullTokenKey := os.Getenv("FULL_TOKEN_KEY")
-	if hexFullTokenKey == "" {
-		return ErrMissingFullTokenKey
-	}
-	decodedFullTokenKey, err := decodeHexKey(hexFullTokenKey)
-	if err != nil {
-		return err
-	}
-	c.env.fullTokenKey = decodedFullTokenKey
+	c.env.authTokenKey = decodedAuthTokenKey
 
 	hexBentoTokenKey := os.Getenv("BENTO_TOKEN_KEY")
 	if hexBentoTokenKey == "" {
