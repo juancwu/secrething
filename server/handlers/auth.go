@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"database/sql"
 	"encoding/hex"
 	"errors"
 	"konbini/server/db"
@@ -15,6 +14,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/pquerna/otp/totp"
+	"github.com/rs/zerolog/log"
 )
 
 // RegisterRequest represents the request body for register route.
@@ -61,15 +61,12 @@ func Register(connector *db.DBConnector) echo.HandlerFunc {
 			return err
 		}
 
-		// userId at
-		now := time.Now().UTC().Format(time.RFC3339Nano)
-
 		userId, err := queries.CreateUser(ctx, db.CreateUserParams{
 			Email:     body.Email,
 			Password:  hash,
 			Nickname:  body.NickName,
-			CreatedAt: now,
-			UpdatedAt: now,
+			CreatedAt: utils.NowString(),
+			UpdatedAt: utils.NowString(),
 		})
 		if err != nil {
 			return err
@@ -78,7 +75,30 @@ func Register(connector *db.DBConnector) echo.HandlerFunc {
 		logger.Info().Str("user_id", userId).Msg("New user registered.")
 		go sendVerificationEmail(userId, body.Email, logger)
 
-		return c.NoContent(http.StatusCreated)
+		// generate a partial token so that the user can immediately setup TOTP
+		now := time.Now().UTC()
+		exp := now.Add(time.Hour * 24 * 7)
+		var authToken *services.AuthToken
+		dbJwt, err := queries.NewJWT(ctx, db.NewJWTParams{
+			UserID:    userId,
+			TokenType: services.PARTIAL_USER_TOKEN_TYPE.String(),
+			CreatedAt: now.Format(time.RFC3339Nano),
+			ExpiresAt: exp.Format(time.RFC3339Nano),
+		})
+		if err != nil {
+			return err
+		}
+		authToken, err = services.NewAuthToken(dbJwt.ID, userId, services.PARTIAL_USER_TOKEN_TYPE, exp)
+		if err != nil {
+			return err
+		}
+
+		token, err := authToken.Package()
+		if err != nil {
+			return err
+		}
+
+		return c.JSON(http.StatusCreated, map[string]string{"token": token, "type": services.PARTIAL_USER_TOKEN_TYPE.String()})
 	}
 }
 
@@ -124,21 +144,22 @@ func Login(connector *db.DBConnector) echo.HandlerFunc {
 		}
 
 		var tokType services.TokenType
-		if !user.TotpSecret.Valid || !user.EmailVerified {
+		if user.TotpSecret == nil || !user.EmailVerified {
 			tokType = services.PARTIAL_USER_TOKEN_TYPE
-		} else if user.TotpLocked && user.TotpSecret.Valid {
+		} else if user.TotpLocked && user.TotpSecret != nil {
 			if body.TOTPCode == nil {
 				return APIError{
 					Code:          http.StatusBadRequest,
 					PublicMessage: "User has TOTP setup, code is required. Make a new login request with the totp_code field in the body.",
 				}
 			}
-			if !totp.Validate(*body.TOTPCode, user.TotpSecret.String) {
+			if !totp.Validate(*body.TOTPCode, *user.TotpSecret) {
 				return APIError{
 					Code:          http.StatusBadRequest,
 					PublicMessage: "Invalid TOTP code.",
 				}
 			}
+			tokType = services.FULL_USER_TOKEN_TYPE
 		} else {
 			tokType = services.FULL_USER_TOKEN_TYPE
 		}
@@ -305,11 +326,11 @@ func SetupTOTP(connector *db.DBConnector) echo.HandlerFunc {
 
 		q := db.New(conn)
 
+		secret := key.Secret()
 		err = q.SetUserTOTPSecret(c.Request().Context(), db.SetUserTOTPSecretParams{
-			TotpSecret: sql.NullString{
-				String: key.Secret(),
-				Valid:  true,
-			},
+			TotpSecret: &secret,
+			UpdatedAt:  utils.NowString(),
+			ID:         user.ID,
 		})
 		if err != nil {
 			return APIError{
@@ -333,9 +354,17 @@ type SetupTOTPLockRequest struct {
 // SetupTOTPLock finishes the TOTP setup and generates backup codes for the client.
 func SetupTOTPLock(connector *db.DBConnector) echo.HandlerFunc {
 	return func(c echo.Context) error {
+		logger := middlewares.GetLogger(c)
 		user, err := middlewares.GetUser(c)
 		if err != nil {
 			return err
+		}
+
+		if user.TotpSecret == nil {
+			return APIError{
+				Code:          http.StatusBadRequest,
+				PublicMessage: "No TOTP setup yet.",
+			}
 		}
 
 		if user.TotpLocked {
@@ -354,7 +383,9 @@ func SetupTOTPLock(connector *db.DBConnector) echo.HandlerFunc {
 			}
 		}
 
-		if !totp.Validate(body.Code, user.TotpSecret.String) {
+		log.Debug().Str("code", body.Code).Send()
+
+		if !totp.Validate(body.Code, *user.TotpSecret) {
 			return APIError{
 				Code:          http.StatusBadRequest,
 				PublicMessage: "Invalid code.",
@@ -384,7 +415,18 @@ func SetupTOTPLock(connector *db.DBConnector) echo.HandlerFunc {
 		}
 		defer conn.Close()
 
+		tx, err := conn.Begin()
+		if err != nil {
+			return APIError{
+				Code:           http.StatusInternalServerError,
+				PrivateMessage: "Failed to start transtaction",
+				InternalError:  err,
+			}
+		}
+
 		q := db.New(conn)
+		q = q.WithTx(tx)
+
 		err = q.NewRecoveryCodes(c.Request().Context(), db.NewRecoveryCodesParams{
 			UserID:    user.ID,
 			CreatedAt: time.Now().UTC().Format(time.RFC3339Nano),
@@ -396,12 +438,113 @@ func SetupTOTPLock(connector *db.DBConnector) echo.HandlerFunc {
 			Code_6:    codes[5],
 		})
 		if err != nil {
+			if err := tx.Rollback(); err != nil {
+				logger.Error().Err(err).Msg("Failed to rollback")
+			}
 			return APIError{
 				Code:           http.StatusInternalServerError,
 				PublicMessage:  "Failed to verify TOTP code.",
 				PrivateMessage: "Failed to store the recovery codes in the database.",
 				InternalError:  err,
 			}
+		}
+
+		err = q.LockUserTOTP(c.Request().Context(), db.LockUserTOTPParams{
+			UpdatedAt: utils.NowString(),
+			ID:        user.ID,
+		})
+		if err != nil {
+			if err := tx.Rollback(); err != nil {
+				logger.Error().Err(err).Msg("Failed to rollback")
+			}
+			return APIError{
+				Code:           http.StatusInternalServerError,
+				PrivateMessage: "Failed to lock user TOTP status in database",
+				InternalError:  err,
+			}
+		}
+
+		var token string
+		if user.EmailVerified {
+			// generate a full token for the user to start using instead of the partial token
+			now := time.Now().UTC()
+			exp := now.Add(time.Hour * 24 * 7)
+			var authToken *services.AuthToken
+			dbJwt, err := q.NewJWT(c.Request().Context(), db.NewJWTParams{
+				UserID:    user.ID,
+				TokenType: services.FULL_USER_TOKEN_TYPE.String(),
+				CreatedAt: now.Format(time.RFC3339Nano),
+				ExpiresAt: exp.Format(time.RFC3339Nano),
+			})
+			if err != nil {
+				if err := tx.Rollback(); err != nil {
+					logger.Error().Err(err).Msg("Failed to rollback")
+				}
+				return APIError{
+					Code:           http.StatusInternalServerError,
+					PrivateMessage: "Failed to create new full token",
+					InternalError:  err,
+				}
+			}
+			authToken, err = services.NewAuthToken(dbJwt.ID, user.ID, services.FULL_USER_TOKEN_TYPE, exp)
+			if err != nil {
+				if err := tx.Rollback(); err != nil {
+					logger.Error().Err(err).Msg("Failed to rollback")
+				}
+				return APIError{
+					Code:           http.StatusInternalServerError,
+					PrivateMessage: "Failed to create new auth token",
+					InternalError:  err,
+				}
+			}
+
+			token, err = authToken.Package()
+			if err != nil {
+				if err := tx.Rollback(); err != nil {
+					logger.Error().Err(err).Msg("Failed to rollback")
+				}
+				return APIError{
+					Code:           http.StatusInternalServerError,
+					PrivateMessage: "Failed to package auth token",
+					InternalError:  err,
+				}
+			}
+
+			// remove all partial tokens, make them invalid
+			err = q.DeleteAllTokensByTypeAndUserID(c.Request().Context(), db.DeleteAllTokensByTypeAndUserIDParams{
+				UserID:    user.ID,
+				TokenType: services.PARTIAL_USER_TOKEN_TYPE.String(),
+			})
+			if err != nil {
+				if err := tx.Rollback(); err != nil {
+					logger.Error().Err(err).Msg("Failed to rollback")
+				}
+				return APIError{
+					Code:           http.StatusInternalServerError,
+					PrivateMessage: "Failed to delete all partial tokens owned by user",
+					InternalError:  err,
+				}
+			}
+		}
+
+		err = tx.Commit()
+		if err != nil {
+			if err := tx.Rollback(); err != nil {
+				logger.Error().Err(err).Msg("Failed to rollback")
+			}
+			return APIError{
+				Code:           http.StatusInternalServerError,
+				PrivateMessage: "Failed to commit transaction",
+				InternalError:  err,
+			}
+		}
+
+		if token != "" {
+			return c.JSON(http.StatusOK, map[string]interface{}{
+				"recover_codes": codes,
+				"token":         token,
+				"type":          services.FULL_USER_TOKEN_TYPE.String(),
+			})
 		}
 
 		return c.JSON(http.StatusOK, map[string][]string{
@@ -418,7 +561,7 @@ func RemoveTOTP(connector *db.DBConnector) echo.HandlerFunc {
 			return err
 		}
 
-		if !user.TotpLocked || !user.TotpSecret.Valid {
+		if !user.TotpLocked || user.TotpSecret == nil {
 			return APIError{
 				Code:          http.StatusBadRequest,
 				PublicMessage: "No TOTP setup.",

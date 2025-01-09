@@ -21,3 +21,6 @@ DELETE FROM jwts WHERE id = ?;
 
 -- name: DeleteUserJwts :exec
 DELETE FROM jwts WHERE user_id = ?;
+
+-- name: DeleteAllTokensByTypeAndUserID :exec
+DELETE FROM jwts WHERE user_id = ? AND token_type = ?;

@@ -31,6 +31,12 @@ totp_secret = ?,
 updated_at = ?
 WHERE id = ?;
 
+-- name: LockUserTOTP :exec
+UPDATE users SET
+totp_locked = true,
+updated_at = ?
+WHERE id = ?;
+
 -- name: RemoveUserTOTPSecret :exec
 UPDATE users SET
 totp_secret = NULL,

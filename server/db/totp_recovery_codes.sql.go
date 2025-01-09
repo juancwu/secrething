@@ -22,14 +22,14 @@ VALUES
 `
 
 type NewRecoveryCodesParams struct {
-	UserID    string
-	CreatedAt string
-	Code      string
-	Code_2    string
-	Code_3    string
-	Code_4    string
-	Code_5    string
-	Code_6    string
+	UserID    string `db:"user_id"`
+	CreatedAt string `db:"created_at"`
+	Code      string `db:"code"`
+	Code_2    string `db:"code_2"`
+	Code_3    string `db:"code_3"`
+	Code_4    string `db:"code_4"`
+	Code_5    string `db:"code_5"`
+	Code_6    string `db:"code_6"`
 }
 
 func (q *Queries) NewRecoveryCodes(ctx context.Context, arg NewRecoveryCodesParams) error {

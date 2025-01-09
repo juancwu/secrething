@@ -18,6 +18,20 @@ func (q *Queries) DeletJwtById(ctx context.Context, id string) error {
 	return err
 }
 
+const deleteAllTokensByTypeAndUserID = `-- name: DeleteAllTokensByTypeAndUserID :exec
+DELETE FROM jwts WHERE user_id = ? AND token_type = ?
+`
+
+type DeleteAllTokensByTypeAndUserIDParams struct {
+	UserID    string `db:"user_id"`
+	TokenType string `db:"token_type"`
+}
+
+func (q *Queries) DeleteAllTokensByTypeAndUserID(ctx context.Context, arg DeleteAllTokensByTypeAndUserIDParams) error {
+	_, err := q.db.ExecContext(ctx, deleteAllTokensByTypeAndUserID, arg.UserID, arg.TokenType)
+	return err
+}
+
 const deleteUserJwts = `-- name: DeleteUserJwts :exec
 DELETE FROM jwts WHERE user_id = ?
 `
@@ -99,10 +113,10 @@ RETURNING id, user_id, created_at, expires_at, token_type
 `
 
 type NewJWTParams struct {
-	UserID    string
-	CreatedAt string
-	ExpiresAt string
-	TokenType string
+	UserID    string `db:"user_id"`
+	CreatedAt string `db:"created_at"`
+	ExpiresAt string `db:"expires_at"`
+	TokenType string `db:"token_type"`
 }
 
 func (q *Queries) NewJWT(ctx context.Context, arg NewJWTParams) (Jwt, error) {

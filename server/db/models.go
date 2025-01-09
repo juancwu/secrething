@@ -4,102 +4,98 @@
 
 package db
 
-import (
-	"database/sql"
-)
-
 type AccessLog struct {
-	ID           string
-	UserID       sql.NullString
-	BentoID      sql.NullString
-	GroupID      sql.NullString
-	BentoTokenID sql.NullString
-	Action       string
-	Details      interface{}
-	AccessedAt   string
+	ID           string      `db:"id"`
+	UserID       *string     `db:"user_id"`
+	BentoID      *string     `db:"bento_id"`
+	GroupID      *string     `db:"group_id"`
+	BentoTokenID *string     `db:"bento_token_id"`
+	Action       string      `db:"action"`
+	Details      interface{} `db:"details"`
+	AccessedAt   string      `db:"accessed_at"`
 }
 
 type Bento struct {
-	ID        string
-	UserID    string
-	Name      string
-	CreatedAt string
-	UpdatedAt string
+	ID        string `db:"id"`
+	UserID    string `db:"user_id"`
+	Name      string `db:"name"`
+	CreatedAt string `db:"created_at"`
+	UpdatedAt string `db:"updated_at"`
 }
 
 type BentoIngridient struct {
-	ID        string
-	BentoID   string
-	Name      string
-	Value     []byte
-	CreatedAt string
-	UpdatedAt string
+	ID        string `db:"id"`
+	BentoID   string `db:"bento_id"`
+	Name      string `db:"name"`
+	Value     []byte `db:"value"`
+	CreatedAt string `db:"created_at"`
+	UpdatedAt string `db:"updated_at"`
 }
 
 type BentoPermission struct {
-	UserID    string
-	BentoID   string
-	Level     int64
-	CreatedAt string
-	UpdatedAt string
+	UserID    string `db:"user_id"`
+	BentoID   string `db:"bento_id"`
+	Level     int64  `db:"level"`
+	CreatedAt string `db:"created_at"`
+	UpdatedAt string `db:"updated_at"`
 }
 
 type BentoToken struct {
-	ID         string
-	BentoID    string
-	TokenSalt  []byte
-	CreatedBy  string
-	CreatedAt  string
-	LastUsedAt sql.NullString
-	ExpiresAt  sql.NullString
+	ID         string  `db:"id"`
+	BentoID    string  `db:"bento_id"`
+	TokenSalt  []byte  `db:"token_salt"`
+	CreatedBy  string  `db:"created_by"`
+	CreatedAt  string  `db:"created_at"`
+	LastUsedAt *string `db:"last_used_at"`
+	ExpiresAt  *string `db:"expires_at"`
 }
 
 type Group struct {
-	ID        string
-	Name      string
-	OwnerID   string
-	CreatedAt string
-	UpdatedAt string
+	ID        string `db:"id"`
+	Name      string `db:"name"`
+	OwnerID   string `db:"owner_id"`
+	CreatedAt string `db:"created_at"`
+	UpdatedAt string `db:"updated_at"`
 }
 
 type GroupPermission struct {
-	GroupID   string
-	BentoID   string
-	Level     int64
-	CreatedAt string
-	UpdatedAt string
+	GroupID   string `db:"group_id"`
+	BentoID   string `db:"bento_id"`
+	Level     int64  `db:"level"`
+	CreatedAt string `db:"created_at"`
+	UpdatedAt string `db:"updated_at"`
 }
 
 type Jwt struct {
-	ID        string
-	UserID    string
-	CreatedAt string
-	ExpiresAt string
-	TokenType string
+	ID        string `db:"id"`
+	UserID    string `db:"user_id"`
+	CreatedAt string `db:"created_at"`
+	ExpiresAt string `db:"expires_at"`
+	TokenType string `db:"token_type"`
 }
 
 type TotpRecoveryCode struct {
-	ID        string
-	UserID    string
-	Code      string
-	Used      bool
-	CreatedAt string
+	ID        string `db:"id"`
+	UserID    string `db:"user_id"`
+	Code      string `db:"code"`
+	Used      bool   `db:"used"`
+	CreatedAt string `db:"created_at"`
 }
 
 type User struct {
-	ID            string
-	Email         string
-	Password      string
-	Nickname      string
-	EmailVerified bool
-	TotpSecret    sql.NullString
-	TotpLocked    bool
-	CreatedAt     string
-	UpdatedAt     string
+	ID            string  `db:"id"`
+	Email         string  `db:"email"`
+	Password      string  `db:"password"`
+	Nickname      string  `db:"nickname"`
+	EmailVerified bool    `db:"email_verified"`
+	TotpSecret    *string `db:"totp_secret"`
+	TotpLocked    bool    `db:"totp_locked"`
+	CreatedAt     string  `db:"created_at"`
+	UpdatedAt     string  `db:"updated_at"`
 }
 
 type UsersGroup struct {
-	UserID    string
-	GroupID   string
-	CreatedAt string
+	UserID    string `db:"user_id"`
+	GroupID   string `db:"group_id"`
+	CreatedAt string `db:"created_at"`
 }
