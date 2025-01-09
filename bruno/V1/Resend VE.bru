@@ -1,0 +1,19 @@
+meta {
+  name: Resend VE
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{base_url}}/api/v1/auth/register
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "email": "jch.wch@proton.me",
+    "password": "password1234",
+    "nickname": "name"
+  }
+}

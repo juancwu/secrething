@@ -1,0 +1,23 @@
+meta {
+  name: Login (TOTP)
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{base_url}}/api/v1/auth/login
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "email": "jch.wch@proton.me",
+    "password": "password1234",
+    "totp_code": "{{totp_code}}"
+  }
+}
+
+vars:pre-request {
+  totp_code: 
+}

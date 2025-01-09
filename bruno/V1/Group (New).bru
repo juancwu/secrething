@@ -1,0 +1,21 @@
+meta {
+  name: Group (New)
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{base_url}}/api/v1/group/new
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+body:json {
+  {
+    "name": ""
+  }
+}
