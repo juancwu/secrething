@@ -4,11 +4,9 @@ import (
 	"database/sql"
 	"errors"
 	"konbini/server/db"
-	"konbini/server/memcache"
 	"konbini/server/services"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/labstack/echo/v4"
 )
@@ -102,24 +100,19 @@ func ProtectWithConfig(cfg ProtectConfig) echo.MiddlewareFunc {
 
 			q := db.New(conn)
 
-			// before querying, check memory cache
-			_, found := memcache.Cache().Get("auth_token_" + authToken.ID)
-			if !found {
-				exists, err := q.ExistsAuthTokenById(c.Request().Context(), authToken.ID)
-				if err != nil {
-					conn.Close()
-					if err == sql.ErrNoRows {
-						return echo.NewHTTPError(http.StatusUnauthorized, http.StatusText(http.StatusUnauthorized))
-					}
-					logger.Error().Err(err).Msg("Failed to fetch AuthToken from database. Reject.")
-					return err
-				}
-				if exists != 1 {
-					conn.Close()
-					logger.Error().Msg("AuthToken does not exists in database. Reject.")
+			exists, err := q.ExistsAuthTokenById(c.Request().Context(), authToken.ID)
+			if err != nil {
+				conn.Close()
+				if err == sql.ErrNoRows {
 					return echo.NewHTTPError(http.StatusUnauthorized, http.StatusText(http.StatusUnauthorized))
 				}
-				memcache.Cache().Set("auth_token_"+authToken.ID, authToken.ID, time.Minute*10)
+				logger.Error().Err(err).Msg("Failed to fetch AuthToken from database. Reject.")
+				return err
+			}
+			if exists != 1 {
+				conn.Close()
+				logger.Error().Msg("AuthToken does not exists in database. Reject.")
+				return echo.NewHTTPError(http.StatusUnauthorized, http.StatusText(http.StatusUnauthorized))
 			}
 
 			user, err := q.GetUserById(c.Request().Context(), authToken.UserID)
