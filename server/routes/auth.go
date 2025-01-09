@@ -33,6 +33,7 @@ func setupAuthRoutes(routeConfig *RouteConfig) {
 		"/auth/totp",
 		handlers.RemoveTOTP(routeConfig.DBConnector),
 		middlewares.ProtectFull(routeConfig.DBConnector),
+		middlewares.ValidateJson(reflect.TypeOf(handlers.RemoveTOTPRequest{})),
 	)
 
 	routeConfig.Echo.GET("/auth/email/verify", handlers.VerifyEmail(routeConfig.DBConnector))

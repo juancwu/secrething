@@ -2,11 +2,14 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"konbini/server/db"
 	"konbini/server/services"
 	"konbini/server/utils"
 	"time"
 )
+
+var ErrUsedRecoveryCode error = errors.New("Recovery code has already been used")
 
 func newAuthToken(ctx context.Context, queries *db.Queries, userID string, tokType services.TokenType) (*services.AuthToken, error) {
 	now := time.Now()
@@ -21,4 +24,26 @@ func newAuthToken(ctx context.Context, queries *db.Queries, userID string, tokTy
 		return nil, err
 	}
 	return services.NewAuthToken(authToken.ID, userID, tokType, exp)
+}
+
+// verifyRecoveryCode is a helper function that verifies if the given recovery code is valid for the user to use.
+func verifyRecoveryCode(ctx context.Context, q *db.Queries, userID string, recoveryCode string) error {
+	row, err := q.GetRecoveryCode(ctx, db.GetRecoveryCodeParams{
+		UserID: userID,
+		Code:   recoveryCode,
+	})
+	if err != nil {
+		return err
+	}
+	if row.Used {
+		return ErrUsedRecoveryCode
+	}
+	err = q.UseRecoveryCode(ctx, db.UseRecoveryCodeParams{
+		UserID: userID,
+		Code:   recoveryCode,
+	})
+	if err != nil {
+		return err
+	}
+	return nil
 }

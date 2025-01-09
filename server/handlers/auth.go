@@ -570,10 +570,20 @@ func SetupTOTPLock(connector *db.DBConnector) echo.HandlerFunc {
 	}
 }
 
+// RemoveTOTPRequest is the expected request body for remove totp request
+type RemoveTOTPRequest struct {
+	Code string `json:"code" validate:"required,len=6|len=32|len=8"`
+}
+
 // RemoveTOTP removes the TOTP that has been setup for the requesting user.
 func RemoveTOTP(connector *db.DBConnector) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		user, err := middlewares.GetUser(c)
+		if err != nil {
+			return err
+		}
+
+		body, err := middlewares.GetJsonBody[RemoveTOTPRequest](c)
 		if err != nil {
 			return err
 		}
@@ -590,6 +600,61 @@ func RemoveTOTP(connector *db.DBConnector) echo.HandlerFunc {
 			return err
 		}
 		defer conn.Close()
+
+		switch len(body.Code) {
+		case 6:
+			if !totp.Validate(body.Code, *user.TotpSecret) {
+				return APIError{
+					Code:          http.StatusBadRequest,
+					PublicMessage: "Invalid TOTP code.",
+				}
+			}
+		case 8:
+			// this is a code sent through email
+			if !user.EmailVerified {
+				return APIError{
+					Code:          http.StatusBadRequest,
+					PublicMessage: "Email must be verified to use email codes.",
+				}
+			}
+			k, exp, found := memcache.Cache().GetWithExpiration("email_code_" + user.ID)
+			if !found || time.Now().After(exp) {
+				return APIError{
+					Code:           http.StatusBadRequest,
+					PublicMessage:  "Invalid 2FA code.",
+					PrivateMessage: "Email code not found in memory cache or expired",
+				}
+			}
+			emailCode, ok := k.(string)
+			if !ok {
+				return APIError{
+					Code:           http.StatusInternalServerError,
+					PrivateMessage: "Failed to cast email code stored in memory cache to string",
+				}
+			}
+			if body.Code != emailCode {
+				return APIError{
+					Code:          http.StatusBadRequest,
+					PublicMessage: "Invalid 2FA code.",
+				}
+			}
+		case 32:
+			q := db.New(conn)
+			if err := verifyRecoveryCode(c.Request().Context(), q, user.ID, body.Code); err != nil {
+				return APIError{
+					Code:           http.StatusBadRequest,
+					PublicMessage:  "Invalid TOTP code.",
+					PrivateMessage: "Verification failed at recovery code.",
+					InternalError:  err,
+				}
+			}
+		default:
+			return APIError{
+				Code:          http.StatusBadRequest,
+				PublicMessage: "Invalid 'code' in body.",
+			}
+		}
+
 		tx, err := conn.Begin()
 		if err != nil {
 			return err
