@@ -16,4 +16,5 @@ func SetupRoutesV1(cfg *RouteConfig) {
 	))
 	setupAuthRoutes(cfg)
 	setupHealthRoutes(cfg)
+	setupGroupRoutes(cfg)
 }
