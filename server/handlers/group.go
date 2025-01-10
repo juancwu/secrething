@@ -119,3 +119,57 @@ func NewGroup(connector *db.DBConnector) echo.HandlerFunc {
 		return c.JSON(http.StatusCreated, map[string]string{"group_id": groupId})
 	}
 }
+
+// DeleteGroup deletes a group if the requesting user is the owner of the group
+func DeleteGroup(connector *db.DBConnector) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		groupId := c.Param("id")
+		if groupId == "" {
+			return APIError{
+				Code:          http.StatusBadRequest,
+				PublicMessage: "Missing group id",
+			}
+		}
+		user, err := middlewares.GetUser(c)
+		if err != nil {
+			return err
+		}
+
+		conn, err := connector.Connect()
+		if err != nil {
+			return err
+		}
+		defer conn.Close()
+
+		q := db.New(conn)
+
+		exists, err := q.ExistsGroupWithIdOwnedByUser(c.Request().Context(), db.ExistsGroupWithIdOwnedByUserParams{
+			ID:      groupId,
+			OwnerID: user.ID,
+		})
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return APIError{
+					Code:          http.StatusBadRequest,
+					PublicMessage: "Group not found",
+					InternalError: err,
+				}
+			}
+			return err
+		}
+		if exists != 1 {
+			return APIError{
+				Code:          http.StatusBadRequest,
+				PublicMessage: "Group not found",
+				InternalError: err,
+			}
+		}
+
+		err = q.RemoveGroupByID(c.Request().Context(), groupId)
+		if err != nil {
+			return err
+		}
+
+		return c.NoContent(http.StatusOK)
+	}
+}

@@ -16,4 +16,10 @@ func setupGroupRoutes(routeConfig *RouteConfig) {
 		middlewares.ProtectFull(routeConfig.DBConnector),
 		middlewares.ValidateJson(reflect.TypeOf(handlers.NewGroupRequest{})),
 	)
+
+	e.DELETE(
+		"/group/:id",
+		handlers.DeleteGroup(routeConfig.DBConnector),
+		middlewares.ProtectFull(routeConfig.DBConnector),
+	)
 }

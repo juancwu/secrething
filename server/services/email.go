@@ -70,32 +70,3 @@ Do not reply to this email. This email is not monitored.`,
 
 	return res, nil
 }
-
-func SendMagicLinkEmail(ctx context.Context, to string, url string, createdAt, expiresAt string) (*resend.SendEmailResponse, error) {
-	c, err := config.Global()
-	if err != nil {
-		return nil, err
-	}
-
-	component := views.MagicLinkEmail(url, expiresAt)
-	var buffer bytes.Buffer
-	err = component.Render(ctx, &buffer)
-	if err != nil {
-		return nil, err
-	}
-
-	params := &resend.SendEmailRequest{
-		From:    c.GetVerifyEmailAddress(),
-		To:      []string{to},
-		Subject: fmt.Sprintf("Log In | Magic Link - %s", createdAt),
-		Html:    buffer.String(),
-		Text:    fmt.Sprintf(views.MagicLinkEmailTextContent, url, expiresAt),
-	}
-
-	res, err := SendEmail(ctx, params)
-	if err != nil {
-		return nil, err
-	}
-
-	return res, nil
-}

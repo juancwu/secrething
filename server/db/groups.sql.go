@@ -40,6 +40,22 @@ func (q *Queries) ExistsGroupOwnedByUser(ctx context.Context, arg ExistsGroupOwn
 	return column_1, err
 }
 
+const existsGroupWithIdOwnedByUser = `-- name: ExistsGroupWithIdOwnedByUser :one
+SELECT EXISTS(SELECT 1 FROM groups WHERE id = ? AND owner_id = ?)
+`
+
+type ExistsGroupWithIdOwnedByUserParams struct {
+	ID      string `db:"id"`
+	OwnerID string `db:"owner_id"`
+}
+
+func (q *Queries) ExistsGroupWithIdOwnedByUser(ctx context.Context, arg ExistsGroupWithIdOwnedByUserParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, existsGroupWithIdOwnedByUser, arg.ID, arg.OwnerID)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const newGroup = `-- name: NewGroup :one
 INSERT INTO groups (name, owner_id, created_at, updated_at)
 VALUES (?, ?, ?, ?)
@@ -63,6 +79,15 @@ func (q *Queries) NewGroup(ctx context.Context, arg NewGroupParams) (string, err
 	var id string
 	err := row.Scan(&id)
 	return id, err
+}
+
+const removeGroupByID = `-- name: RemoveGroupByID :exec
+DELETE FROM groups WHERE id = ?
+`
+
+func (q *Queries) RemoveGroupByID(ctx context.Context, id string) error {
+	_, err := q.db.ExecContext(ctx, removeGroupByID, id)
+	return err
 }
 
 const removeUserFromGroup = `-- name: RemoveUserFromGroup :exec
