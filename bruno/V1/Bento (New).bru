@@ -1,0 +1,21 @@
+meta {
+  name: Bento (New)
+  type: http
+  seq: 11
+}
+
+post {
+  url: {{base_url}}/api/v1/bento/new
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+body:json {
+  {
+    "name": "My Bento"
+  }
+}
