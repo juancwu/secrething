@@ -78,6 +78,23 @@ func (q *Queries) GetGroupByIDOwendByUser(ctx context.Context, arg GetGroupByIDO
 	return i, err
 }
 
+const getGroupInvitationByID = `-- name: GetGroupInvitationByID :one
+SELECT id, user_id, group_id, created_at, expires_at FROM group_invitations WHERE id = ?
+`
+
+func (q *Queries) GetGroupInvitationByID(ctx context.Context, id string) (GroupInvitation, error) {
+	row := q.db.QueryRowContext(ctx, getGroupInvitationByID, id)
+	var i GroupInvitation
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.GroupID,
+		&i.CreatedAt,
+		&i.ExpiresAt,
+	)
+	return i, err
+}
+
 const newGroup = `-- name: NewGroup :one
 INSERT INTO groups (name, owner_id, created_at, updated_at)
 VALUES (?, ?, ?, ?)
@@ -135,6 +152,15 @@ DELETE FROM groups WHERE id = ?
 
 func (q *Queries) RemoveGroupByID(ctx context.Context, id string) error {
 	_, err := q.db.ExecContext(ctx, removeGroupByID, id)
+	return err
+}
+
+const removeGroupInvitationByID = `-- name: RemoveGroupInvitationByID :exec
+DELETE FROM group_invitations WHERE id = ?
+`
+
+func (q *Queries) RemoveGroupInvitationByID(ctx context.Context, id string) error {
+	_, err := q.db.ExecContext(ctx, removeGroupInvitationByID, id)
 	return err
 }
 

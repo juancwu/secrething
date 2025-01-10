@@ -26,3 +26,9 @@ RETURNING id;
 
 -- name: GetGroupByIDOwendByUser :one
 SELECT * FROM groups WHERE id = ? AND owner_id = ?;
+
+-- name: GetGroupInvitationByID :one
+SELECT * FROM group_invitations WHERE id = ?;
+
+-- name: RemoveGroupInvitationByID :exec
+DELETE FROM group_invitations WHERE id = ?;

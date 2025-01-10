@@ -29,4 +29,9 @@ func setupGroupRoutes(routeConfig *RouteConfig) {
 		middlewares.ProtectFull(routeConfig.DBConnector),
 		middlewares.ValidateJson(reflect.TypeOf(handlers.InviteUsersToJoinGroupRequest{})),
 	)
+
+	e.GET(
+		"/group/invitation/accept",
+		handlers.AcceptGroupInvitation(routeConfig.DBConnector),
+	)
 }

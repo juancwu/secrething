@@ -96,7 +96,14 @@ func NewGroup(connector *db.DBConnector) echo.HandlerFunc {
 			}
 		}
 
-		err = q.AddUserToGroup(ctx, db.AddUserToGroupParams{UserID: user.ID, GroupID: groupId})
+		err = q.AddUserToGroup(
+			ctx,
+			db.AddUserToGroupParams{
+				UserID:    user.ID,
+				GroupID:   groupId,
+				CreatedAt: utils.FormatRFC3339NanoFixed(time.Now()),
+			},
+		)
 		if err != nil {
 			if err := tx.Rollback(); err != nil {
 				logger.Error().Err(err).Msg("failed to rollback")
@@ -322,5 +329,127 @@ func InviteUsersToJoinGroup(connector *db.DBConnector) echo.HandlerFunc {
 		}(params)
 
 		return c.NoContent(http.StatusCreated)
+	}
+}
+
+// AcceptGroupInvitation accepts an invitation to join a group
+func AcceptGroupInvitation(connector *db.DBConnector) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		b64Token := c.QueryParam("token")
+		if b64Token == "" {
+			return APIError{
+				Code:          http.StatusBadRequest,
+				PublicMessage: "Missing token",
+			}
+		}
+
+		cfg, err := config.Global()
+		if err != nil {
+			return err
+		}
+
+		// validate the token
+		token, err := base64.URLEncoding.DecodeString(b64Token)
+		if err != nil {
+			return APIError{
+				Code:           http.StatusBadRequest,
+				PublicMessage:  "Invalid token",
+				PrivateMessage: "Failed to decode base64 token",
+				InternalError:  err,
+			}
+		}
+
+		// decrypt the token
+		token, err = utils.DecryptAES(token, cfg.GetAesKey())
+		if err != nil {
+			return APIError{
+				Code:           http.StatusBadRequest,
+				PublicMessage:  "Invalid token",
+				PrivateMessage: "Failed to decrypt token",
+				InternalError:  err,
+			}
+		}
+
+		// 36 bytes invitation id + 30 from time
+		if len(token) != 66 {
+			return APIError{
+				Code:           http.StatusBadRequest,
+				PublicMessage:  "Invalid token",
+				PrivateMessage: "Token is not 66 bytes long",
+			}
+		}
+
+		invitationId := token[:36]
+		exp := token[36:]
+
+		// parse expiration and check
+		expT, err := time.Parse(time.RFC3339Nano, string(exp))
+		if err != nil {
+			return err
+		}
+
+		if time.Now().After(expT) {
+			return APIError{
+				Code:          http.StatusBadRequest,
+				PublicMessage: "Invitation Expired",
+			}
+		}
+
+		// get invitation from database
+		conn, err := connector.Connect()
+		if err != nil {
+			return err
+		}
+		defer conn.Close()
+
+		tx, err := conn.Begin()
+		if err != nil {
+			return err
+		}
+
+		q := db.New(tx)
+
+		invitation, err := q.GetGroupInvitationByID(c.Request().Context(), string(invitationId))
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return APIError{
+					Code:           http.StatusBadRequest,
+					PublicMessage:  "Invalid Invitation",
+					PrivateMessage: "No invitation found in the database",
+					InternalError:  err,
+				}
+			}
+			return err
+		}
+
+		err = q.AddUserToGroup(
+			c.Request().Context(),
+			db.AddUserToGroupParams{
+				UserID:    invitation.UserID,
+				GroupID:   invitation.GroupID,
+				CreatedAt: utils.FormatRFC3339NanoFixed(time.Now()),
+			},
+		)
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
+
+		err = q.RemoveGroupInvitationByID(
+			c.Request().Context(),
+			invitation.ID,
+		)
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
+
+		err = tx.Commit()
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
+
+		return c.NoContent(http.StatusOK)
 	}
 }
