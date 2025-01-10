@@ -6,14 +6,14 @@ PRAGMA foreign_keys = ON;
 
 CREATE TABLE IF NOT EXISTS users (
     id TEXT NOT NULL PRIMARY KEY DEFAULT(gen_random_uuid()),
-    email TEXT NOT NULL UNIQUE,
-    password TEXT NOT NULL,
-    nickname TEXT NOT NULL,
+    email TEXT NOT NULL UNIQUE CHECK (email != ''),
+    password TEXT NOT NULL CHECK (password != ''),
+    nickname TEXT NOT NULL CHECK (nickname != ''),
     email_verified BOOL NOT NULL DEFAULT false,
     totp_secret TEXT,
     totp_locked BOOL NOT NULL DEFAULT false,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
+    created_at TEXT NOT NULL CHECK(created_at != ''),
+    updated_at TEXT NOT NULL CHECK(updated_at != '')
 );
 -- +goose StatementEnd
 

@@ -2,10 +2,10 @@
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS group_invitations (
     id TEXT NOT NULL PRIMARY KEY DEFAULT (gen_random_uuid()),
-    user_id TEXT NOT NULL,
-    group_id TEXT NOT NULL,
-    created_at TEXT NOT NULL,
-    expires_at TEXT NOT NULL,
+    user_id TEXT NOT NULL CHECK (user_id != ''),
+    group_id TEXT NOT NULL CHECK (group_id != ''),
+    created_at TEXT NOT NULL CHECK (created_at != ''),
+    expires_at TEXT NOT NULL CHECK (expires_at != ''),
 
     CONSTRAINT fk_user_id FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     CONSTRAINT fk_group_id FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE

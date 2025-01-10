@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS access_logs (
     bento_token_id TEXT,
     action TEXT NOT NULL,
     details JSONB,
-    accessed_at TEXT NOT NULL
+    accessed_at TEXT NOT NULL CHECK (accessed_at != '')
 );
 -- +goose StatementEnd
 

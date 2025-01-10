@@ -2,10 +2,10 @@
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS groups (
     id TEXT NOT NULL PRIMARY KEY DEFAULT (gen_random_uuid()),
-    name TEXT NOT NULL,
-    owner_id TEXT NOT NULL,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL,
+    name TEXT NOT NULL CHECK (name != ''),
+    owner_id TEXT NOT NULL CHECK (owner_id != ''),
+    created_at TEXT NOT NULL CHECK (created_at != ''),
+    updated_at TEXT NOT NULL CHECK (updated_at != ''),
 
     CONSTRAINT unique_group_name_owner UNIQUE (name, owner_id),
 
