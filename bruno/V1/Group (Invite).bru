@@ -1,0 +1,22 @@
+meta {
+  name: Group (Invite)
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{base_url}}/api/v1/group/invite
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+body:json {
+  {
+    "group_id": "74905ff4-a6d9-4235-bf20-bb3076ca3092",
+    "emails": ["jch.wch@proton.me"]
+  }
+}

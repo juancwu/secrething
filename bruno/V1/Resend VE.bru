@@ -1,19 +1,15 @@
 meta {
   name: Resend VE
   type: http
-  seq: 9
+  seq: 10
 }
 
 post {
-  url: {{base_url}}/api/v1/auth/register
+  url: {{base_url}}/api/v1/auth/email/resend-verification
   body: json
-  auth: none
+  auth: bearer
 }
 
-body:json {
-  {
-    "email": "jch.wch@proton.me",
-    "password": "password1234",
-    "nickname": "name"
-  }
+auth:bearer {
+  token: {{auth_token}}
 }
