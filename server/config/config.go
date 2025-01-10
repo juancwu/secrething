@@ -22,17 +22,18 @@ const (
 )
 
 var (
-	ErrMissingAppEnv             error = errors.New("APP_ENV environment variable must be set")
-	ErrMissingDatabaseUrl        error = errors.New("DATABASE_URL environment variable must be set")
-	ErrMissingDatabaseAuthToken  error = errors.New("DATABASE_AUTH_TOKEN environment variable must be set")
-	ErrMissingBackendUrl         error = errors.New("BACKEND_URL environment variable must be set")
-	ErrMissingPort               error = errors.New("PORT environment variable must be set")
-	ErrMissingResendApiKey       error = errors.New("RESEND_API_KEY environment varaible must be set")
-	ErrMissingVerifyEmailAddress error = errors.New("VERIFY_EMAIL_ADDRESS environment varaible must be set")
-	ErrMissingAuthTokenKey       error = errors.New("AUTH_TOKEN_KEY environment varaible must be set")
-	ErrMissingBentoTokenKey      error = errors.New("BENTO_TOKEN_KEY environment varaible must be set")
-	ErrMissingEmailTokenKey      error = errors.New("EMAIL_TOKEN_KEY environment varaible must be set")
-	ErrMissingAesKey             error = errors.New("AES_KEY environment varaible must be set")
+	ErrMissingAppEnv                      error = errors.New("APP_ENV environment variable must be set")
+	ErrMissingDatabaseUrl                 error = errors.New("DATABASE_URL environment variable must be set")
+	ErrMissingDatabaseAuthToken           error = errors.New("DATABASE_AUTH_TOKEN environment variable must be set")
+	ErrMissingBackendUrl                  error = errors.New("BACKEND_URL environment variable must be set")
+	ErrMissingPort                        error = errors.New("PORT environment variable must be set")
+	ErrMissingResendApiKey                error = errors.New("RESEND_API_KEY environment varaible must be set")
+	ErrMissingVerifyEmailAddress          error = errors.New("VERIFY_EMAIL_ADDRESS environment varaible must be set")
+	ErrMissingGroupInvitationEmailAddress error = errors.New("GROUP_INVITATION_EMAIL_ADDRESS environment varaible must be set")
+	ErrMissingAuthTokenKey                error = errors.New("AUTH_TOKEN_KEY environment varaible must be set")
+	ErrMissingBentoTokenKey               error = errors.New("BENTO_TOKEN_KEY environment varaible must be set")
+	ErrMissingEmailTokenKey               error = errors.New("EMAIL_TOKEN_KEY environment varaible must be set")
+	ErrMissingAesKey                      error = errors.New("AES_KEY environment varaible must be set")
 
 	ErrInvalidAppEnv error = errors.New("Invalid value for APP_ENV environment variable")
 
@@ -62,18 +63,19 @@ type Config struct {
 }
 
 type EnvConfig struct {
-	databaseUrl        string
-	databaseAuthToken  string
-	backendUrl         string
-	port               string
-	appEnv             AppEnv
-	resendApiKey       string
-	verifyEmailAddress string
-	authTokenKey       []byte
-	fullTokenKey       []byte
-	bentoTokenKey      []byte
-	emailTokenKey      []byte
-	aesKey             []byte
+	databaseUrl                 string
+	databaseAuthToken           string
+	backendUrl                  string
+	port                        string
+	appEnv                      AppEnv
+	resendApiKey                string
+	verifyEmailAddress          string
+	groupInvitationEmailAddress string
+	authTokenKey                []byte
+	fullTokenKey                []byte
+	bentoTokenKey               []byte
+	emailTokenKey               []byte
+	aesKey                      []byte
 }
 
 // Create a new server configuration. This method reads in required environment
@@ -162,6 +164,10 @@ func (c *Config) GetVerifyEmailAddress() string {
 	return c.env.verifyEmailAddress
 }
 
+func (c *Config) GetGroupInvitationEmailAddress() string {
+	return c.env.groupInvitationEmailAddress
+}
+
 func (c *Config) GetAuthTokenKey() []byte {
 	return c.env.authTokenKey
 }
@@ -238,6 +244,11 @@ func (c *Config) loadEnvironmentVariables() error {
 	c.env.verifyEmailAddress = os.Getenv("VERIFY_EMAIL_ADDRESS")
 	if c.env.verifyEmailAddress == "" {
 		return ErrMissingVerifyEmailAddress
+	}
+
+	c.env.groupInvitationEmailAddress = os.Getenv("GROUP_INVITATION_EMAIL_ADDRESS")
+	if c.env.groupInvitationEmailAddress == "" {
+		return ErrMissingGroupInvitationEmailAddress
 	}
 
 	hexAuthTokenKey := os.Getenv("AUTH_TOKEN_KEY")

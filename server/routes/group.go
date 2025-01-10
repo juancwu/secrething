@@ -22,4 +22,11 @@ func setupGroupRoutes(routeConfig *RouteConfig) {
 		handlers.DeleteGroup(routeConfig.DBConnector),
 		middlewares.ProtectFull(routeConfig.DBConnector),
 	)
+
+	e.POST(
+		"/group/invite",
+		handlers.InviteUsersToJoinGroup(routeConfig.DBConnector),
+		middlewares.ProtectFull(routeConfig.DBConnector),
+		middlewares.ValidateJson(reflect.TypeOf(handlers.InviteUsersToJoinGroupRequest{})),
+	)
 }

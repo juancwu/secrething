@@ -3,14 +3,18 @@ package handlers
 import (
 	"context"
 	"database/sql"
+	"encoding/base64"
 	"fmt"
+	"konbini/server/config"
 	"konbini/server/db"
 	"konbini/server/middlewares"
+	"konbini/server/services"
 	"konbini/server/utils"
 	"net/http"
 	"time"
 
 	"github.com/labstack/echo/v4"
+	"github.com/rs/zerolog/log"
 )
 
 // NewGroupRequest is the request body to create a new group
@@ -171,5 +175,152 @@ func DeleteGroup(connector *db.DBConnector) echo.HandlerFunc {
 		}
 
 		return c.NoContent(http.StatusOK)
+	}
+}
+
+type InviteUsersToJoinGroupRequest struct {
+	GroupID string   `json:"group_id" validate:"required,uuid4"`
+	Emails  []string `json:"emails" validate:"gt=0,dive,email"`
+}
+
+func InviteUsersToJoinGroup(connector *db.DBConnector) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		user, err := middlewares.GetUser(c)
+		if err != nil {
+			return err
+		}
+		body, err := middlewares.GetJsonBody[InviteUsersToJoinGroupRequest](c)
+		if err != nil {
+			return err
+		}
+		cfg, err := config.Global()
+		if err != nil {
+			return err
+		}
+		logger := middlewares.GetLogger(c)
+
+		// check if user is owner of group
+		conn, err := connector.Connect()
+		if err != nil {
+			return err
+		}
+		defer conn.Close()
+
+		q := db.New(conn)
+
+		group, err := q.GetGroupByIDOwendByUser(
+			c.Request().Context(),
+			db.GetGroupByIDOwendByUserParams{
+				ID:      body.GroupID,
+				OwnerID: user.ID,
+			},
+		)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return APIError{
+					Code:          http.StatusBadRequest,
+					PublicMessage: "No group found",
+					InternalError: err,
+				}
+			}
+			return err
+		}
+
+		// the token needs to have the
+		// - invitation id
+		// - expiry time
+		// default expiry time is 24 hours
+
+		tx, err := conn.Begin()
+		if err != nil {
+			return err
+		}
+
+		q = q.WithTx(tx)
+
+		params := services.SendGroupInvitationEmailsParams{
+			InvitorName: user.Nickname,
+			GroupName:   group.Name,
+			Users: make([]struct {
+				Name  string
+				Token string
+				Email string
+			}, len(body.Emails)),
+		}
+		for i, email := range body.Emails {
+			invitedUser, err := q.GetUserByEmail(c.Request().Context(), email)
+			if err != nil {
+				if err == sql.ErrNoRows {
+					return APIError{
+						Code:          http.StatusBadRequest,
+						PublicMessage: fmt.Sprintf("No user with email: '%s'", email),
+						InternalError: err,
+					}
+				}
+				return err
+			}
+			now := time.Now()
+			exp := now.Add(time.Hour * 24)
+			invitationId, err := q.NewGroupInvitation(
+				c.Request().Context(),
+				db.NewGroupInvitationParams{
+					UserID:    invitedUser.ID,
+					GroupID:   body.GroupID,
+					CreatedAt: utils.FormatRFC3339NanoFixed(now),
+					ExpiresAt: utils.FormatRFC3339NanoFixed(exp),
+				},
+			)
+			if err != nil {
+				if err := tx.Rollback(); err != nil {
+					logger.Error().Err(err).Msg("Failed to rollback")
+				}
+				return err
+			}
+
+			// 36 bytes from invitation id + 30 from time
+			token := make([]byte, 66)
+			copy(token[:], []byte(invitationId))
+			copy(token[36:], []byte(utils.FormatRFC3339NanoFixed(exp)))
+
+			token, err = utils.EncryptAES(token, cfg.GetAesKey())
+			if err != nil {
+				if err := tx.Rollback(); err != nil {
+					logger.Error().Err(err).Msg("Failed to rollback")
+				}
+				return err
+			}
+
+			// add encrypted token to list
+			params.Users[i].Token = base64.URLEncoding.EncodeToString(token)
+			params.Users[i].Name = invitedUser.Nickname
+			params.Users[i].Email = invitedUser.Email
+		}
+
+		// commit changes
+		err = tx.Commit()
+		if err != nil {
+			if err := tx.Rollback(); err != nil {
+				logger.Error().Err(err).Msg("Failed to rollback")
+			}
+			return err
+		}
+
+		// send the emails
+		go func(params services.SendGroupInvitationEmailsParams) {
+			ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+			defer cancel()
+			res, err := services.SendGroupInvitationEmails(ctx, params)
+			if err != nil {
+				log.Error().Err(err).Msg("Failed to send group invitations")
+				return
+			}
+			ids := make([]string, len(res.Data))
+			for i, d := range res.Data {
+				ids[i] = d.Id
+			}
+			log.Info().Strs("email_ids", ids).Msg("Successfully sent group invitations")
+		}(params)
+
+		return c.NoContent(http.StatusCreated)
 	}
 }

@@ -1,0 +1,18 @@
+package views
+
+templ GroupInvitationEmail(invitorName, inviteeName, groupName, url string) {
+	<div>
+		<p>
+			Hi { inviteeName },
+		</p>
+		<p>
+			{ invitorName } has invited you to join the group <span>{ groupName }</span>
+		</p>
+		<div>
+			<a href={ templ.SafeURL(url) }>Accept Invite</a>
+		</div>
+		<p>
+			You can ignore this email if you don't wish to join.
+		</p>
+	</div>
+}

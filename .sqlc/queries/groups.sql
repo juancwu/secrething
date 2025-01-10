@@ -17,3 +17,12 @@ SELECT EXISTS(SELECT 1 FROM groups WHERE id = ? AND owner_id = ?);
 
 -- name: RemoveGroupByID :exec
 DELETE FROM groups WHERE id = ?;
+
+-- name: NewGroupInvitation :one
+INSERT INTO group_invitations
+(user_id, group_id, created_at, expires_at)
+VALUES (?, ?, ?, ?)
+RETURNING id;
+
+-- name: GetGroupByIDOwendByUser :one
+SELECT * FROM groups WHERE id = ? AND owner_id = ?;

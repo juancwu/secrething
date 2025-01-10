@@ -56,6 +56,28 @@ func (q *Queries) ExistsGroupWithIdOwnedByUser(ctx context.Context, arg ExistsGr
 	return column_1, err
 }
 
+const getGroupByIDOwendByUser = `-- name: GetGroupByIDOwendByUser :one
+SELECT id, name, owner_id, created_at, updated_at FROM groups WHERE id = ? AND owner_id = ?
+`
+
+type GetGroupByIDOwendByUserParams struct {
+	ID      string `db:"id"`
+	OwnerID string `db:"owner_id"`
+}
+
+func (q *Queries) GetGroupByIDOwendByUser(ctx context.Context, arg GetGroupByIDOwendByUserParams) (Group, error) {
+	row := q.db.QueryRowContext(ctx, getGroupByIDOwendByUser, arg.ID, arg.OwnerID)
+	var i Group
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.OwnerID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const newGroup = `-- name: NewGroup :one
 INSERT INTO groups (name, owner_id, created_at, updated_at)
 VALUES (?, ?, ?, ?)
@@ -75,6 +97,32 @@ func (q *Queries) NewGroup(ctx context.Context, arg NewGroupParams) (string, err
 		arg.OwnerID,
 		arg.CreatedAt,
 		arg.UpdatedAt,
+	)
+	var id string
+	err := row.Scan(&id)
+	return id, err
+}
+
+const newGroupInvitation = `-- name: NewGroupInvitation :one
+INSERT INTO group_invitations
+(user_id, group_id, created_at, expires_at)
+VALUES (?, ?, ?, ?)
+RETURNING id
+`
+
+type NewGroupInvitationParams struct {
+	UserID    string `db:"user_id"`
+	GroupID   string `db:"group_id"`
+	CreatedAt string `db:"created_at"`
+	ExpiresAt string `db:"expires_at"`
+}
+
+func (q *Queries) NewGroupInvitation(ctx context.Context, arg NewGroupInvitationParams) (string, error) {
+	row := q.db.QueryRowContext(ctx, newGroupInvitation,
+		arg.UserID,
+		arg.GroupID,
+		arg.CreatedAt,
+		arg.ExpiresAt,
 	)
 	var id string
 	err := row.Scan(&id)

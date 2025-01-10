@@ -66,6 +66,14 @@ type Group struct {
 	UpdatedAt string `db:"updated_at"`
 }
 
+type GroupInvitation struct {
+	ID        string `db:"id"`
+	UserID    string `db:"user_id"`
+	GroupID   string `db:"group_id"`
+	CreatedAt string `db:"created_at"`
+	ExpiresAt string `db:"expires_at"`
+}
+
 type GroupPermission struct {
 	GroupID   string `db:"group_id"`
 	BentoID   string `db:"bento_id"`
