@@ -1,6 +1,6 @@
 -- +goose Up
 -- +goose StatementBegin
-CREATE TABLE IF NOT EXISTS bento_ingridients (
+CREATE TABLE IF NOT EXISTS bento_ingredients (
     id TEXT NOT NULL PRIMARY KEY DEFAULT (gen_random_uuid()),
     bento_id TEXT NOT NULL CHECK (bento_id != ''),
     name TEXT NOT NULL CHECK (name != ''),
@@ -14,5 +14,5 @@ CREATE TABLE IF NOT EXISTS bento_ingridients (
 
 -- +goose Down
 -- +goose StatementBegin
-DROP TABLE IF EXISTS bento_ingridients;
+DROP TABLE IF EXISTS bento_ingredients;
 -- +goose StatementEnd

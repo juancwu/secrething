@@ -17,7 +17,7 @@ func setupBentoRoutes(routeConfig *RouteConfig) {
 	)
 	e.POST(
 		"/bento/ingredient/add",
-		handlers.AddIngridientsToBento(routeConfig.DBConnector),
+		handlers.AddIngredientsToBento(routeConfig.DBConnector),
 		middlewares.ProtectFull(routeConfig.DBConnector),
 		middlewares.ValidateJson(reflect.TypeOf(handlers.AddIngridientsToBentoRequest{})),
 	)

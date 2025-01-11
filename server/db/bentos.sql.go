@@ -9,12 +9,12 @@ import (
 	"context"
 )
 
-const addIngridientToBento = `-- name: AddIngridientToBento :exec
-INSERT INTO bento_ingridients (bento_id, name, value, created_at, updated_at)
+const addIngredientToBento = `-- name: AddIngredientToBento :exec
+INSERT INTO bento_ingredients (bento_id, name, value, created_at, updated_at)
 VALUES (?, ?, ?, ?, ?)
 `
 
-type AddIngridientToBentoParams struct {
+type AddIngredientToBentoParams struct {
 	BentoID   string `db:"bento_id"`
 	Name      string `db:"name"`
 	Value     []byte `db:"value"`
@@ -22,8 +22,8 @@ type AddIngridientToBentoParams struct {
 	UpdatedAt string `db:"updated_at"`
 }
 
-func (q *Queries) AddIngridientToBento(ctx context.Context, arg AddIngridientToBentoParams) error {
-	_, err := q.db.ExecContext(ctx, addIngridientToBento,
+func (q *Queries) AddIngredientToBento(ctx context.Context, arg AddIngredientToBentoParams) error {
+	_, err := q.db.ExecContext(ctx, addIngredientToBento,
 		arg.BentoID,
 		arg.Name,
 		arg.Value,
@@ -95,15 +95,15 @@ func (q *Queries) NewBento(ctx context.Context, arg NewBentoParams) (string, err
 	return id, err
 }
 
-const setBentoIngridient = `-- name: SetBentoIngridient :exec
-INSERT INTO bento_ingridients (bento_id, name, value, created_at, updated_at)
+const setBentoIngredient = `-- name: SetBentoIngredient :exec
+INSERT INTO bento_ingredients (bento_id, name, value, created_at, updated_at)
 VALUES (?, ?, ?, ?, ?)
 ON CONFLICT DO UPDATE SET
     value = excluded.value,
     updated_at = excluded.updated_at
 `
 
-type SetBentoIngridientParams struct {
+type SetBentoIngredientParams struct {
 	BentoID   string `db:"bento_id"`
 	Name      string `db:"name"`
 	Value     []byte `db:"value"`
@@ -111,8 +111,8 @@ type SetBentoIngridientParams struct {
 	UpdatedAt string `db:"updated_at"`
 }
 
-func (q *Queries) SetBentoIngridient(ctx context.Context, arg SetBentoIngridientParams) error {
-	_, err := q.db.ExecContext(ctx, setBentoIngridient,
+func (q *Queries) SetBentoIngredient(ctx context.Context, arg SetBentoIngredientParams) error {
+	_, err := q.db.ExecContext(ctx, setBentoIngredient,
 		arg.BentoID,
 		arg.Name,
 		arg.Value,

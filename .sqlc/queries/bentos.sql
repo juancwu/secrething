@@ -8,12 +8,12 @@ VALUES (?, ?, ?, ?) RETURNING id;
 -- name: GetBentoWithIDOwnedByUser :one
 SELECT * FROM bentos WHERE id = ? AND user_id = ?;
 
--- name: AddIngridientToBento :exec
-INSERT INTO bento_ingridients (bento_id, name, value, created_at, updated_at)
+-- name: AddIngredientToBento :exec
+INSERT INTO bento_ingredients (bento_id, name, value, created_at, updated_at)
 VALUES (?, ?, ?, ?, ?);
 
--- name: SetBentoIngridient :exec
-INSERT INTO bento_ingridients (bento_id, name, value, created_at, updated_at)
+-- name: SetBentoIngredient :exec
+INSERT INTO bento_ingredients (bento_id, name, value, created_at, updated_at)
 VALUES (?, ?, ?, ?, ?)
 ON CONFLICT DO UPDATE SET
     value = excluded.value,

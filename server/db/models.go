@@ -31,7 +31,7 @@ type Bento struct {
 	UpdatedAt string `db:"updated_at"`
 }
 
-type BentoIngridient struct {
+type BentoIngredient struct {
 	ID        string `db:"id"`
 	BentoID   string `db:"bento_id"`
 	Name      string `db:"name"`

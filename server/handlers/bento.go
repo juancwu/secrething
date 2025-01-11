@@ -91,9 +91,9 @@ func NewBento(connector *db.DBConnector) echo.HandlerFunc {
 
 		if body.Ingridients != nil && len(body.Ingridients) > 0 {
 			for _, ing := range body.Ingridients {
-				err = q.AddIngridientToBento(
+				err = q.AddIngredientToBento(
 					ctx,
-					db.AddIngridientToBentoParams{
+					db.AddIngredientToBentoParams{
 						BentoID:   bentoID,
 						Name:      ing.Name,
 						Value:     []byte(ing.Value),
@@ -176,9 +176,9 @@ func AddIngridientsToBento(cnt *db.DBConnector) echo.HandlerFunc {
 
 		for _, ing := range body.Ingridients {
 			if replace {
-				err = q.SetBentoIngridient(
+				err = q.SetBentoIngredient(
 					ctx,
-					db.SetBentoIngridientParams{
+					db.SetBentoIngredientParams{
 						BentoID:   bento.ID,
 						Name:      ing.Name,
 						Value:     []byte(ing.Value),
@@ -187,9 +187,9 @@ func AddIngridientsToBento(cnt *db.DBConnector) echo.HandlerFunc {
 					},
 				)
 			} else {
-				err = q.AddIngridientToBento(
+				err = q.AddIngredientToBento(
 					ctx,
-					db.AddIngridientToBentoParams{
+					db.AddIngredientToBentoParams{
 						BentoID:   bento.ID,
 						Name:      ing.Name,
 						Value:     []byte(ing.Value),
