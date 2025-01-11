@@ -95,6 +95,23 @@ func (q *Queries) NewBento(ctx context.Context, arg NewBentoParams) (string, err
 	return id, err
 }
 
+const removeIngredientFromBento = `-- name: RemoveIngredientFromBento :execrows
+DELETE FROM bento_ingredients WHERE bento_id = ? AND id = ?
+`
+
+type RemoveIngredientFromBentoParams struct {
+	BentoID string `db:"bento_id"`
+	ID      string `db:"id"`
+}
+
+func (q *Queries) RemoveIngredientFromBento(ctx context.Context, arg RemoveIngredientFromBentoParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, removeIngredientFromBento, arg.BentoID, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const setBentoIngredient = `-- name: SetBentoIngredient :exec
 INSERT INTO bento_ingredients (bento_id, name, value, created_at, updated_at)
 VALUES (?, ?, ?, ?, ?)

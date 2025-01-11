@@ -1,10 +1,10 @@
 meta {
-  name: Bento (Add)
+  name: Bento (Remove Ing)
   type: http
-  seq: 13
+  seq: 14
 }
 
-post {
+delete {
   url: {{base_url}}/api/v1/bento/ingredients
   body: json
   auth: bearer
@@ -18,14 +18,8 @@ body:json {
   {
     "bento_id": "9532f426-c318-4790-bfb5-56c6223cc377",
     "ingredients": [
-      {
-        "name": "ing1",
-        "value": "dasdas"
-      },
-      {
-        "name": "ing2",
-        "value": "asd"
-      }
+      "92de2cfc-b3f7-4ff5-8c54-bef2b4ac54a8",
+      "92de2cfc-b3f7-4ff5-8c54-bef2b4ac54aa"
     ]
   }
 }

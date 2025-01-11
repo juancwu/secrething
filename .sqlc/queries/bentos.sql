@@ -12,6 +12,9 @@ SELECT * FROM bentos WHERE id = ? AND user_id = ?;
 INSERT INTO bento_ingredients (bento_id, name, value, created_at, updated_at)
 VALUES (?, ?, ?, ?, ?);
 
+-- name: RemoveIngredientFromBento :execrows
+DELETE FROM bento_ingredients WHERE bento_id = ? AND id = ?;
+
 -- name: SetBentoIngredient :exec
 INSERT INTO bento_ingredients (bento_id, name, value, created_at, updated_at)
 VALUES (?, ?, ?, ?, ?)

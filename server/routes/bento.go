@@ -16,9 +16,15 @@ func setupBentoRoutes(routeConfig *RouteConfig) {
 		middlewares.ValidateJson(reflect.TypeOf(handlers.NewBentoRequest{})),
 	)
 	e.POST(
-		"/bento/ingredient/add",
+		"/bento/ingredients",
 		handlers.AddIngredientsToBento(routeConfig.DBConnector),
 		middlewares.ProtectFull(routeConfig.DBConnector),
-		middlewares.ValidateJson(reflect.TypeOf(handlers.AddIngridientsToBentoRequest{})),
+		middlewares.ValidateJson(reflect.TypeOf(handlers.AddIngredientsToBentoRequest{})),
+	)
+	e.DELETE(
+		"/bento/ingredients",
+		handlers.RemoveIngredientsFromBento(routeConfig.DBConnector),
+		middlewares.ProtectFull(routeConfig.DBConnector),
+		middlewares.ValidateJson(reflect.TypeOf(handlers.RemoveIngredientsFromBentoRequest{})),
 	)
 }

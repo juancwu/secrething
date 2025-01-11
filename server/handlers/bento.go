@@ -13,14 +13,14 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-type ingridient struct {
+type ingredient struct {
 	Name  string `json:"name" validate:"required,min=1,printascii"`
 	Value string `json:"value"`
 }
 
 type NewBentoRequest struct {
 	Name        string       `json:"name" validate:"required,min=3,printascii"`
-	Ingridients []ingridient `json:"ingridients,omitempty" validate:"omitnil,omitempty,dive"`
+	Ingredients []ingredient `json:"ingridients,omitempty" validate:"omitnil,omitempty,dive"`
 }
 
 func NewBento(connector *db.DBConnector) echo.HandlerFunc {
@@ -89,8 +89,8 @@ func NewBento(connector *db.DBConnector) echo.HandlerFunc {
 			return err
 		}
 
-		if body.Ingridients != nil && len(body.Ingridients) > 0 {
-			for _, ing := range body.Ingridients {
+		if body.Ingredients != nil && len(body.Ingredients) > 0 {
+			for _, ing := range body.Ingredients {
 				err = q.AddIngredientToBento(
 					ctx,
 					db.AddIngredientToBentoParams{
@@ -118,13 +118,13 @@ func NewBento(connector *db.DBConnector) echo.HandlerFunc {
 	}
 }
 
-type AddIngridientsToBentoRequest struct {
+type AddIngredientsToBentoRequest struct {
 	BentoID     string       `json:"bento_id" validate:"required,uuid4"`
-	Ingridients []ingridient `json:"ingridients,omitempty" validate:"omitnil,omitempty,dive"`
+	Ingredients []ingredient `json:"ingredients,omitempty" validate:"omitnil,omitempty,dive"`
 }
 
-// AddIngridientsToBento add the ingridients in the request body to the bento
-func AddIngridientsToBento(cnt *db.DBConnector) echo.HandlerFunc {
+// AddIngredientsToBento add the ingridients in the request body to the bento
+func AddIngredientsToBento(cnt *db.DBConnector) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		replace := c.QueryParam("replace") == "true"
 
@@ -135,7 +135,7 @@ func AddIngridientsToBento(cnt *db.DBConnector) echo.HandlerFunc {
 		if err != nil {
 			return err
 		}
-		body, err := middlewares.GetJsonBody[AddIngridientsToBentoRequest](c)
+		body, err := middlewares.GetJsonBody[AddIngredientsToBentoRequest](c)
 		if err != nil {
 			return err
 		}
@@ -174,7 +174,7 @@ func AddIngridientsToBento(cnt *db.DBConnector) echo.HandlerFunc {
 
 		q = q.WithTx(tx)
 
-		for _, ing := range body.Ingridients {
+		for _, ing := range body.Ingredients {
 			if replace {
 				err = q.SetBentoIngredient(
 					ctx,
@@ -221,8 +221,90 @@ func AddIngridientsToBento(cnt *db.DBConnector) echo.HandlerFunc {
 	}
 }
 
-// RemoveIngridientsFromBento removes ingridients by id from the bento
-func RemoveIngridientsFromBento() {}
+type RemoveIngredientsFromBentoRequest struct {
+	BentoID     string   `json:"bento_id" validate:"required,uuid4"`
+	Ingredients []string `json:"ingredients" validate:"required,gt=0,dive,uuid4"`
+}
+
+// RemoveIngredientsFromBento removes ingridients by id from the bento
+func RemoveIngredientsFromBento(cnt *db.DBConnector) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		ctx, cancel := context.WithTimeout(c.Request().Context(), time.Second*5)
+		defer cancel()
+
+		user, err := middlewares.GetUser(c)
+		if err != nil {
+			return err
+		}
+		body, err := middlewares.GetJsonBody[RemoveIngredientsFromBentoRequest](c)
+		if err != nil {
+			return err
+		}
+
+		conn, err := cnt.Connect()
+		if err != nil {
+			return err
+		}
+		defer conn.Close()
+
+		tx, err := conn.Begin()
+		if err != nil {
+			return err
+		}
+
+		q := db.New(tx)
+
+		bento, err := q.GetBentoWithIDOwnedByUser(
+			ctx,
+			db.GetBentoWithIDOwnedByUserParams{
+				UserID: user.ID,
+				ID:     body.BentoID,
+			},
+		)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return APIError{
+					Code:          http.StatusBadRequest,
+					PublicMessage: "No bento found",
+				}
+			}
+			return err
+		}
+
+		deleted := []string{}
+		notDeleted := []string{}
+
+		for _, ingID := range body.Ingredients {
+			n, err := q.RemoveIngredientFromBento(
+				ctx,
+				db.RemoveIngredientFromBentoParams{
+					BentoID: bento.ID,
+					ID:      ingID,
+				},
+			)
+			if err != nil {
+				tx.Rollback()
+				return err
+			}
+			if n != 1 {
+				notDeleted = append(notDeleted, ingID)
+			} else {
+				deleted = append(deleted, ingID)
+			}
+		}
+
+		err = tx.Commit()
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
+
+		return c.JSON(http.StatusOK, map[string][]string{
+			"deleted":     deleted,
+			"not_deleted": notDeleted,
+		})
+	}
+}
 
 // GetBento gets the bento info and ingridients
 func GetBento() {}
