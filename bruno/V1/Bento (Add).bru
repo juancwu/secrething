@@ -1,0 +1,35 @@
+meta {
+  name: Bento (Add)
+  type: http
+  seq: 13
+}
+
+post {
+  url: {{base_url}}/api/v1/bento/ingredient/add?replace=true
+  body: json
+  auth: bearer
+}
+
+params:query {
+  replace: true
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+body:json {
+  {
+    "bento_id": "e48f69f4-6f16-424f-9117-219c0fabee46",
+    "ingridients": [
+      {
+        "name": "ing1",
+        "value": "dasdas"
+      },
+      {
+        "name": "ing2",
+        "value": "asd"
+      }
+    ]
+  }
+}

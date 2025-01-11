@@ -49,6 +49,28 @@ func (q *Queries) ExistsBentoWithNameOwnedByUser(ctx context.Context, arg Exists
 	return column_1, err
 }
 
+const getBentoWithIDOwnedByUser = `-- name: GetBentoWithIDOwnedByUser :one
+SELECT id, user_id, name, created_at, updated_at FROM bentos WHERE id = ? AND user_id = ?
+`
+
+type GetBentoWithIDOwnedByUserParams struct {
+	ID     string `db:"id"`
+	UserID string `db:"user_id"`
+}
+
+func (q *Queries) GetBentoWithIDOwnedByUser(ctx context.Context, arg GetBentoWithIDOwnedByUserParams) (Bento, error) {
+	row := q.db.QueryRowContext(ctx, getBentoWithIDOwnedByUser, arg.ID, arg.UserID)
+	var i Bento
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Name,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const newBento = `-- name: NewBento :one
 INSERT INTO bentos (user_id, name, created_at, updated_at)
 VALUES (?, ?, ?, ?) RETURNING id
@@ -71,4 +93,31 @@ func (q *Queries) NewBento(ctx context.Context, arg NewBentoParams) (string, err
 	var id string
 	err := row.Scan(&id)
 	return id, err
+}
+
+const setBentoIngridient = `-- name: SetBentoIngridient :exec
+INSERT INTO bento_ingridients (bento_id, name, value, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?)
+ON CONFLICT DO UPDATE SET
+    value = excluded.value,
+    updated_at = excluded.updated_at
+`
+
+type SetBentoIngridientParams struct {
+	BentoID   string `db:"bento_id"`
+	Name      string `db:"name"`
+	Value     []byte `db:"value"`
+	CreatedAt string `db:"created_at"`
+	UpdatedAt string `db:"updated_at"`
+}
+
+func (q *Queries) SetBentoIngridient(ctx context.Context, arg SetBentoIngridientParams) error {
+	_, err := q.db.ExecContext(ctx, setBentoIngridient,
+		arg.BentoID,
+		arg.Name,
+		arg.Value,
+		arg.CreatedAt,
+		arg.UpdatedAt,
+	)
+	return err
 }

@@ -15,4 +15,10 @@ func setupBentoRoutes(routeConfig *RouteConfig) {
 		middlewares.ProtectFull(routeConfig.DBConnector),
 		middlewares.ValidateJson(reflect.TypeOf(handlers.NewBentoRequest{})),
 	)
+	e.POST(
+		"/bento/ingredient/add",
+		handlers.AddIngridientsToBento(routeConfig.DBConnector),
+		middlewares.ProtectFull(routeConfig.DBConnector),
+		middlewares.ValidateJson(reflect.TypeOf(handlers.AddIngridientsToBentoRequest{})),
+	)
 }
