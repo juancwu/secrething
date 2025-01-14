@@ -1,0 +1,25 @@
+meta {
+  name: Bento
+  type: http
+  seq: 11
+}
+
+get {
+  url: {{base_url}}/api/v1/bento?bento_id=a2b08afd-ba2f-4f50-8891-d9d86362071c
+  body: none
+  auth: bearer
+}
+
+params:query {
+  bento_id: a2b08afd-ba2f-4f50-8891-d9d86362071c
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+body:json {
+  {
+    "name": "My Bento"
+  }
+}
