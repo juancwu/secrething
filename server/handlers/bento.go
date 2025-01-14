@@ -9,6 +9,7 @@ import (
 	"konbini/server/permission"
 	"konbini/server/utils"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -497,23 +498,36 @@ func GetBentoMetadata(cnt *db.DBConnector) echo.HandlerFunc {
 		}
 
 		if c.QueryParam("extended") == "true" {
-			ingIDs, err := q.GetBentoIngredientIDsInBento(ctx, bento.ID)
-			if err != nil {
-				return err
-			}
-			users, err := q.GetUserIDsWithBentoAccess(ctx, bento.ID)
-			if err != nil {
-				return err
-			}
-			groups, err := q.GetGroupIDsWithBentoAccess(ctx, bento.ID)
-			if err != nil {
-				return err
-			}
+			var wg sync.WaitGroup
+			results := make(chan metadataChannelResult, 3)
+			wg.Add(3)
+			go getBentoIngredientIDs(ctx, q, bento.ID, &wg, results)
+			go getUsersWithAccess(ctx, q, bento.ID, &wg, results)
+			go getGroupsWithAccess(ctx, q, bento.ID, &wg, results)
 			extMetadata := bentoMetadataExtended{
-				bentoMetadata:    metadata,
-				IngredientIDs:    ingIDs,
-				UsersWithAccess:  users,
-				GroupsWithAccess: groups,
+				bentoMetadata: metadata,
+			}
+			wg.Wait()
+			close(results)
+
+			for res := range results {
+				switch res.From {
+				case "get_bento_ingredients":
+					if res.Err != nil {
+						return res.Err
+					}
+					extMetadata.IngredientIDs = res.Data
+				case "get_bento_access":
+					if res.Err != nil {
+						return res.Err
+					}
+					extMetadata.UsersWithAccess = res.Data
+				case "get_group_access":
+					if res.Err != nil {
+						return res.Err
+					}
+					extMetadata.GroupsWithAccess = res.Data
+				}
 			}
 
 			return c.JSON(http.StatusOK, extMetadata)
