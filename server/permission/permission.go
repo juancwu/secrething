@@ -60,7 +60,7 @@ func GetBentoOwnerPermissions() uint64 {
 // ToBytes transform a uint64 into bytes
 func ToBytes(permission uint64) []byte {
 	b := make([]byte, 8)
-	binary.BigEndian.AppendUint64(b, permission)
+	binary.BigEndian.PutUint64(b, permission)
 	return b
 }
 
