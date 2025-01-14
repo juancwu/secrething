@@ -14,9 +14,9 @@ INSERT INTO users_groups (user_id, group_id, created_at) VALUES (?, ?, ?)
 `
 
 type AddUserToGroupParams struct {
-	UserID    string `db:"user_id"`
-	GroupID   string `db:"group_id"`
-	CreatedAt string `db:"created_at"`
+	UserID    string `db:"user_id" json:"user_id"`
+	GroupID   string `db:"group_id" json:"group_id"`
+	CreatedAt string `db:"created_at" json:"created_at"`
 }
 
 func (q *Queries) AddUserToGroup(ctx context.Context, arg AddUserToGroupParams) error {
@@ -29,8 +29,8 @@ SELECT EXISTS(SELECT 1 FROM groups WHERE name = ? AND owner_id = ?)
 `
 
 type ExistsGroupOwnedByUserParams struct {
-	Name    string `db:"name"`
-	OwnerID string `db:"owner_id"`
+	Name    string `db:"name" json:"name"`
+	OwnerID string `db:"owner_id" json:"owner_id"`
 }
 
 func (q *Queries) ExistsGroupOwnedByUser(ctx context.Context, arg ExistsGroupOwnedByUserParams) (int64, error) {
@@ -45,8 +45,8 @@ SELECT EXISTS(SELECT 1 FROM groups WHERE id = ? AND owner_id = ?)
 `
 
 type ExistsGroupWithIdOwnedByUserParams struct {
-	ID      string `db:"id"`
-	OwnerID string `db:"owner_id"`
+	ID      string `db:"id" json:"id"`
+	OwnerID string `db:"owner_id" json:"owner_id"`
 }
 
 func (q *Queries) ExistsGroupWithIdOwnedByUser(ctx context.Context, arg ExistsGroupWithIdOwnedByUserParams) (int64, error) {
@@ -61,8 +61,8 @@ SELECT id, name, owner_id, created_at, updated_at FROM groups WHERE id = ? AND o
 `
 
 type GetGroupByIDOwendByUserParams struct {
-	ID      string `db:"id"`
-	OwnerID string `db:"owner_id"`
+	ID      string `db:"id" json:"id"`
+	OwnerID string `db:"owner_id" json:"owner_id"`
 }
 
 func (q *Queries) GetGroupByIDOwendByUser(ctx context.Context, arg GetGroupByIDOwendByUserParams) (Group, error) {
@@ -102,10 +102,10 @@ RETURNING id
 `
 
 type NewGroupParams struct {
-	Name      string `db:"name"`
-	OwnerID   string `db:"owner_id"`
-	CreatedAt string `db:"created_at"`
-	UpdatedAt string `db:"updated_at"`
+	Name      string `db:"name" json:"name"`
+	OwnerID   string `db:"owner_id" json:"owner_id"`
+	CreatedAt string `db:"created_at" json:"created_at"`
+	UpdatedAt string `db:"updated_at" json:"updated_at"`
 }
 
 func (q *Queries) NewGroup(ctx context.Context, arg NewGroupParams) (string, error) {
@@ -128,10 +128,10 @@ RETURNING id
 `
 
 type NewGroupInvitationParams struct {
-	UserID    string `db:"user_id"`
-	GroupID   string `db:"group_id"`
-	CreatedAt string `db:"created_at"`
-	ExpiresAt string `db:"expires_at"`
+	UserID    string `db:"user_id" json:"user_id"`
+	GroupID   string `db:"group_id" json:"group_id"`
+	CreatedAt string `db:"created_at" json:"created_at"`
+	ExpiresAt string `db:"expires_at" json:"expires_at"`
 }
 
 func (q *Queries) NewGroupInvitation(ctx context.Context, arg NewGroupInvitationParams) (string, error) {
@@ -169,8 +169,8 @@ DELETE FROM users_groups WHERE user_id = ? AND group_id = ?
 `
 
 type RemoveUserFromGroupParams struct {
-	UserID  string `db:"user_id"`
-	GroupID string `db:"group_id"`
+	UserID  string `db:"user_id" json:"user_id"`
+	GroupID string `db:"group_id" json:"group_id"`
 }
 
 func (q *Queries) RemoveUserFromGroup(ctx context.Context, arg RemoveUserFromGroupParams) error {

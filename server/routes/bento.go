@@ -9,6 +9,11 @@ import (
 func setupBentoRoutes(routeConfig *RouteConfig) {
 	e := routeConfig.Echo
 
+	e.GET(
+		"/bento",
+		handlers.GetBento(routeConfig.DBConnector),
+		middlewares.ProtectFull(routeConfig.DBConnector),
+	)
 	e.POST(
 		"/bento/new",
 		handlers.NewBento(routeConfig.DBConnector),

@@ -18,11 +18,11 @@ RETURNING id
 `
 
 type CreateUserParams struct {
-	Email     string `db:"email"`
-	Password  string `db:"password"`
-	Nickname  string `db:"nickname"`
-	CreatedAt string `db:"created_at"`
-	UpdatedAt string `db:"updated_at"`
+	Email     string `db:"email" json:"email"`
+	Password  string `db:"password" json:"password"`
+	Nickname  string `db:"nickname" json:"nickname"`
+	CreatedAt string `db:"created_at" json:"created_at"`
+	UpdatedAt string `db:"updated_at" json:"updated_at"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (string, error) {
@@ -121,8 +121,8 @@ WHERE id = ?
 `
 
 type LockUserTOTPParams struct {
-	UpdatedAt string `db:"updated_at"`
-	ID        string `db:"id"`
+	UpdatedAt string `db:"updated_at" json:"updated_at"`
+	ID        string `db:"id" json:"id"`
 }
 
 func (q *Queries) LockUserTOTP(ctx context.Context, arg LockUserTOTPParams) error {
@@ -139,8 +139,8 @@ WHERE id = ?
 `
 
 type RemoveUserTOTPSecretParams struct {
-	UpdatedAt string `db:"updated_at"`
-	ID        string `db:"id"`
+	UpdatedAt string `db:"updated_at" json:"updated_at"`
+	ID        string `db:"id" json:"id"`
 }
 
 func (q *Queries) RemoveUserTOTPSecret(ctx context.Context, arg RemoveUserTOTPSecretParams) error {
@@ -153,9 +153,9 @@ UPDATE users SET email_verified = ?, updated_at = ? WHERE id = ?
 `
 
 type SetUserEmailVerifiedStatusParams struct {
-	EmailVerified bool   `db:"email_verified"`
-	UpdatedAt     string `db:"updated_at"`
-	ID            string `db:"id"`
+	EmailVerified bool   `db:"email_verified" json:"email_verified"`
+	UpdatedAt     string `db:"updated_at" json:"updated_at"`
+	ID            string `db:"id" json:"id"`
 }
 
 func (q *Queries) SetUserEmailVerifiedStatus(ctx context.Context, arg SetUserEmailVerifiedStatusParams) error {
@@ -171,9 +171,9 @@ WHERE id = ?
 `
 
 type SetUserTOTPSecretParams struct {
-	TotpSecret *string `db:"totp_secret"`
-	UpdatedAt  string  `db:"updated_at"`
-	ID         string  `db:"id"`
+	TotpSecret *string `db:"totp_secret" json:"totp_secret"`
+	UpdatedAt  string  `db:"updated_at" json:"updated_at"`
+	ID         string  `db:"id" json:"id"`
 }
 
 func (q *Queries) SetUserTOTPSecret(ctx context.Context, arg SetUserTOTPSecretParams) error {

@@ -15,8 +15,8 @@ WHERE user_id = ? AND code = ?
 `
 
 type GetRecoveryCodeParams struct {
-	UserID string `db:"user_id"`
-	Code   string `db:"code"`
+	UserID string `db:"user_id" json:"user_id"`
+	Code   string `db:"code" json:"code"`
 }
 
 func (q *Queries) GetRecoveryCode(ctx context.Context, arg GetRecoveryCodeParams) (TotpRecoveryCode, error) {
@@ -46,14 +46,14 @@ VALUES
 `
 
 type NewRecoveryCodesParams struct {
-	UserID    string `db:"user_id"`
-	CreatedAt string `db:"created_at"`
-	Code      string `db:"code"`
-	Code_2    string `db:"code_2"`
-	Code_3    string `db:"code_3"`
-	Code_4    string `db:"code_4"`
-	Code_5    string `db:"code_5"`
-	Code_6    string `db:"code_6"`
+	UserID    string `db:"user_id" json:"user_id"`
+	CreatedAt string `db:"created_at" json:"created_at"`
+	Code      string `db:"code" json:"code"`
+	Code_2    string `db:"code_2" json:"code_2"`
+	Code_3    string `db:"code_3" json:"code_3"`
+	Code_4    string `db:"code_4" json:"code_4"`
+	Code_5    string `db:"code_5" json:"code_5"`
+	Code_6    string `db:"code_6" json:"code_6"`
 }
 
 func (q *Queries) NewRecoveryCodes(ctx context.Context, arg NewRecoveryCodesParams) error {
@@ -85,8 +85,8 @@ UPDATE totp_recovery_codes SET used = true WHERE user_id = ? AND code = ?
 `
 
 type UseRecoveryCodeParams struct {
-	UserID string `db:"user_id"`
-	Code   string `db:"code"`
+	UserID string `db:"user_id" json:"user_id"`
+	Code   string `db:"code" json:"code"`
 }
 
 func (q *Queries) UseRecoveryCode(ctx context.Context, arg UseRecoveryCodeParams) error {

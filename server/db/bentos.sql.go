@@ -15,11 +15,11 @@ VALUES (?, ?, ?, ?, ?)
 `
 
 type AddIngredientToBentoParams struct {
-	BentoID   string `db:"bento_id"`
-	Name      string `db:"name"`
-	Value     []byte `db:"value"`
-	CreatedAt string `db:"created_at"`
-	UpdatedAt string `db:"updated_at"`
+	BentoID   string `db:"bento_id" json:"bento_id"`
+	Name      string `db:"name" json:"name"`
+	Value     []byte `db:"value" json:"value"`
+	CreatedAt string `db:"created_at" json:"created_at"`
+	UpdatedAt string `db:"updated_at" json:"updated_at"`
 }
 
 func (q *Queries) AddIngredientToBento(ctx context.Context, arg AddIngredientToBentoParams) error {
@@ -38,8 +38,8 @@ SELECT EXISTS(SELECT 1 FROM bentos WHERE name = ? AND user_id = ?)
 `
 
 type ExistsBentoWithNameOwnedByUserParams struct {
-	Name   string `db:"name"`
-	UserID string `db:"user_id"`
+	Name   string `db:"name" json:"name"`
+	UserID string `db:"user_id" json:"user_id"`
 }
 
 func (q *Queries) ExistsBentoWithNameOwnedByUser(ctx context.Context, arg ExistsBentoWithNameOwnedByUserParams) (int64, error) {
@@ -49,13 +49,81 @@ func (q *Queries) ExistsBentoWithNameOwnedByUser(ctx context.Context, arg Exists
 	return column_1, err
 }
 
+const getBentoByIDWithPermissions = `-- name: GetBentoByIDWithPermissions :one
+SELECT b.id, b.user_id, b.name, b.created_at, b.updated_at, p.bytes FROM bentos b
+LEFT JOIN bento_permissions p ON p.user_id = ? AND p.bento_id = b.id
+WHERE b.id = ?
+`
+
+type GetBentoByIDWithPermissionsParams struct {
+	UserID string `db:"user_id" json:"user_id"`
+	ID     string `db:"id" json:"id"`
+}
+
+type GetBentoByIDWithPermissionsRow struct {
+	ID        string `db:"id" json:"id"`
+	UserID    string `db:"user_id" json:"user_id"`
+	Name      string `db:"name" json:"name"`
+	CreatedAt string `db:"created_at" json:"created_at"`
+	UpdatedAt string `db:"updated_at" json:"updated_at"`
+	Bytes     []byte `db:"bytes" json:"bytes"`
+}
+
+func (q *Queries) GetBentoByIDWithPermissions(ctx context.Context, arg GetBentoByIDWithPermissionsParams) (GetBentoByIDWithPermissionsRow, error) {
+	row := q.db.QueryRowContext(ctx, getBentoByIDWithPermissions, arg.UserID, arg.ID)
+	var i GetBentoByIDWithPermissionsRow
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Name,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Bytes,
+	)
+	return i, err
+}
+
+const getBentoIngredients = `-- name: GetBentoIngredients :many
+SELECT id, name, value FROM bento_ingredients
+WHERE bento_id = ?
+`
+
+type GetBentoIngredientsRow struct {
+	ID    string `db:"id" json:"id"`
+	Name  string `db:"name" json:"name"`
+	Value []byte `db:"value" json:"value"`
+}
+
+func (q *Queries) GetBentoIngredients(ctx context.Context, bentoID string) ([]GetBentoIngredientsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getBentoIngredients, bentoID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetBentoIngredientsRow
+	for rows.Next() {
+		var i GetBentoIngredientsRow
+		if err := rows.Scan(&i.ID, &i.Name, &i.Value); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getBentoWithIDOwnedByUser = `-- name: GetBentoWithIDOwnedByUser :one
 SELECT id, user_id, name, created_at, updated_at FROM bentos WHERE id = ? AND user_id = ?
 `
 
 type GetBentoWithIDOwnedByUserParams struct {
-	ID     string `db:"id"`
-	UserID string `db:"user_id"`
+	ID     string `db:"id" json:"id"`
+	UserID string `db:"user_id" json:"user_id"`
 }
 
 func (q *Queries) GetBentoWithIDOwnedByUser(ctx context.Context, arg GetBentoWithIDOwnedByUserParams) (Bento, error) {
@@ -77,10 +145,10 @@ VALUES (?, ?, ?, ?) RETURNING id
 `
 
 type NewBentoParams struct {
-	UserID    string `db:"user_id"`
-	Name      string `db:"name"`
-	CreatedAt string `db:"created_at"`
-	UpdatedAt string `db:"updated_at"`
+	UserID    string `db:"user_id" json:"user_id"`
+	Name      string `db:"name" json:"name"`
+	CreatedAt string `db:"created_at" json:"created_at"`
+	UpdatedAt string `db:"updated_at" json:"updated_at"`
 }
 
 func (q *Queries) NewBento(ctx context.Context, arg NewBentoParams) (string, error) {
@@ -100,8 +168,8 @@ DELETE FROM bento_ingredients WHERE bento_id = ? AND id = ?
 `
 
 type RemoveIngredientFromBentoParams struct {
-	BentoID string `db:"bento_id"`
-	ID      string `db:"id"`
+	BentoID string `db:"bento_id" json:"bento_id"`
+	ID      string `db:"id" json:"id"`
 }
 
 func (q *Queries) RemoveIngredientFromBento(ctx context.Context, arg RemoveIngredientFromBentoParams) (int64, error) {
@@ -121,11 +189,11 @@ ON CONFLICT DO UPDATE SET
 `
 
 type SetBentoIngredientParams struct {
-	BentoID   string `db:"bento_id"`
-	Name      string `db:"name"`
-	Value     []byte `db:"value"`
-	CreatedAt string `db:"created_at"`
-	UpdatedAt string `db:"updated_at"`
+	BentoID   string `db:"bento_id" json:"bento_id"`
+	Name      string `db:"name" json:"name"`
+	Value     []byte `db:"value" json:"value"`
+	CreatedAt string `db:"created_at" json:"created_at"`
+	UpdatedAt string `db:"updated_at" json:"updated_at"`
 }
 
 func (q *Queries) SetBentoIngredient(ctx context.Context, arg SetBentoIngredientParams) error {

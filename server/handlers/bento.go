@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
+	"github.com/rs/zerolog/log"
 )
 
 type ingredient struct {
@@ -327,7 +328,83 @@ func RemoveIngredientsFromBento(cnt *db.DBConnector) echo.HandlerFunc {
 }
 
 // GetBento gets the bento info and ingridients
-func GetBento() {}
+func GetBento(cnt *db.DBConnector) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		bentoID := c.QueryParam("bento_id")
+		if bentoID == "" {
+			return APIError{
+				Code:          http.StatusBadRequest,
+				PublicMessage: "Missing bento_id query parameter.",
+			}
+		}
+
+		user, err := middlewares.GetUser(c)
+		if err != nil {
+			return err
+		}
+
+		logger := middlewares.GetLogger(c)
+
+		ctx, cancel := context.WithTimeout(c.Request().Context(), time.Second*5)
+		defer cancel()
+
+		conn, err := cnt.Connect()
+		if err != nil {
+			return err
+		}
+		defer conn.Close()
+
+		q := db.New(conn)
+
+		bento, err := q.GetBentoByIDWithPermissions(
+			ctx,
+			db.GetBentoByIDWithPermissionsParams{
+				UserID: user.ID,
+				ID:     bentoID,
+			},
+		)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return APIError{
+					Code:          http.StatusNotFound,
+					PublicMessage: "Bento not found",
+					InternalError: err,
+				}
+			}
+			return err
+		}
+
+		// check if they have permission to read the bento
+		log.Debug().Int("len", len(bento.Bytes)).Send()
+		u64Perms, err := permission.FromBytes(bento.Bytes)
+		if err != nil {
+			return err
+		}
+		if u64Perms&permission.Read == 0 {
+			logger.Debug().Uint64("perms", u64Perms).Send()
+			return APIError{
+				Code:           http.StatusNotFound,
+				PublicMessage:  "Bento not found",
+				PrivateMessage: "No permissions to read bento",
+			}
+		}
+
+		// get bento ingredients
+		rows, err := q.GetBentoIngredients(
+			ctx,
+			bento.ID,
+		)
+		if err != nil && err != sql.ErrNoRows {
+			return err
+		}
+
+		return c.JSON(http.StatusOK, map[string]interface{}{
+			"bento_id":    bento.ID,
+			"name":        bento.Name,
+			"ingredients": rows,
+		})
+	}
+}
 
 // GetBentoMetadata gets the metadata bento information
 // - id

@@ -5,106 +5,106 @@
 package db
 
 type AccessLog struct {
-	ID           string      `db:"id"`
-	UserID       *string     `db:"user_id"`
-	BentoID      *string     `db:"bento_id"`
-	GroupID      *string     `db:"group_id"`
-	BentoTokenID *string     `db:"bento_token_id"`
-	Action       string      `db:"action"`
-	Details      interface{} `db:"details"`
-	AccessedAt   string      `db:"accessed_at"`
+	ID           string      `db:"id" json:"id"`
+	UserID       *string     `db:"user_id" json:"user_id"`
+	BentoID      *string     `db:"bento_id" json:"bento_id"`
+	GroupID      *string     `db:"group_id" json:"group_id"`
+	BentoTokenID *string     `db:"bento_token_id" json:"bento_token_id"`
+	Action       string      `db:"action" json:"action"`
+	Details      interface{} `db:"details" json:"details"`
+	AccessedAt   string      `db:"accessed_at" json:"accessed_at"`
 }
 
 type AuthToken struct {
-	ID        string `db:"id"`
-	UserID    string `db:"user_id"`
-	CreatedAt string `db:"created_at"`
-	ExpiresAt string `db:"expires_at"`
-	TokenType string `db:"token_type"`
+	ID        string `db:"id" json:"id"`
+	UserID    string `db:"user_id" json:"user_id"`
+	CreatedAt string `db:"created_at" json:"created_at"`
+	ExpiresAt string `db:"expires_at" json:"expires_at"`
+	TokenType string `db:"token_type" json:"token_type"`
 }
 
 type Bento struct {
-	ID        string `db:"id"`
-	UserID    string `db:"user_id"`
-	Name      string `db:"name"`
-	CreatedAt string `db:"created_at"`
-	UpdatedAt string `db:"updated_at"`
+	ID        string `db:"id" json:"id"`
+	UserID    string `db:"user_id" json:"user_id"`
+	Name      string `db:"name" json:"name"`
+	CreatedAt string `db:"created_at" json:"created_at"`
+	UpdatedAt string `db:"updated_at" json:"updated_at"`
 }
 
 type BentoIngredient struct {
-	ID        string `db:"id"`
-	BentoID   string `db:"bento_id"`
-	Name      string `db:"name"`
-	Value     []byte `db:"value"`
-	CreatedAt string `db:"created_at"`
-	UpdatedAt string `db:"updated_at"`
+	ID        string `db:"id" json:"id"`
+	BentoID   string `db:"bento_id" json:"bento_id"`
+	Name      string `db:"name" json:"name"`
+	Value     []byte `db:"value" json:"value"`
+	CreatedAt string `db:"created_at" json:"created_at"`
+	UpdatedAt string `db:"updated_at" json:"updated_at"`
 }
 
 type BentoPermission struct {
-	UserID    string `db:"user_id"`
-	BentoID   string `db:"bento_id"`
-	Bytes     []byte `db:"bytes"`
-	CreatedAt string `db:"created_at"`
-	UpdatedAt string `db:"updated_at"`
+	UserID    string `db:"user_id" json:"user_id"`
+	BentoID   string `db:"bento_id" json:"bento_id"`
+	Bytes     []byte `db:"bytes" json:"bytes"`
+	CreatedAt string `db:"created_at" json:"created_at"`
+	UpdatedAt string `db:"updated_at" json:"updated_at"`
 }
 
 type BentoToken struct {
-	ID         string  `db:"id"`
-	BentoID    string  `db:"bento_id"`
-	TokenSalt  []byte  `db:"token_salt"`
-	CreatedBy  string  `db:"created_by"`
-	CreatedAt  string  `db:"created_at"`
-	LastUsedAt *string `db:"last_used_at"`
-	ExpiresAt  *string `db:"expires_at"`
+	ID         string  `db:"id" json:"id"`
+	BentoID    string  `db:"bento_id" json:"bento_id"`
+	TokenSalt  []byte  `db:"token_salt" json:"token_salt"`
+	CreatedBy  string  `db:"created_by" json:"created_by"`
+	CreatedAt  string  `db:"created_at" json:"created_at"`
+	LastUsedAt *string `db:"last_used_at" json:"last_used_at"`
+	ExpiresAt  *string `db:"expires_at" json:"expires_at"`
 }
 
 type Group struct {
-	ID        string `db:"id"`
-	Name      string `db:"name"`
-	OwnerID   string `db:"owner_id"`
-	CreatedAt string `db:"created_at"`
-	UpdatedAt string `db:"updated_at"`
+	ID        string `db:"id" json:"id"`
+	Name      string `db:"name" json:"name"`
+	OwnerID   string `db:"owner_id" json:"owner_id"`
+	CreatedAt string `db:"created_at" json:"created_at"`
+	UpdatedAt string `db:"updated_at" json:"updated_at"`
 }
 
 type GroupInvitation struct {
-	ID        string `db:"id"`
-	UserID    string `db:"user_id"`
-	GroupID   string `db:"group_id"`
-	CreatedAt string `db:"created_at"`
-	ExpiresAt string `db:"expires_at"`
+	ID        string `db:"id" json:"id"`
+	UserID    string `db:"user_id" json:"user_id"`
+	GroupID   string `db:"group_id" json:"group_id"`
+	CreatedAt string `db:"created_at" json:"created_at"`
+	ExpiresAt string `db:"expires_at" json:"expires_at"`
 }
 
 type GroupPermission struct {
-	GroupID   string `db:"group_id"`
-	BentoID   string `db:"bento_id"`
-	Level     int64  `db:"level"`
-	CreatedAt string `db:"created_at"`
-	UpdatedAt string `db:"updated_at"`
+	GroupID   string `db:"group_id" json:"group_id"`
+	BentoID   string `db:"bento_id" json:"bento_id"`
+	Level     int64  `db:"level" json:"level"`
+	CreatedAt string `db:"created_at" json:"created_at"`
+	UpdatedAt string `db:"updated_at" json:"updated_at"`
 }
 
 type TotpRecoveryCode struct {
-	ID        string  `db:"id"`
-	UserID    string  `db:"user_id"`
-	Code      string  `db:"code"`
-	Used      bool    `db:"used"`
-	CreatedAt string  `db:"created_at"`
-	UsedAt    *string `db:"used_at"`
+	ID        string  `db:"id" json:"id"`
+	UserID    string  `db:"user_id" json:"user_id"`
+	Code      string  `db:"code" json:"code"`
+	Used      bool    `db:"used" json:"used"`
+	CreatedAt string  `db:"created_at" json:"created_at"`
+	UsedAt    *string `db:"used_at" json:"used_at"`
 }
 
 type User struct {
-	ID            string  `db:"id"`
-	Email         string  `db:"email"`
-	Password      string  `db:"password"`
-	Nickname      string  `db:"nickname"`
-	EmailVerified bool    `db:"email_verified"`
-	TotpSecret    *string `db:"totp_secret"`
-	TotpLocked    bool    `db:"totp_locked"`
-	CreatedAt     string  `db:"created_at"`
-	UpdatedAt     string  `db:"updated_at"`
+	ID            string  `db:"id" json:"id"`
+	Email         string  `db:"email" json:"email"`
+	Password      string  `db:"password" json:"password"`
+	Nickname      string  `db:"nickname" json:"nickname"`
+	EmailVerified bool    `db:"email_verified" json:"email_verified"`
+	TotpSecret    *string `db:"totp_secret" json:"totp_secret"`
+	TotpLocked    bool    `db:"totp_locked" json:"totp_locked"`
+	CreatedAt     string  `db:"created_at" json:"created_at"`
+	UpdatedAt     string  `db:"updated_at" json:"updated_at"`
 }
 
 type UsersGroup struct {
-	UserID    string `db:"user_id"`
-	GroupID   string `db:"group_id"`
-	CreatedAt string `db:"created_at"`
+	UserID    string `db:"user_id" json:"user_id"`
+	GroupID   string `db:"group_id" json:"group_id"`
+	CreatedAt string `db:"created_at" json:"created_at"`
 }

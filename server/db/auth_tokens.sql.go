@@ -23,8 +23,8 @@ DELETE FROM auth_tokens WHERE user_id = ? AND token_type = ?
 `
 
 type DeleteAllTokensByTypeAndUserIDParams struct {
-	UserID    string `db:"user_id"`
-	TokenType string `db:"token_type"`
+	UserID    string `db:"user_id" json:"user_id"`
+	TokenType string `db:"token_type" json:"token_type"`
 }
 
 func (q *Queries) DeleteAllTokensByTypeAndUserID(ctx context.Context, arg DeleteAllTokensByTypeAndUserIDParams) error {
@@ -113,10 +113,10 @@ RETURNING id, user_id, created_at, expires_at, token_type
 `
 
 type NewAuthTokenParams struct {
-	UserID    string `db:"user_id"`
-	CreatedAt string `db:"created_at"`
-	ExpiresAt string `db:"expires_at"`
-	TokenType string `db:"token_type"`
+	UserID    string `db:"user_id" json:"user_id"`
+	CreatedAt string `db:"created_at" json:"created_at"`
+	ExpiresAt string `db:"expires_at" json:"expires_at"`
+	TokenType string `db:"token_type" json:"token_type"`
 }
 
 func (q *Queries) NewAuthToken(ctx context.Context, arg NewAuthTokenParams) (AuthToken, error) {

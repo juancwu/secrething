@@ -17,11 +17,11 @@ VALUES
 `
 
 type NewBentoPermissionParams struct {
-	UserID    string `db:"user_id"`
-	BentoID   string `db:"bento_id"`
-	Bytes     []byte `db:"bytes"`
-	CreatedAt string `db:"created_at"`
-	UpdatedAt string `db:"updated_at"`
+	UserID    string `db:"user_id" json:"user_id"`
+	BentoID   string `db:"bento_id" json:"bento_id"`
+	Bytes     []byte `db:"bytes" json:"bytes"`
+	CreatedAt string `db:"created_at" json:"created_at"`
+	UpdatedAt string `db:"updated_at" json:"updated_at"`
 }
 
 func (q *Queries) NewBentoPermission(ctx context.Context, arg NewBentoPermissionParams) error {
