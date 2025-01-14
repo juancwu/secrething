@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
-	"github.com/rs/zerolog/log"
 )
 
 type ingredient struct {
@@ -22,7 +21,7 @@ type ingredient struct {
 
 type NewBentoRequest struct {
 	Name        string       `json:"name" validate:"required,min=3,printascii"`
-	Ingredients []ingredient `json:"ingridients,omitempty" validate:"omitnil,omitempty,dive"`
+	Ingredients []ingredient `json:"ingredients,omitempty" validate:"omitnil,omitempty,dive"`
 }
 
 func NewBento(connector *db.DBConnector) echo.HandlerFunc {
@@ -94,6 +93,7 @@ func NewBento(connector *db.DBConnector) echo.HandlerFunc {
 		}
 
 		if body.Ingredients != nil && len(body.Ingredients) > 0 {
+			timestamp := utils.FormatRFC3339NanoFixed(time.Now())
 			for _, ing := range body.Ingredients {
 				err = q.AddIngredientToBento(
 					ctx,
@@ -101,8 +101,8 @@ func NewBento(connector *db.DBConnector) echo.HandlerFunc {
 						BentoID:   bentoID,
 						Name:      ing.Name,
 						Value:     []byte(ing.Value),
-						CreatedAt: utils.FormatRFC3339NanoFixed(time.Now()),
-						UpdatedAt: utils.FormatRFC3339NanoFixed(time.Now()),
+						CreatedAt: timestamp,
+						UpdatedAt: timestamp,
 					},
 				)
 				if err != nil {
@@ -113,15 +113,15 @@ func NewBento(connector *db.DBConnector) echo.HandlerFunc {
 		}
 
 		// create new bento permissions for the owner
-		now := time.Now()
+		timestamp := utils.FormatRFC3339NanoFixed(time.Now())
 		err = q.NewBentoPermission(
 			ctx,
 			db.NewBentoPermissionParams{
 				UserID:    user.ID,
 				BentoID:   bentoID,
 				Bytes:     permission.ToBytes(permission.GetBentoOwnerPermissions()),
-				CreatedAt: utils.FormatRFC3339NanoFixed(now),
-				UpdatedAt: utils.FormatRFC3339NanoFixed(now),
+				CreatedAt: timestamp,
+				UpdatedAt: timestamp,
 			},
 		)
 		if err != nil {
@@ -375,7 +375,6 @@ func GetBento(cnt *db.DBConnector) echo.HandlerFunc {
 		}
 
 		// check if they have permission to read the bento
-		log.Debug().Int("len", len(bento.Bytes)).Send()
 		u64Perms, err := permission.FromBytes(bento.Bytes)
 		if err != nil {
 			return err

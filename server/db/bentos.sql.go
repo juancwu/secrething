@@ -84,14 +84,14 @@ func (q *Queries) GetBentoByIDWithPermissions(ctx context.Context, arg GetBentoB
 }
 
 const getBentoIngredients = `-- name: GetBentoIngredients :many
-SELECT id, name, value FROM bento_ingredients
+SELECT id, name, CAST(value AS TEXT) FROM bento_ingredients
 WHERE bento_id = ?
 `
 
 type GetBentoIngredientsRow struct {
 	ID    string `db:"id" json:"id"`
 	Name  string `db:"name" json:"name"`
-	Value []byte `db:"value" json:"value"`
+	Value string `db:"value" json:"value"`
 }
 
 func (q *Queries) GetBentoIngredients(ctx context.Context, bentoID string) ([]GetBentoIngredientsRow, error) {

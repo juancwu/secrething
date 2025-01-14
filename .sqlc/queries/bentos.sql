@@ -28,5 +28,5 @@ ON CONFLICT DO UPDATE SET
     updated_at = excluded.updated_at;
 
 -- name: GetBentoIngredients :many
-SELECT id, name, value FROM bento_ingredients
+SELECT id, name, CAST(value AS TEXT) FROM bento_ingredients
 WHERE bento_id = ?;
