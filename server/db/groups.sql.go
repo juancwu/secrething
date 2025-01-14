@@ -78,6 +78,33 @@ func (q *Queries) GetGroupByIDOwendByUser(ctx context.Context, arg GetGroupByIDO
 	return i, err
 }
 
+const getGroupIDsWithBentoAccess = `-- name: GetGroupIDsWithBentoAccess :many
+SELECT group_id FROM group_permissions WHERE bento_id = ?
+`
+
+func (q *Queries) GetGroupIDsWithBentoAccess(ctx context.Context, bentoID string) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, getGroupIDsWithBentoAccess, bentoID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var group_id string
+		if err := rows.Scan(&group_id); err != nil {
+			return nil, err
+		}
+		items = append(items, group_id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getGroupInvitationByID = `-- name: GetGroupInvitationByID :one
 SELECT id, user_id, group_id, created_at, expires_at FROM group_invitations WHERE id = ?
 `

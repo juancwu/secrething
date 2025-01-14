@@ -30,3 +30,6 @@ ON CONFLICT DO UPDATE SET
 -- name: GetBentoIngredients :many
 SELECT id, name, CAST(value AS TEXT) FROM bento_ingredients
 WHERE bento_id = ?;
+
+-- name: GetBentoIngredientIDsInBento :many
+SELECT id FROM bento_ingredients WHERE bento_id = ?;

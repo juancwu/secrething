@@ -32,3 +32,6 @@ SELECT * FROM group_invitations WHERE id = ?;
 
 -- name: RemoveGroupInvitationByID :exec
 DELETE FROM group_invitations WHERE id = ?;
+
+-- name: GetGroupIDsWithBentoAccess :many
+SELECT group_id FROM group_permissions WHERE bento_id = ?;

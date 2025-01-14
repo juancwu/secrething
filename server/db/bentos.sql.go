@@ -83,6 +83,33 @@ func (q *Queries) GetBentoByIDWithPermissions(ctx context.Context, arg GetBentoB
 	return i, err
 }
 
+const getBentoIngredientIDsInBento = `-- name: GetBentoIngredientIDsInBento :many
+SELECT id FROM bento_ingredients WHERE bento_id = ?
+`
+
+func (q *Queries) GetBentoIngredientIDsInBento(ctx context.Context, bentoID string) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, getBentoIngredientIDsInBento, bentoID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getBentoIngredients = `-- name: GetBentoIngredients :many
 SELECT id, name, CAST(value AS TEXT) FROM bento_ingredients
 WHERE bento_id = ?

@@ -405,6 +405,22 @@ func GetBento(cnt *db.DBConnector) echo.HandlerFunc {
 	}
 }
 
+type bentoMetadata struct {
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	OwnerID   string `json:"owner_id"`
+	CreatedAt string `json:"created_at"`
+	UpdatedAt string `json:"updated_at"`
+}
+
+type bentoMetadataExtended struct {
+	bentoMetadata
+
+	IngredientIDs    []string `json:"ingredient_ids"`
+	UsersWithAccess  []string `json:"users_with_access"`
+	GroupsWithAccess []string `json:"groups_with_access"`
+}
+
 // GetBentoMetadata gets the metadata bento information
 // - id
 // - owner id
@@ -412,11 +428,100 @@ func GetBento(cnt *db.DBConnector) echo.HandlerFunc {
 // - created at
 // - updated at
 //
-// Extended metadata based on the query parameter "version=extended"
+// Extended metadata based on the query parameter "extended=true"
 // - ingridient_count
 // - users_with_access
 // - groups-with_access
-func GetBentoMetadata() {}
+func GetBentoMetadata(cnt *db.DBConnector) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		bentoID := c.QueryParam("bento_id")
+		if bentoID == "" {
+			return APIError{
+				Code:          http.StatusBadRequest,
+				PublicMessage: "Missing bento_id query parameter.",
+			}
+		}
+
+		user, err := middlewares.GetUser(c)
+		if err != nil {
+			return err
+		}
+
+		ctx, cancel := context.WithTimeout(c.Request().Context(), FiveSeconds)
+		defer cancel()
+
+		conn, err := cnt.Connect()
+		if err != nil {
+			return err
+		}
+		defer conn.Close()
+
+		q := db.New(conn)
+
+		bento, err := q.GetBentoByIDWithPermissions(
+			ctx,
+			db.GetBentoByIDWithPermissionsParams{
+				UserID: user.ID,
+				ID:     bentoID,
+			},
+		)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return APIError{
+					Code:          http.StatusNotFound,
+					PublicMessage: "No bento found.",
+					InternalError: err,
+				}
+			}
+			return err
+		}
+
+		u64Perms, err := permission.FromBytes(bento.Bytes)
+		if err != nil {
+			return err
+		}
+		if u64Perms&permission.Read == 0 {
+			return APIError{
+				Code:           http.StatusNotFound,
+				PublicMessage:  "No bento found.",
+				PrivateMessage: "No permission to read bento",
+			}
+		}
+
+		metadata := bentoMetadata{
+			ID:        bento.ID,
+			Name:      bento.Name,
+			OwnerID:   bento.UserID,
+			CreatedAt: bento.CreatedAt,
+			UpdatedAt: bento.UpdatedAt,
+		}
+
+		if c.QueryParam("extended") == "true" {
+			ingIDs, err := q.GetBentoIngredientIDsInBento(ctx, bento.ID)
+			if err != nil {
+				return err
+			}
+			users, err := q.GetUserIDsWithBentoAccess(ctx, bento.ID)
+			if err != nil {
+				return err
+			}
+			groups, err := q.GetGroupIDsWithBentoAccess(ctx, bento.ID)
+			if err != nil {
+				return err
+			}
+			extMetadata := bentoMetadataExtended{
+				bentoMetadata:    metadata,
+				IngredientIDs:    ingIDs,
+				UsersWithAccess:  users,
+				GroupsWithAccess: groups,
+			}
+
+			return c.JSON(http.StatusOK, extMetadata)
+		}
+
+		return c.JSON(http.StatusOK, metadata)
+	}
+}
 
 // ListBentos gets a list of all the user's bentos. The list only contains
 // basic information of the bentos, the same as the non-extended version of the metadata.

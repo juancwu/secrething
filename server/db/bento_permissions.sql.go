@@ -9,6 +9,33 @@ import (
 	"context"
 )
 
+const getUserIDsWithBentoAccess = `-- name: GetUserIDsWithBentoAccess :many
+SELECT user_id FROM bento_permissions WHERE bento_id = ?
+`
+
+func (q *Queries) GetUserIDsWithBentoAccess(ctx context.Context, bentoID string) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, getUserIDsWithBentoAccess, bentoID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var user_id string
+		if err := rows.Scan(&user_id); err != nil {
+			return nil, err
+		}
+		items = append(items, user_id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const newBentoPermission = `-- name: NewBentoPermission :exec
 INSERT INTO bento_permissions
 (user_id, bento_id, bytes, created_at, updated_at)
