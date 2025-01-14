@@ -43,7 +43,7 @@ type BentoIngredient struct {
 type BentoPermission struct {
 	UserID    string `db:"user_id"`
 	BentoID   string `db:"bento_id"`
-	Level     int64  `db:"level"`
+	Bytes     []byte `db:"bytes"`
 	CreatedAt string `db:"created_at"`
 	UpdatedAt string `db:"updated_at"`
 }
