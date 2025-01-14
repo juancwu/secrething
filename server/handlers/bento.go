@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"konbini/server/db"
 	"konbini/server/middlewares"
+	"konbini/server/permission"
 	"konbini/server/utils"
 	"net/http"
 	"time"
@@ -40,6 +41,8 @@ func NewBento(connector *db.DBConnector) echo.HandlerFunc {
 		if err != nil {
 			return err
 		}
+
+		logger := middlewares.GetLogger(c)
 
 		// shouldn't take more than 5 seconds to run
 		ctx, cancel := context.WithTimeout(c.Request().Context(), time.Second*5)
@@ -85,7 +88,7 @@ func NewBento(connector *db.DBConnector) echo.HandlerFunc {
 			},
 		)
 		if err != nil {
-			tx.Rollback()
+			db.RollabackWithLog(tx, logger)
 			return err
 		}
 
@@ -102,15 +105,32 @@ func NewBento(connector *db.DBConnector) echo.HandlerFunc {
 					},
 				)
 				if err != nil {
-					tx.Rollback()
+					db.RollabackWithLog(tx, logger)
 					return err
 				}
 			}
 		}
 
+		// create new bento permissions for the owner
+		now := time.Now()
+		err = q.NewBentoPermission(
+			ctx,
+			db.NewBentoPermissionParams{
+				UserID:    user.ID,
+				BentoID:   bentoID,
+				Bytes:     permission.ToBytes(permission.GetBentoOwnerPermissions()),
+				CreatedAt: utils.FormatRFC3339NanoFixed(now),
+				UpdatedAt: utils.FormatRFC3339NanoFixed(now),
+			},
+		)
+		if err != nil {
+			db.RollabackWithLog(tx, logger)
+			return err
+		}
+
 		err = tx.Commit()
 		if err != nil {
-			tx.Rollback()
+			db.RollabackWithLog(tx, logger)
 			return err
 		}
 

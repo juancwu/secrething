@@ -1,5 +1,10 @@
 package permission
 
+import (
+	"encoding/binary"
+	"errors"
+)
+
 const (
 	// NoOp just means no bit set for any permission. Useful for clearing permission.
 	NoOp uint64 = 0
@@ -46,3 +51,26 @@ const (
 	// GroupOwner is the ultimate permission level for a group.
 	GroupOwner uint64 = 1 << 62
 )
+
+// GetBentoOwnerPermissions gets the combination of bits that an owner of a bento would have.
+func GetBentoOwnerPermissions() uint64 {
+	return Owner | WriteName | WriteIngredientName | WriteIngredientValue | Read | Delete | DeleteIngredient | AddGroup | Admin
+}
+
+// ToBytes transform a uint64 into bytes
+func ToBytes(permission uint64) []byte {
+	b := make([]byte, 8)
+	binary.BigEndian.AppendUint64(b, permission)
+	return b
+}
+
+// FromBytes transform bytes into uint64
+func FromBytes(permission []byte) (uint64, error) {
+	if len(permission) != 8 {
+		return 0, errors.New("Invalid permission bytes length")
+	}
+
+	p := binary.BigEndian.Uint64(permission)
+
+	return p, nil
+}
