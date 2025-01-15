@@ -3,6 +3,7 @@ package permission
 import (
 	"encoding/binary"
 	"errors"
+	"strings"
 )
 
 const (
@@ -76,4 +77,65 @@ func FromBytes(permission []byte) (uint64, error) {
 	p := binary.BigEndian.Uint64(permission)
 
 	return p, nil
+}
+
+// BytesToString transforms permissions bytes into string representation of all the
+// permissions in the bytes.
+func BytesToString(perms []byte) (string, error) {
+	if perms == nil {
+		return "no_op;", nil
+	}
+
+	i, err := FromBytes(perms)
+	if err != nil {
+		return "", err
+	}
+
+	if i == NoOp {
+		return "no_op;", nil
+	}
+
+	var builder strings.Builder
+
+	if i&Read != 0 {
+		builder.WriteString("read;")
+	}
+	if i&WriteName != 0 {
+		builder.WriteString("write_name;")
+	}
+	if i&WriteIngredientName != 0 {
+		builder.WriteString("write_ingredient_name;")
+	}
+	if i&WriteIngredientValue != 0 {
+		builder.WriteString("write_ingredient_value;")
+	}
+	if i&DeleteIngredient != 0 {
+		builder.WriteString("delete_ingredient;")
+	}
+	if i&Delete != 0 {
+		builder.WriteString("delete;")
+	}
+	if i&Admin != 0 {
+		builder.WriteString("admin;")
+	}
+	if i&AddGroup != 0 {
+		builder.WriteString("add_group;")
+	}
+	if i&Owner != 0 {
+		builder.WriteString("owner;")
+	}
+	if i&AddUserToGroup != 0 {
+		builder.WriteString("add_user_to_group;")
+	}
+	if i&DeleteUserFromGroup != 0 {
+		builder.WriteString("delete_user_from_group;")
+	}
+	if i&GroupAdmin != 0 {
+		builder.WriteString("group_admin;")
+	}
+	if i&GroupOwner != 0 {
+		builder.WriteString("group_owner;")
+	}
+
+	return builder.String(), nil
 }
