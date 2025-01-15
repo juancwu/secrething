@@ -79,22 +79,27 @@ func (q *Queries) GetGroupByIDOwendByUser(ctx context.Context, arg GetGroupByIDO
 }
 
 const getGroupIDsWithBentoAccess = `-- name: GetGroupIDsWithBentoAccess :many
-SELECT group_id FROM group_permissions WHERE bento_id = ?
+SELECT group_id, bytes FROM group_permissions WHERE bento_id = ?
 `
 
-func (q *Queries) GetGroupIDsWithBentoAccess(ctx context.Context, bentoID string) ([]string, error) {
+type GetGroupIDsWithBentoAccessRow struct {
+	GroupID string `db:"group_id" json:"group_id"`
+	Bytes   []byte `db:"bytes" json:"bytes"`
+}
+
+func (q *Queries) GetGroupIDsWithBentoAccess(ctx context.Context, bentoID string) ([]GetGroupIDsWithBentoAccessRow, error) {
 	rows, err := q.db.QueryContext(ctx, getGroupIDsWithBentoAccess, bentoID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []string
+	var items []GetGroupIDsWithBentoAccessRow
 	for rows.Next() {
-		var group_id string
-		if err := rows.Scan(&group_id); err != nil {
+		var i GetGroupIDsWithBentoAccessRow
+		if err := rows.Scan(&i.GroupID, &i.Bytes); err != nil {
 			return nil, err
 		}
-		items = append(items, group_id)
+		items = append(items, i)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err

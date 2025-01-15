@@ -5,4 +5,4 @@ VALUES
 (?, ?, ?, ?, ?);
 
 -- name: GetUserIDsWithBentoAccess :many
-SELECT user_id FROM bento_permissions WHERE bento_id = ?;
+SELECT user_id, bytes FROM bento_permissions WHERE bento_id = ?;

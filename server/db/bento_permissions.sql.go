@@ -10,22 +10,27 @@ import (
 )
 
 const getUserIDsWithBentoAccess = `-- name: GetUserIDsWithBentoAccess :many
-SELECT user_id FROM bento_permissions WHERE bento_id = ?
+SELECT user_id, bytes FROM bento_permissions WHERE bento_id = ?
 `
 
-func (q *Queries) GetUserIDsWithBentoAccess(ctx context.Context, bentoID string) ([]string, error) {
+type GetUserIDsWithBentoAccessRow struct {
+	UserID string `db:"user_id" json:"user_id"`
+	Bytes  []byte `db:"bytes" json:"bytes"`
+}
+
+func (q *Queries) GetUserIDsWithBentoAccess(ctx context.Context, bentoID string) ([]GetUserIDsWithBentoAccessRow, error) {
 	rows, err := q.db.QueryContext(ctx, getUserIDsWithBentoAccess, bentoID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []string
+	var items []GetUserIDsWithBentoAccessRow
 	for rows.Next() {
-		var user_id string
-		if err := rows.Scan(&user_id); err != nil {
+		var i GetUserIDsWithBentoAccessRow
+		if err := rows.Scan(&i.UserID, &i.Bytes); err != nil {
 			return nil, err
 		}
-		items = append(items, user_id)
+		items = append(items, i)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err
