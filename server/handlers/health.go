@@ -17,10 +17,10 @@ type HealthReport struct {
 	DatabaseConnectionStatus string `json:"database_connection_status"`
 }
 
-// HandleHealthCheck handles health check requests.
+// HealthCheck handles health check requests.
 // It gets the current running version of the app.
 // It gets the database connection status.
-func HandleHealthCheck(cfg *config.Config, connector *db.DBConnector) echo.HandlerFunc {
+func HealthCheck(cfg *config.Config, connector *db.DBConnector) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		conn, err := connector.Connect()
 		if err != nil {
