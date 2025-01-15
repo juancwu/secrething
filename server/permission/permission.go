@@ -66,6 +66,9 @@ func ToBytes(permission uint64) []byte {
 
 // FromBytes transform bytes into uint64
 func FromBytes(permission []byte) (uint64, error) {
+	if permission == nil {
+		return 0, errors.New("Cannot scan Nil bytes")
+	}
 	if len(permission) != 8 {
 		return 0, errors.New("Invalid permission bytes length")
 	}
