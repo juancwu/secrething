@@ -27,7 +27,7 @@ func main() {
 	e.Validator = &cv
 
 	// set global error handler
-	e.HTTPErrorHandler = handlers.HandleErrors()
+	e.HTTPErrorHandler = handlers.ErrorHandler()
 
 	// v1 routes
 	apiV1 := e.Group("/api/v1")

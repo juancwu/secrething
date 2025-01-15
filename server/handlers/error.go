@@ -29,7 +29,7 @@ func (e APIError) Error() string {
 	)
 }
 
-func HandleErrors() echo.HTTPErrorHandler {
+func ErrorHandler() echo.HTTPErrorHandler {
 	return func(err error, c echo.Context) {
 		var apiError APIError
 		switch err.(type) {
