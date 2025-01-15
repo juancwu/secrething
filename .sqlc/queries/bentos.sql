@@ -33,3 +33,10 @@ WHERE bento_id = ?;
 
 -- name: GetBentoIngredientIDsInBento :many
 SELECT id FROM bento_ingredients WHERE bento_id = ?;
+
+-- name: ListBentosWithAccess :many
+SELECT b.user_id as owner_id, b.id as bento_id, b.name as bento_name, b.created_at, b.updated_at, p.bytes as user_perms, g.bytes as group_perms FROM bentos b
+LEFT JOIN bento_permissions p ON p.bento_id = b.id AND p.user_id = ?1
+LEFT JOIN users_groups ug ON  ug.user_id = ?1
+LEFT JOIN group_permissions g ON g.bento_id = b.id AND g.group_id = ug.group_id
+WHERE b.user_id = ?1;

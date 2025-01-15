@@ -166,6 +166,55 @@ func (q *Queries) GetBentoWithIDOwnedByUser(ctx context.Context, arg GetBentoWit
 	return i, err
 }
 
+const listBentosWithAccess = `-- name: ListBentosWithAccess :many
+SELECT b.user_id as owner_id, b.id as bento_id, b.name as bento_name, b.created_at, b.updated_at, p.bytes as user_perms, g.bytes as group_perms FROM bentos b
+LEFT JOIN bento_permissions p ON p.bento_id = b.id AND p.user_id = ?1
+LEFT JOIN users_groups ug ON  ug.user_id = ?1
+LEFT JOIN group_permissions g ON g.bento_id = b.id AND g.group_id = ug.group_id
+WHERE b.user_id = ?1
+`
+
+type ListBentosWithAccessRow struct {
+	OwnerID    string `db:"owner_id" json:"owner_id"`
+	BentoID    string `db:"bento_id" json:"bento_id"`
+	BentoName  string `db:"bento_name" json:"bento_name"`
+	CreatedAt  string `db:"created_at" json:"created_at"`
+	UpdatedAt  string `db:"updated_at" json:"updated_at"`
+	UserPerms  []byte `db:"user_perms" json:"user_perms"`
+	GroupPerms []byte `db:"group_perms" json:"group_perms"`
+}
+
+func (q *Queries) ListBentosWithAccess(ctx context.Context, userID string) ([]ListBentosWithAccessRow, error) {
+	rows, err := q.db.QueryContext(ctx, listBentosWithAccess, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListBentosWithAccessRow
+	for rows.Next() {
+		var i ListBentosWithAccessRow
+		if err := rows.Scan(
+			&i.OwnerID,
+			&i.BentoID,
+			&i.BentoName,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.UserPerms,
+			&i.GroupPerms,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const newBento = `-- name: NewBento :one
 INSERT INTO bentos (user_id, name, created_at, updated_at)
 VALUES (?, ?, ?, ?) RETURNING id

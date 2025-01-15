@@ -537,6 +537,62 @@ func GetBentoMetadata(cnt *db.DBConnector) echo.HandlerFunc {
 	}
 }
 
+type ListBentosResponse struct {
+	OwnerID    string `json:"owner_id"`
+	BentoID    string `json:"bento_id"`
+	BentoName  string `json:"bento_name"`
+	CreatedAt  string `json:"created_at"`
+	UpdatedAt  string `json:"updated_at"`
+	UserPerms  string `json:"user_perms"`
+	GroupPerms string `json:"group_perms"`
+}
+
 // ListBentos gets a list of all the user's bentos. The list only contains
 // basic information of the bentos, the same as the non-extended version of the metadata.
-func ListBentos() {}
+func ListBentos(cnt *db.DBConnector) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		user, err := middlewares.GetUser(c)
+		if err != nil {
+			return err
+		}
+
+		ctx, cancel := context.WithTimeout(c.Request().Context(), FiveSeconds)
+		defer cancel()
+
+		conn, err := cnt.Connect()
+		if err != nil {
+			return err
+		}
+		defer conn.Close()
+
+		q := db.New(conn)
+
+		rows, err := q.ListBentosWithAccess(ctx, user.ID)
+		if err != nil && err != sql.ErrNoRows {
+			return err
+		}
+
+		res := make([]ListBentosResponse, len(rows))
+		for i := 0; i < len(rows); i++ {
+			uPerms, err := permission.BytesToString(rows[i].UserPerms)
+			if err != nil {
+				return err
+			}
+			gPerms, err := permission.BytesToString(rows[i].GroupPerms)
+			if err != nil {
+				return err
+			}
+			res[i] = ListBentosResponse{
+				OwnerID:    rows[i].OwnerID,
+				BentoID:    rows[i].BentoID,
+				BentoName:  rows[i].BentoName,
+				UserPerms:  uPerms,
+				GroupPerms: gPerms,
+				CreatedAt:  rows[i].CreatedAt,
+				UpdatedAt:  rows[i].UpdatedAt,
+			}
+		}
+
+		return c.JSON(http.StatusOK, res)
+	}
+}

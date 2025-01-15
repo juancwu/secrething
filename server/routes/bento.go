@@ -15,6 +15,11 @@ func setupBentoRoutes(routeConfig *RouteConfig) {
 		middlewares.ProtectFull(routeConfig.DBConnector),
 	)
 	e.GET(
+		"/bentos",
+		handlers.ListBentos(routeConfig.DBConnector),
+		middlewares.ProtectFull(routeConfig.DBConnector),
+	)
+	e.GET(
 		"/bento/metadata",
 		handlers.GetBentoMetadata(routeConfig.DBConnector),
 		middlewares.ProtectFull(routeConfig.DBConnector),

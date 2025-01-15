@@ -77,7 +77,7 @@ type GroupInvitation struct {
 type GroupPermission struct {
 	GroupID   string `db:"group_id" json:"group_id"`
 	BentoID   string `db:"bento_id" json:"bento_id"`
-	Level     int64  `db:"level" json:"level"`
+	Bytes     []byte `db:"bytes" json:"bytes"`
 	CreatedAt string `db:"created_at" json:"created_at"`
 	UpdatedAt string `db:"updated_at" json:"updated_at"`
 }
