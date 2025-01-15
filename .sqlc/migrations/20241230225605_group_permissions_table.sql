@@ -3,7 +3,7 @@
 CREATE TABLE IF NOT EXISTS group_permissions(
     group_id TEXT NOT NULL CHECK (group_id != ''),
     bento_id TEXT NOT NULL CHECK (bento_id != ''),
-    level INTEGER NOT NULL DEFAULT 0,
+    bytes BLOB NOT NULL,
     created_at TEXT NOT NULL CHECK (created_at != ''),
     updated_at TEXT NOT NULL CHECK (updated_at != ''),
     CONSTRAINT pk_group_permissions PRIMARY KEY (group_id, bento_id),
