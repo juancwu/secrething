@@ -1,7 +1,14 @@
 package main
 
-import "fmt"
+import (
+	"log"
+
+	command "konbini/cli/commands"
+)
 
 func main() {
-	fmt.Println("cli")
+	err := command.Execute()
+	if err != nil {
+		log.Fatal(err)
+	}
 }
