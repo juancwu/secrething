@@ -1,9 +1,7 @@
 package models
 
 import (
-	"fmt"
 	"konbini/cli/router"
-	"strings"
 
 	"github.com/charmbracelet/bubbles/help"
 	tea "github.com/charmbracelet/bubbletea"
@@ -126,19 +124,4 @@ func (a app) View() string {
 
 	view := a.router.CurrentModel().View()
 	return view
-}
-
-func (a *app) debug(msg tea.Msg) {
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		a.debugProfile.Input = msg.String()
-	}
-}
-
-func (a *app) debugPrint() string {
-	var builder strings.Builder
-	builder.WriteString("Debug Profile:\n")
-	builder.WriteString(fmt.Sprintf("   => Input: %s\n", a.debugProfile.Input))
-	builder.WriteString(fmt.Sprintf("   => Route History: %s\n", a.router.HistoryString()))
-	return builder.String()
 }
