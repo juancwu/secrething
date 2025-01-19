@@ -20,6 +20,11 @@ type app struct {
 
 	err error
 
+	width  int
+	height int
+
+	ready bool
+
 	debugProfile debugProfile
 	debugMode    bool
 }
@@ -41,6 +46,12 @@ func NewApp() app {
 		loginPageID,
 		func(params map[string]interface{}) tea.Model {
 			return newLoginModel()
+		},
+	)
+	r.RegisterPage(
+		registerPageID,
+		func(params map[string]interface{}) tea.Model {
+			return newRegisterModel()
 		},
 	)
 
@@ -77,6 +88,11 @@ func (a app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.router.UpdateCurrentModel(model)
 			return a, cmd
 		}
+	case tea.WindowSizeMsg:
+		a.width = msg.Width
+		a.height = msg.Height
+		a.ready = true
+		return a, nil
 	case router.NavigationMsg:
 		cmd, err := a.router.Navigate(msg.To, msg.Params)
 		if err != nil {
@@ -93,6 +109,9 @@ func (a app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // View only renders the activeModel view
 func (a app) View() string {
+	if !a.ready {
+		return "not ready"
+	}
 	var builder strings.Builder
 
 	if a.debugMode {
@@ -100,9 +119,7 @@ func (a app) View() string {
 	}
 
 	modelView := a.router.CurrentModel().View()
-	builder.WriteString(modelView + "\n")
-
-	builder.WriteString(a.help.View(a.keys))
+	builder.WriteString(modelView)
 
 	return builder.String()
 }

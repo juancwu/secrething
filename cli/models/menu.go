@@ -30,8 +30,10 @@ func (m menuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "n":
+		case "l":
 			return m, router.NewNavigationMsg(loginPageID, nil)
+		case "r":
+			return m, router.NewNavigationMsg(registerPageID, nil)
 		}
 	}
 	return m, nil
