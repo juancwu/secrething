@@ -27,6 +27,8 @@ type app struct {
 
 	debugProfile debugProfile
 	debugMode    bool
+	debugOverlay debugOverlay
+	showDebug    bool
 }
 
 type debugProfile struct {
@@ -61,6 +63,8 @@ func NewApp() app {
 		help:         help.New(),
 		debugProfile: debugProfile{},
 		debugMode:    true,
+		debugOverlay: newDebugOverlay(0, 0),
+		showDebug:    false,
 	}
 }
 
@@ -87,11 +91,15 @@ func (a app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			model, cmd := a.router.Forward()
 			a.router.UpdateCurrentModel(model)
 			return a, cmd
+		case "alt+ctrl+d":
+			a.showDebug = !a.showDebug
+			return a, nil
 		}
 	case tea.WindowSizeMsg:
 		a.width = msg.Width
 		a.height = msg.Height
 		a.ready = true
+		a.debugOverlay = newDebugOverlay(a.width, a.height)
 		return a, nil
 	case router.NavigationMsg:
 		cmd, err := a.router.Navigate(msg.To, msg.Params)
@@ -112,16 +120,13 @@ func (a app) View() string {
 	if !a.ready {
 		return "not ready"
 	}
-	var builder strings.Builder
 
-	if a.debugMode {
-		builder.WriteString(a.debugPrint())
+	if a.showDebug && a.debugMode {
+		return a.debugOverlay.View(a.debugProfile, a.router.HistoryString())
 	}
 
-	modelView := a.router.CurrentModel().View()
-	builder.WriteString(modelView)
-
-	return builder.String()
+	view := a.router.CurrentModel().View()
+	return view
 }
 
 func (a *app) debug(msg tea.Msg) {
