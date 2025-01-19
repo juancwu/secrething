@@ -1,6 +1,6 @@
 package router
 
-import tea "github.com/charmbracelet/bubbletea/v2"
+import tea "github.com/charmbracelet/bubbletea"
 
 // LifecycleHooks defines the interface for page lifecycle events
 type LifecycleHooks interface {

@@ -7,7 +7,7 @@ import (
 	command "konbini/cli/commands"
 	"konbini/cli/models"
 
-	tea "github.com/charmbracelet/bubbletea/v2"
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 func main() {

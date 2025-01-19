@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/bubbles/help"
-	tea "github.com/charmbracelet/bubbletea/v2"
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 // app is the main app that is used to render the TUI
@@ -53,12 +53,12 @@ func NewApp() app {
 	}
 }
 
-func (a app) Init() (tea.Model, tea.Cmd) {
+func (a app) Init() tea.Cmd {
 	cmd, err := a.router.SetInitialPage(menuPageID, nil)
 	if err != nil {
 		panic(err)
 	}
-	return a, cmd
+	return cmd
 }
 
 func (a app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {

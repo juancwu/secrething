@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea/v2"
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -219,7 +219,7 @@ func (r *Router) initalizePage(builder PageBuilder, params map[string]interface{
 	var cmds []tea.Cmd
 	var cmd tea.Cmd
 
-	model, cmd = model.Init()
+	cmd = model.Init()
 	if cmd != nil {
 		cmds = append(cmds, cmd)
 	}

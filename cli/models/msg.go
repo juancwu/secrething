@@ -1,6 +1,6 @@
 package models
 
-import tea "github.com/charmbracelet/bubbletea/v2"
+import tea "github.com/charmbracelet/bubbletea"
 
 type errMsg struct {
 	err error
