@@ -1,6 +1,7 @@
 package models
 
 import (
+	"konbini/cli/models/auth"
 	"konbini/cli/models/menu"
 	"konbini/cli/router"
 
@@ -46,13 +47,13 @@ func NewApp() app {
 	r.RegisterPage(
 		loginPageID,
 		func(params map[string]interface{}) tea.Model {
-			return newLoginModel()
+			return auth.NewLogin()
 		},
 	)
 	r.RegisterPage(
 		registerPageID,
 		func(params map[string]interface{}) tea.Model {
-			return newRegisterModel()
+			return auth.NewRegister()
 		},
 	)
 

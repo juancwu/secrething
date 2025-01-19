@@ -1,4 +1,4 @@
-package models
+package auth
 
 import (
 	tea "github.com/charmbracelet/bubbletea"
@@ -8,7 +8,7 @@ type loginModel struct {
 	showModal bool
 }
 
-func newLoginModel() loginModel {
+func NewLogin() loginModel {
 	return loginModel{showModal: false}
 }
 
@@ -34,7 +34,7 @@ func (m loginModel) View() string {
 type registerModel struct {
 }
 
-func newRegisterModel() registerModel {
+func NewRegister() registerModel {
 	return registerModel{}
 }
 
