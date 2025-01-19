@@ -1,7 +1,6 @@
 package models
 
-type page string
-
 const (
-	menuPageID page = "/menu"
+	menuPageID  string = "/menu"
+	loginPageID string = "/auth"
 )

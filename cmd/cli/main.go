@@ -7,12 +7,12 @@ import (
 	command "konbini/cli/commands"
 	"konbini/cli/models"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "github.com/charmbracelet/bubbletea/v2"
 )
 
 func main() {
 	if len(os.Args) == 1 {
-		m := models.NewModel()
+		m := models.NewApp()
 		p := tea.NewProgram(m, tea.WithAltScreen())
 		_, err := p.Run()
 		if err != nil {
