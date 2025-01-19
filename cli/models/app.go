@@ -1,6 +1,7 @@
 package models
 
 import (
+	"fmt"
 	"konbini/cli/router"
 	"strings"
 
@@ -98,8 +99,6 @@ func (a app) View() string {
 		builder.WriteString(a.debugPrint())
 	}
 
-	builder.WriteString(a.router.HistoryString() + "\n")
-
 	modelView := a.router.CurrentModel().View()
 	builder.WriteString(modelView + "\n")
 
@@ -116,5 +115,9 @@ func (a *app) debug(msg tea.Msg) {
 }
 
 func (a *app) debugPrint() string {
-	return "input: " + a.debugProfile.Input + "\n"
+	var builder strings.Builder
+	builder.WriteString("Debug Profile:\n")
+	builder.WriteString(fmt.Sprintf("   => Input: %s\n", a.debugProfile.Input))
+	builder.WriteString(fmt.Sprintf("   => Route History: %s\n", a.router.HistoryString()))
+	return builder.String()
 }
