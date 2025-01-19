@@ -55,7 +55,7 @@ func NewApp() app {
 func (a app) Init() (tea.Model, tea.Cmd) {
 	cmd, err := a.router.SetInitialPage(menuPageID, nil)
 	if err != nil {
-		panic(err) // TODO: do something better
+		panic(err)
 	}
 	return a, cmd
 }
