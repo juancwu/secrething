@@ -1,6 +1,7 @@
 package models
 
 import (
+	"konbini/cli/models/menu"
 	"konbini/cli/router"
 
 	"github.com/charmbracelet/bubbles/help"
@@ -39,7 +40,7 @@ func NewApp() app {
 	r.RegisterPage(
 		menuPageID,
 		func(params map[string]interface{}) tea.Model {
-			return newMenuModel()
+			return menu.New()
 		},
 	)
 	r.RegisterPage(
