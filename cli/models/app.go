@@ -100,7 +100,6 @@ func (a app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.height = msg.Height
 		a.ready = true
 		a.debugOverlay = newDebugOverlay(a.width, a.height)
-		return a, nil
 	case router.NavigationMsg:
 		cmd, err := a.router.Navigate(msg.To, msg.Params)
 		if err != nil {
