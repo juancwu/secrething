@@ -39,12 +39,12 @@ func New(width int, height int) menuModel {
 		menuItem{
 			title:       "Login",
 			description: "Sign in to your account",
-			route:       "/login",
+			route:       "login",
 		},
 		menuItem{
 			title:       "Register",
 			description: "Create a new account",
-			route:       "/register",
+			route:       "register",
 		},
 		menuItem{
 			title:       "Manage Bentos",
