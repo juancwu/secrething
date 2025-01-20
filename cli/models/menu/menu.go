@@ -9,15 +9,9 @@ import (
 )
 
 var (
-	titleStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("62")).
-			Bold(true).
-			Padding(1).
-			MarginLeft(2)
-
 	itemStyle = lipgloss.NewStyle().
-			PaddingLeft(2).
-			PaddingRight(2)
+		PaddingLeft(2).
+		PaddingRight(2)
 )
 
 // menuItem represents a single menu option
@@ -83,7 +77,6 @@ func New(width int, height int) menuModel {
 
 	l := list.New(items, delegate, 0, 0)
 	l.Title = "Konbini CLI"
-	l.Styles.Title = titleStyle
 	l.SetShowHelp(true)
 
 	return menuModel{
