@@ -46,21 +46,21 @@ func New(width int, height int) menuModel {
 			description: "Create a new account",
 			route:       "/register",
 		},
-		// menuItem{
-		// 	title:       "Manage Bentos",
-		// 	description: "View and manage your bento configurations",
-		// 	route:       "bentos", // Add this route when ready
-		// },
-		// menuItem{
-		// 	title:       "Manage Groups",
-		// 	description: "Configure and manage user groups",
-		// 	route:       "groups", // Add this route when ready
-		// },
-		// menuItem{
-		// 	title:       "Permissions",
-		// 	description: "Manage access controls and permissions",
-		// 	route:       "permissions", // Add this route when ready
-		// },
+		menuItem{
+			title:       "Manage Bentos",
+			description: "View and manage your bento configurations",
+			route:       "bentos", // Add this route when ready
+		},
+		menuItem{
+			title:       "Manage Groups",
+			description: "Configure and manage user groups",
+			route:       "groups", // Add this route when ready
+		},
+		menuItem{
+			title:       "Permissions",
+			description: "Manage access controls and permissions",
+			route:       "permissions", // Add this route when ready
+		},
 	}
 
 	// Initialize list
@@ -75,7 +75,7 @@ func New(width int, height int) menuModel {
 		BorderStyle(lipgloss.NormalBorder()).
 		BorderForeground(lipgloss.Color("62"))
 
-	l := list.New(items, delegate, 0, 0)
+	l := list.New(items, delegate, 50, 4*len(items))
 	l.Title = "Konbini CLI"
 	l.SetShowHelp(true)
 
