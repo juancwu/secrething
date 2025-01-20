@@ -83,14 +83,14 @@ func (a app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "ctrl+c":
 			return a, tea.Quit
-		case "ctrl+b": // navigate back
-			model, cmd := a.router.Back()
-			a.router.UpdateCurrentModel(model)
-			return a, cmd
-		case "ctrl+f": // navigate forward
-			model, cmd := a.router.Forward()
-			a.router.UpdateCurrentModel(model)
-			return a, cmd
+		// case "ctrl+b": // navigate back
+		// 	model, cmd := a.router.Back()
+		// 	a.router.UpdateCurrentModel(model)
+		// 	return a, cmd
+		// case "ctrl+f": // navigate forward
+		// 	model, cmd := a.router.Forward()
+		// 	a.router.UpdateCurrentModel(model)
+		// 	return a, cmd
 		case "alt+ctrl+d":
 			a.showDebug = !a.showDebug
 			return a, nil
