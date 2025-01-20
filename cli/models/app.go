@@ -41,7 +41,19 @@ func NewApp() app {
 	r.RegisterPage(
 		menuPageID,
 		func(params map[string]interface{}) tea.Model {
-			return menu.New()
+			var (
+				width  int
+				height int
+			)
+
+			if i, ok := params["app_width"]; ok {
+				width = i.(int)
+			}
+			if i, ok := params["app_height"]; ok {
+				height = i.(int)
+			}
+
+			return menu.New(width, height)
 		},
 	)
 	r.RegisterPage(

@@ -33,11 +33,13 @@ func (i menuItem) FilterValue() string { return i.title }
 
 // menuModel represents the main menu of the konbini cli
 type menuModel struct {
-	list list.Model
+	list   list.Model
+	width  int
+	height int
 }
 
 // New creates a new menu model with pre-populated items
-func New() menuModel {
+func New(width int, height int) menuModel {
 	// Define menu items
 	items := []list.Item{
 		menuItem{
@@ -85,7 +87,9 @@ func New() menuModel {
 	l.SetShowHelp(true)
 
 	return menuModel{
-		list: l,
+		list:   l,
+		width:  width,
+		height: height,
 	}
 }
 
