@@ -113,6 +113,9 @@ func (a app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.ready = true
 		a.debugOverlay = newDebugOverlay(a.width, a.height)
 	case router.NavigationMsg:
+		if msg.Params == nil {
+			msg.Params = make(map[string]interface{})
+		}
 		msg.Params["app_width"] = a.width
 		msg.Params["app_height"] = a.height
 		cmd, err := a.router.Navigate(msg.To, msg.Params)
