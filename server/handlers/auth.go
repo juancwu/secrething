@@ -716,3 +716,22 @@ func RemoveTOTP(connector *db.DBConnector) echo.HandlerFunc {
 		return c.NoContent(http.StatusOK)
 	}
 }
+
+type CheckAuthTokenRequest struct {
+	AuthToken string `json:"auth_token" validate:"required"`
+}
+
+func CheckAuthToken() echo.HandlerFunc {
+	return func(c echo.Context) error {
+		body, err := middlewares.GetJsonBody[CheckAuthTokenRequest](c)
+		if err != nil {
+			return err
+		}
+		_, err = services.VerifyAuthToken(body.AuthToken)
+		if err != nil {
+			return err
+		}
+		// TODO: for now, just echo back the same string, but later update it
+		return c.JSON(http.StatusOK, map[string]string{"auth_token": body.AuthToken})
+	}
+}
