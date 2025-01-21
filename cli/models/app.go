@@ -1,9 +1,11 @@
 package models
 
 import (
+	"konbini/cli/config"
 	"konbini/cli/models/auth"
 	"konbini/cli/models/menu"
 	"konbini/cli/router"
+	"konbini/cli/secrets"
 
 	"github.com/charmbracelet/bubbles/help"
 	tea "github.com/charmbracelet/bubbletea"
@@ -23,7 +25,8 @@ type app struct {
 	width  int
 	height int
 
-	ready bool
+	windowSizeDone bool
+	authCheckDone  bool
 
 	debugProfile debugProfile
 	debugMode    bool
@@ -81,11 +84,18 @@ func NewApp() app {
 }
 
 func (a app) Init() tea.Cmd {
-	cmd, err := a.router.SetInitialPage(menuPageID, nil)
+	var cmds []tea.Cmd
+	var cmd tea.Cmd
+	var err error
+	cmd, err = a.router.SetInitialPage(menuPageID, nil)
 	if err != nil {
 		panic(err)
 	}
-	return cmd
+	if cmd != nil {
+		cmds = append(cmds, cmd)
+	}
+	cmds = append(cmds, a.persistAuth())
+	return tea.Batch(cmds...)
 }
 
 func (a app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -95,14 +105,6 @@ func (a app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "ctrl+c":
 			return a, tea.Quit
-		// case "ctrl+b": // navigate back
-		// 	model, cmd := a.router.Back()
-		// 	a.router.UpdateCurrentModel(model)
-		// 	return a, cmd
-		// case "ctrl+f": // navigate forward
-		// 	model, cmd := a.router.Forward()
-		// 	a.router.UpdateCurrentModel(model)
-		// 	return a, cmd
 		case "alt+ctrl+d":
 			a.showDebug = !a.showDebug
 			return a, nil
@@ -110,7 +112,7 @@ func (a app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		a.width = msg.Width
 		a.height = msg.Height
-		a.ready = true
+		a.windowSizeDone = true
 		a.debugOverlay = newDebugOverlay(a.width, a.height)
 	case router.NavigationMsg:
 		if msg.Params == nil {
@@ -123,6 +125,8 @@ func (a app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a, newErrMsg(err)
 		}
 		return a, cmd
+	case initMsg:
+		a.authCheckDone = true
 	}
 
 	// Update current page
@@ -133,8 +137,8 @@ func (a app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // View only renders the activeModel view
 func (a app) View() string {
-	if !a.ready {
-		return "not ready"
+	if !a.ready() {
+		return config.BackendUrl() + " " + config.A()
 	}
 
 	if a.showDebug && a.debugMode {
@@ -143,4 +147,18 @@ func (a app) View() string {
 
 	view := a.router.CurrentModel().View()
 	return view
+}
+
+type initMsg struct{}
+
+// persistAuth checks if the current
+func (a app) persistAuth() tea.Cmd {
+	return func() tea.Msg {
+		secrets.CheckAuth()
+		return initMsg{}
+	}
+}
+
+func (a app) ready() bool {
+	return a.authCheckDone && a.windowSizeDone
 }
