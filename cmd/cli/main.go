@@ -4,13 +4,16 @@ import (
 	"log"
 	"os"
 
-	tea "github.com/charmbracelet/bubbletea"
 	command "konbini/cli/commands"
+	"konbini/cli/config"
+
+	tea "github.com/charmbracelet/bubbletea"
 
 	"konbini/cli/models"
 )
 
 func main() {
+	config.Init()
 	if len(os.Args) == 1 {
 		m := models.NewApp()
 		p := tea.NewProgram(m, tea.WithAltScreen())
