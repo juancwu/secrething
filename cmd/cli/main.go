@@ -4,10 +4,10 @@ import (
 	"log"
 	"os"
 
-	command "konbini/cli/commands"
-	"konbini/cli/models"
-
 	tea "github.com/charmbracelet/bubbletea"
+	command "konbini/cli/commands"
+
+	"konbini/cli/models"
 )
 
 func main() {
