@@ -52,10 +52,14 @@ func NewLogin() loginModel {
 	eti := textinput.New()
 	eti.Placeholder = "Email"
 	eti.Focus()
+	eti.Validate = validateEmail
 
 	pti := textinput.New()
 	pti.Placeholder = "Password"
 	pti.EchoMode = textinput.EchoPassword
+	pti.Validate = func(s string) error {
+		return validatePasswords(s)
+	}
 
 	s := spinner.New()
 	s.Spinner = spinner.Dot

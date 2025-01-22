@@ -155,7 +155,12 @@ type initMsg struct{}
 // persistAuth checks if the current
 func (a app) persistAuth() tea.Cmd {
 	return func() tea.Msg {
-		secrets.CheckAuth()
+		err := secrets.CheckAuth()
+		// check for partial token
+		if err == nil && secrets.TokenType() == "partial_token" {
+			// redirect to totp setup
+		}
+
 		return initMsg{}
 	}
 }

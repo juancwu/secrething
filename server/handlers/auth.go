@@ -718,7 +718,7 @@ func RemoveTOTP(connector *db.DBConnector) echo.HandlerFunc {
 	}
 }
 
-func CheckAuthToken() echo.HandlerFunc {
+func CheckAuthToken(cnt *db.DBConnector) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		body, err := middlewares.GetJsonBody[commonApi.CheckAuthTokenRequest](c)
 		if err != nil {
@@ -729,7 +729,63 @@ func CheckAuthToken() echo.HandlerFunc {
 			return err
 		}
 
-		// TODO: for now, just echo back the same string, but later update it
-		return c.JSON(http.StatusOK, map[string]string{"auth_token": body.AuthToken, "type": string(token.TokenType)})
+		ctx, cancel := context.WithTimeout(c.Request().Context(), time.Second*30)
+		defer cancel()
+
+		conn, err := cnt.Connect()
+		if err != nil {
+			return err
+		}
+		defer conn.Close()
+
+		q := db.New(conn)
+
+		// get the user
+		user, err := q.GetUserById(ctx, token.UserID)
+		if err != nil {
+			return err
+		}
+
+		diff := time.Until(token.ExpiresAt)
+		threeDays := 3 * 24 * time.Hour
+
+		authToken := body.AuthToken
+		if diff >= threeDays && diff <= threeDays {
+			// generate a new token
+			now := time.Now()
+			exp := now.Add(time.Hour * 24 * 7)
+			dbToken, err := q.NewAuthToken(ctx, db.NewAuthTokenParams{
+				UserID:    token.UserID,
+				TokenType: token.TokenType.String(),
+				CreatedAt: utils.FormatRFC3339NanoFixed(now),
+				ExpiresAt: utils.FormatRFC3339NanoFixed(exp),
+			})
+			if err != nil {
+				return err
+			}
+
+			token, err = services.NewAuthToken(
+				dbToken.ID,
+				dbToken.UserID,
+				services.TokenType(dbToken.TokenType),
+				exp,
+			)
+			if err != nil {
+				return err
+			}
+
+			authToken, err = token.Package()
+			if err != nil {
+				return err
+			}
+		}
+
+		return c.JSON(http.StatusOK, commonApi.CheckAuthResponse{
+			AuthToken:     authToken,
+			TokenType:     string(token.TokenType),
+			Email:         user.Email,
+			EmailVerified: user.EmailVerified,
+			TOTP:          user.TotpLocked,
+		})
 	}
 }

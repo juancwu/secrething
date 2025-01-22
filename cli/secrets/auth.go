@@ -5,12 +5,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"konbini/cli/config"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/zalando/go-keyring"
+
+	"konbini/cli/config"
+	commonApi "konbini/common/api"
 )
 
 const (
@@ -65,18 +67,15 @@ func CheckAuth() (err error) {
 	if err != nil {
 		return err
 	}
-	var resBody map[string]string
+	var resBody commonApi.CheckAuthResponse
 	json.Unmarshal(data, &resBody)
 
 	// a new token is issued if the user has been active for at least 2 days within the 7 days
 	// the old token was issued.
-	if newToken, ok := resBody["auth_token"]; ok {
-		parts[0] = newToken
-	}
 
-	authToken = parts[0]
-	userEmail = parts[1]
-	tokenType = resBody["type"]
+	authToken = resBody.AuthToken
+	userEmail = resBody.Email
+	tokenType = resBody.TokenType
 
 	// save new token in keyring
 	SaveCredentials(authToken, userEmail)
