@@ -727,11 +727,12 @@ func CheckAuthToken() echo.HandlerFunc {
 		if err != nil {
 			return err
 		}
-		_, err = services.VerifyAuthToken(body.AuthToken)
+		token, err := services.VerifyAuthToken(body.AuthToken)
 		if err != nil {
 			return err
 		}
+
 		// TODO: for now, just echo back the same string, but later update it
-		return c.JSON(http.StatusOK, map[string]string{"auth_token": body.AuthToken})
+		return c.JSON(http.StatusOK, map[string]string{"auth_token": body.AuthToken, "type": string(token.TokenType)})
 	}
 }
