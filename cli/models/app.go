@@ -1,6 +1,7 @@
 package models
 
 import (
+	"konbini/cli/config"
 	"konbini/cli/models/auth"
 	"konbini/cli/models/menu"
 	"konbini/cli/router"
@@ -119,6 +120,7 @@ func (a app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.height = msg.Height
 		a.windowSizeDone = true
 		a.debugOverlay = newDebugOverlay(a.width, a.height)
+		config.UpdateTermSize(a.width, a.height)
 	case router.NavigationMsg:
 		if msg.Params == nil {
 			msg.Params = make(map[string]interface{})
@@ -143,7 +145,7 @@ func (a app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // View only renders the activeModel view
 func (a app) View() string {
-	if !a.authCheckDone {
+	if !a.ready() {
 		return "Loading..."
 	}
 

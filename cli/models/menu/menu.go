@@ -2,6 +2,7 @@ package menu
 
 import (
 	"fmt"
+	"konbini/cli/config"
 	"konbini/cli/router"
 	"konbini/cli/secrets"
 
@@ -103,6 +104,7 @@ func (m menuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
+		m.list.SetSize(m.width, m.height)
 		return m, nil
 
 	case tea.KeyMsg:
@@ -125,7 +127,17 @@ func (m menuModel) View() string {
 
 // Implement LifecycleHooks interface
 func (m menuModel) OnEnter(params map[string]interface{}) tea.Cmd {
-	return nil
+	return func() tea.Msg {
+		w := config.TermWidth()
+		h := config.TermHeight()
+		if w+h == 0 {
+			return nil
+		}
+		return tea.WindowSizeMsg{
+			Width:  config.TermWidth(),
+			Height: config.TermHeight(),
+		}
+	}
 }
 
 func (m menuModel) OnExit() tea.Cmd {
