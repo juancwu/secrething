@@ -167,6 +167,10 @@ func (m registerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// save the partial token
 		secrets.SaveCredentials(msg.Token, m.inputs[0].Value())
 
+		secrets.SetAuthToken(msg.Token)
+		secrets.SetTokenType(msg.TokenType)
+		secrets.SetUserEmail(m.inputs[0].Value())
+
 		// move onto setting up 2FA
 		return m, router.NewNavigationMsg("setup-totp", nil)
 	}
@@ -199,8 +203,9 @@ func (m registerModel) View() string {
 }
 
 type registerMsg struct {
-	Token string
-	Err   error
+	Token     string
+	TokenType string
+	Err       error
 }
 
 func (m registerModel) register() tea.Msg {
@@ -209,8 +214,9 @@ func (m registerModel) register() tea.Msg {
 	password := m.inputs[2].Value()
 	res, err := services.Register(email, nickname, password)
 	return registerMsg{
-		Token: res.Token,
-		Err:   err,
+		Token:     res.Token,
+		TokenType: res.Type,
+		Err:       err,
 	}
 }
 
