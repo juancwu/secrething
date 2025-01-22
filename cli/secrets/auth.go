@@ -77,7 +77,7 @@ func CheckAuth() (err error) {
 	userEmail = parts[1]
 
 	// save new token in keyring
-	saveCredentials(authToken, userEmail)
+	SaveCredentials(authToken, userEmail)
 
 	return nil
 }
@@ -94,7 +94,13 @@ func UserEmail() string {
 	return userEmail
 }
 
-// saveCredentials saves the auth token and user email in system keyring.
-func saveCredentials(authToken string, userEmail string) error {
-	return keyring.Set(serviceName, serviceUser, fmt.Sprintf("%s %s", authToken, userEmail))
+// SaveCredentials saves the auth token and user email in system keyring.
+func SaveCredentials(token string, email string) error {
+	err := keyring.Set(serviceName, serviceUser, fmt.Sprintf("%s %s", token, email))
+	if err != nil {
+		return err
+	}
+	authToken = token
+	userEmail = email
+	return nil
 }
