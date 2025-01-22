@@ -1,7 +1,6 @@
 package models
 
 import (
-	"konbini/cli/config"
 	"konbini/cli/models/auth"
 	"konbini/cli/models/menu"
 	"konbini/cli/router"
@@ -71,6 +70,12 @@ func NewApp() app {
 			return auth.NewRegister()
 		},
 	)
+	r.RegisterPage(
+		setupTOTPPageID,
+		func(params map[string]interface{}) tea.Model {
+			return auth.NewTOTPModel()
+		},
+	)
 
 	return app{
 		router:       r,
@@ -137,10 +142,6 @@ func (a app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // View only renders the activeModel view
 func (a app) View() string {
-	if !a.ready() {
-		return config.BackendUrl() + " " + config.A()
-	}
-
 	if a.showDebug && a.debugMode {
 		return a.debugOverlay.View(a.debugProfile, a.router.HistoryString())
 	}

@@ -17,6 +17,8 @@ var (
 	wrapperStyles = lipgloss.NewStyle().Margin(1)
 
 	redTextStyles = lipgloss.NewStyle().Foreground(lipgloss.Color("#ff0000"))
+
+	spinnerStyles = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
 )
 
 type loginKeyMap struct {
@@ -57,7 +59,7 @@ func NewLogin() loginModel {
 
 	s := spinner.New()
 	s.Spinner = spinner.Dot
-	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
+	s.Style = spinnerStyles
 
 	keys := loginKeyMap{
 		Tab: key.NewBinding(
@@ -172,23 +174,4 @@ type loginResponseMsg struct {
 func (m loginModel) login() tea.Msg {
 	time.Sleep(time.Second * 3)
 	return loginResponseMsg{Status: 200, AuthToken: ""}
-}
-
-type registerModel struct {
-}
-
-func NewRegister() registerModel {
-	return registerModel{}
-}
-
-func (m registerModel) Init() tea.Cmd {
-	return nil
-}
-
-func (m registerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	return m, nil
-}
-
-func (m registerModel) View() string {
-	return "register"
 }

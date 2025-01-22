@@ -2,10 +2,12 @@ package menu
 
 import (
 	"fmt"
+	"konbini/cli/router"
+	"konbini/cli/secrets"
+
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"konbini/cli/router"
 )
 
 var (
@@ -34,33 +36,39 @@ type menuModel struct {
 
 // New creates a new menu model with pre-populated items
 func New(width int, height int) menuModel {
-	// Define menu items
-	items := []list.Item{
-		menuItem{
-			title:       "Login",
-			description: "Sign in to your account",
-			route:       "login",
-		},
-		menuItem{
-			title:       "Register",
-			description: "Create a new account",
-			route:       "register",
-		},
-		menuItem{
-			title:       "Manage Bentos",
-			description: "View and manage your bento configurations",
-			route:       "bentos", // Add this route when ready
-		},
-		menuItem{
-			title:       "Manage Groups",
-			description: "Configure and manage user groups",
-			route:       "groups", // Add this route when ready
-		},
-		menuItem{
-			title:       "Permissions",
-			description: "Manage access controls and permissions",
-			route:       "permissions", // Add this route when ready
-		},
+	var items []list.Item
+
+	if secrets.AuthToken() == "" {
+		items = append(items,
+			menuItem{
+				title:       "Login",
+				description: "Sign in to your account",
+				route:       "login",
+			},
+			menuItem{
+				title:       "Register",
+				description: "Create a new account",
+				route:       "register",
+			},
+		)
+	} else {
+		items = append(items,
+			menuItem{
+				title:       "Manage Bentos",
+				description: "View and manage your bento configurations",
+				route:       "bentos", // Add this route when ready
+			},
+			menuItem{
+				title:       "Manage Groups",
+				description: "Configure and manage user groups",
+				route:       "groups", // Add this route when ready
+			},
+			menuItem{
+				title:       "Permissions",
+				description: "Manage access controls and permissions",
+				route:       "permissions", // Add this route when ready
+			},
+		)
 	}
 
 	// Initialize list
