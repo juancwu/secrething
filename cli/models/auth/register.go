@@ -4,6 +4,7 @@ import (
 	"konbini/cli/router"
 	"konbini/cli/secrets"
 	"konbini/cli/services"
+	"konbini/common/api"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/help"
@@ -167,10 +168,10 @@ func (m registerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		// save the partial token
-		secrets.SaveCredentials(msg.Token, m.inputs[0].Value())
+		secrets.SaveCredentials(msg.Response.AuthToken)
 
-		secrets.SetAuthToken(msg.Token)
-		secrets.SetTokenType(msg.TokenType)
+		secrets.SetAuthToken(msg.Response.AuthToken)
+		secrets.SetTokenType(msg.Response.TokenType)
 		secrets.SetUserEmail(m.inputs[0].Value())
 
 		// move onto setting up 2FA
@@ -205,9 +206,8 @@ func (m registerModel) View() string {
 }
 
 type registerMsg struct {
-	Token     string
-	TokenType string
-	Err       error
+	Response api.RegisterResponse
+	Err      error
 }
 
 func (m registerModel) register() tea.Msg {
@@ -216,9 +216,8 @@ func (m registerModel) register() tea.Msg {
 	password := m.inputs[2].Value()
 	res, err := services.Register(email, nickname, password)
 	return registerMsg{
-		Token:     res.Token,
-		TokenType: res.Type,
-		Err:       err,
+		Response: res,
+		Err:      err,
 	}
 }
 

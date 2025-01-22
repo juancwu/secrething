@@ -5,31 +5,28 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"konbini/cli/config"
 	"net/http"
 	"time"
+
+	"konbini/cli/config"
+	commonAPI "konbini/common/api"
 )
 
-type RegisterResponse struct {
-	Token string
-	Type  string
-}
-
-func Register(email string, nickname string, password string) (RegisterResponse, error) {
+func Register(email string, nickname string, password string) (commonAPI.RegisterResponse, error) {
 	body, err := json.Marshal(map[string]string{
 		"email":    email,
 		"nickname": nickname,
 		"password": password,
 	})
 	if err != nil {
-		return RegisterResponse{}, err
+		return commonAPI.RegisterResponse{}, err
 	}
 
 	reader := bytes.NewReader(body)
 
 	req, err := http.NewRequest(http.MethodPost, config.BackendUrl()+"/auth/register", reader)
 	if err != nil {
-		return RegisterResponse{}, err
+		return commonAPI.RegisterResponse{}, err
 	}
 	req.Header.Add("Content-Type", "application/json")
 
@@ -38,26 +35,31 @@ func Register(email string, nickname string, password string) (RegisterResponse,
 	}
 	res, err := client.Do(req)
 	if err != nil {
-		return RegisterResponse{}, err
+		return commonAPI.RegisterResponse{}, err
 	}
 	defer res.Body.Close()
 
 	data, err := io.ReadAll(res.Body)
 	if err != nil {
-		return RegisterResponse{}, err
+		return commonAPI.RegisterResponse{}, err
 	}
-	var resBody map[string]any
+
+	if res.StatusCode == http.StatusCreated {
+		var resBody commonAPI.RegisterResponse
+		err = json.Unmarshal(data, &resBody)
+		if err != nil {
+			return commonAPI.RegisterResponse{}, err
+		}
+
+		return resBody, nil
+	}
+
+	var resBody commonAPI.ErrorResponse
 	err = json.Unmarshal(data, &resBody)
 	if err != nil {
-		return RegisterResponse{}, err
+		return commonAPI.RegisterResponse{}, err
 	}
 
-	if res.StatusCode != http.StatusCreated {
-		return RegisterResponse{}, fmt.Errorf("Registration Error: %s", resBody["message"])
-	}
+	return commonAPI.RegisterResponse{}, fmt.Errorf("Registration Error: %s", resBody.Message)
 
-	return RegisterResponse{
-		Token: resBody["token"].(string),
-		Type:  resBody["type"].(string),
-	}, nil
 }

@@ -99,7 +99,7 @@ func (a app) Init() tea.Cmd {
 	if cmd != nil {
 		cmds = append(cmds, cmd)
 	}
-	cmds = append(cmds, a.persistAuth())
+	cmds = append(cmds, a.persistAuth)
 	return tea.Batch(cmds...)
 }
 
@@ -132,6 +132,7 @@ func (a app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, cmd
 	case initMsg:
 		a.authCheckDone = true
+		return a, router.NewNavigationMsg(msg.redirectTo, nil)
 	}
 
 	// Update current page
@@ -142,6 +143,10 @@ func (a app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // View only renders the activeModel view
 func (a app) View() string {
+	if !a.authCheckDone {
+		return "Loading..."
+	}
+
 	if a.showDebug && a.debugMode {
 		return a.debugOverlay.View(a.debugProfile, a.router.HistoryString())
 	}
@@ -150,19 +155,20 @@ func (a app) View() string {
 	return view
 }
 
-type initMsg struct{}
+type initMsg struct {
+	redirectTo string
+}
 
 // persistAuth checks if the current
-func (a app) persistAuth() tea.Cmd {
-	return func() tea.Msg {
-		err := secrets.CheckAuth()
-		// check for partial token
-		if err == nil && secrets.TokenType() == "partial_token" {
-			// redirect to totp setup
-		}
-
-		return initMsg{}
+func (a app) persistAuth() tea.Msg {
+	err := secrets.CheckAuth()
+	msg := initMsg{redirectTo: menuPageID}
+	// check for partial token
+	if err == nil && !secrets.TOTPSet() {
+		// redirect to totp setup
+		msg.redirectTo = setupTOTPPageID
 	}
+	return msg
 }
 
 func (a app) ready() bool {

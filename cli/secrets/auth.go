@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/zalando/go-keyring"
@@ -20,24 +19,24 @@ const (
 	serviceUser string = "user"
 )
 
-var authToken string
-var userEmail string
-var tokenType string
+type User struct {
+	token         string
+	tokenType     string
+	email         string
+	totpSet       bool
+	emailVerified bool
+}
+
+var user User
 
 // CheckAuth checks if the current auth token is still valid or not.
 func CheckAuth() (err error) {
-	var key string
-	key, err = keyring.Get(serviceName, serviceUser)
+	token, err := keyring.Get(serviceName, serviceUser)
 	if err != nil {
 		return err
 	}
 
-	parts := strings.Split(key, " ")
-	if len(parts) != 2 {
-		return fmt.Errorf("Invalid key format")
-	}
-
-	b, err := json.Marshal(map[string]string{"auth_token": authToken})
+	b, err := json.Marshal(commonApi.CheckAuthTokenRequest{AuthToken: token})
 	if err != nil {
 		return err
 	}
@@ -73,12 +72,16 @@ func CheckAuth() (err error) {
 	// a new token is issued if the user has been active for at least 2 days within the 7 days
 	// the old token was issued.
 
-	authToken = resBody.AuthToken
-	userEmail = resBody.Email
-	tokenType = resBody.TokenType
+	user = User{
+		token:         resBody.AuthToken,
+		tokenType:     resBody.TokenType,
+		email:         resBody.Email,
+		emailVerified: resBody.EmailVerified,
+		totpSet:       resBody.TOTP,
+	}
 
 	// save new token in keyring
-	SaveCredentials(authToken, userEmail)
+	SaveCredentials(user.token)
 
 	return nil
 }
@@ -86,32 +89,48 @@ func CheckAuth() (err error) {
 // AuthToken returns the user auth token.
 // This token might be an empty string depending on how the CheckAuth success.
 func AuthToken() string {
-	return authToken
+	return user.token
 }
 
 // UserEmail returns the user's email.
 // This token might be an empty string depending on how the CheckAuth success.
 func UserEmail() string {
-	return userEmail
+	return user.email
 }
 
 func TokenType() string {
-	return tokenType
+	return user.tokenType
+}
+
+func EmailVerified() bool {
+	return user.emailVerified
+}
+
+func TOTPSet() bool {
+	return user.totpSet
 }
 
 func SetAuthToken(s string) {
-	authToken = s
+	user.token = s
 }
 
 func SetUserEmail(s string) {
-	userEmail = s
+	user.email = s
 }
 
 func SetTokenType(s string) {
-	tokenType = s
+	user.tokenType = s
+}
+
+func SetEmailVerified(b bool) {
+	user.emailVerified = b
+}
+
+func SetTOTP(b bool) {
+	user.totpSet = b
 }
 
 // SaveCredentials saves the auth token and user email in system keyring.
-func SaveCredentials(token string, email string) error {
-	return keyring.Set(serviceName, serviceUser, fmt.Sprintf("%s %s", token, email))
+func SaveCredentials(token string) error {
+	return keyring.Set(serviceName, serviceUser, token)
 }
