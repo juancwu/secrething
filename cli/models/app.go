@@ -122,11 +122,6 @@ func (a app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.debugOverlay = newDebugOverlay(a.width, a.height)
 		config.UpdateTermSize(a.width, a.height)
 	case router.NavigationMsg:
-		if msg.Params == nil {
-			msg.Params = make(map[string]interface{})
-		}
-		msg.Params["app_width"] = a.width
-		msg.Params["app_height"] = a.height
 		cmd, err := a.router.Navigate(msg.To, msg.Params)
 		if err != nil {
 			return a, newErrMsg(err)
