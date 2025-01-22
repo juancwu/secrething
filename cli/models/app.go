@@ -8,6 +8,7 @@ import (
 	"konbini/cli/secrets"
 
 	"github.com/charmbracelet/bubbles/help"
+	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -16,6 +17,8 @@ type app struct {
 	// pointer to a router because the router maps should not be copied
 	// but just in-place updated.
 	router *router.Router
+
+	spinner spinner.Model
 
 	keys keyMap
 	help help.Model
@@ -78,8 +81,12 @@ func NewApp() app {
 		},
 	)
 
+	s := spinner.New()
+	s.Spinner = spinner.Dot
+
 	return app{
 		router:       r,
+		spinner:      s,
 		keys:         defaultKeyMap(),
 		help:         help.New(),
 		debugProfile: debugProfile{},
@@ -100,11 +107,13 @@ func (a app) Init() tea.Cmd {
 	if cmd != nil {
 		cmds = append(cmds, cmd)
 	}
-	cmds = append(cmds, a.persistAuth)
+	cmds = append(cmds, a.persistAuth, a.spinner.Tick)
 	return tea.Batch(cmds...)
 }
 
 func (a app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+	var cmds []tea.Cmd
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		a.debugProfile.Input = msg.String()
@@ -132,16 +141,22 @@ func (a app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, router.NewNavigationMsg(msg.redirectTo, nil)
 	}
 
+	if !a.ready() {
+		a.spinner, cmd = a.spinner.Update(msg)
+		cmds = append(cmds, cmd)
+	}
+
 	// Update current page
 	currentModel, cmd := a.router.CurrentModel().Update(msg)
 	a.router.UpdateCurrentModel(currentModel)
-	return a, cmd
+	cmds = append(cmds, cmd)
+	return a, tea.Batch(cmds...)
 }
 
 // View only renders the activeModel view
 func (a app) View() string {
 	if !a.ready() {
-		return "Loading..."
+		return a.spinner.View() + " Loading..."
 	}
 
 	if a.showDebug && a.debugMode {
