@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"fmt"
+	commonApi "konbini/common/api"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
@@ -65,7 +66,12 @@ func ErrorHandler() echo.HTTPErrorHandler {
 			Msg(apiError.PrivateMessage)
 
 		if !c.Response().Committed {
-			err := c.JSON(apiError.Code, apiError)
+			err := c.JSON(apiError.Code, commonApi.ErrorResponse{
+				Code:      apiError.Code,
+				Message:   apiError.PublicMessage,
+				Errors:    apiError.Errors,
+				RequestId: apiError.RequestId,
+			})
 			if err != nil {
 				log.Error().Err(err).Msg("Failed to response from error handler.")
 			}

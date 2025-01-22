@@ -100,7 +100,13 @@ func Register(connector *db.DBConnector) echo.HandlerFunc {
 			return err
 		}
 
-		return c.JSON(http.StatusCreated, map[string]string{"token": token, "type": services.PARTIAL_USER_TOKEN_TYPE.String()})
+		return c.JSON(
+			http.StatusCreated,
+			commonApi.RegisterResponse{
+				AuthToken: token,
+				TokenType: authToken.TokenType.String(),
+			},
+		)
 	}
 }
 

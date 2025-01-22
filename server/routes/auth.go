@@ -20,8 +20,8 @@ func setupAuthRoutes(routeConfig *RouteConfig) {
 	)
 
 	routeConfig.Echo.POST(
-		"/auth/check/token",
-		handlers.CheckAuthToken(),
+		"/auth/token/check",
+		handlers.CheckAuthToken(routeConfig.DBConnector),
 		middlewares.ValidateJson(reflect.TypeOf(commonApi.CheckAuthTokenRequest{})),
 	)
 
