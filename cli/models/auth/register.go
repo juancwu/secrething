@@ -155,6 +155,10 @@ func (m registerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m registerModel) View() string {
 	parts := []string{}
 
+	if m.err != nil {
+		parts = append(parts, redTextStyles.Render(m.err.Error()))
+	}
+
 	for _, i := range m.inputs {
 		parts = append(parts, i.View())
 	}
