@@ -48,16 +48,24 @@ func NewRegister() registerModel {
 
 	ei := textinput.New()
 	ei.Placeholder = "Enter email"
+	ei.Validate = validateEmail
 	ei.Focus()
 
 	ni := textinput.New()
 	ni.Placeholder = "Enter nickname"
+	ni.Validate = validateNickname
 
 	pi := textinput.New()
 	pi.Placeholder = "Enter password"
+	pi.Validate = func(s string) error {
+		return validatePasswords(s)
+	}
 
 	cpi := textinput.New()
 	cpi.Placeholder = "Confirm password"
+	cpi.Validate = func(s string) error {
+		return nil
+	}
 
 	keys := registerKeyMap{
 		Enter: key.NewBinding(
@@ -114,6 +122,20 @@ func (m registerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, router.NewNavigationMsg("menu", nil)
 			case tea.KeyEnter:
 				if m.currentInputIdx == len(m.inputs)-1 {
+					for _, i := range m.inputs {
+						err := i.Validate(i.Value())
+						if err != nil {
+							m.err = err
+							return m, nil
+						}
+					}
+
+					// match passwords
+					if err := validatePasswords(m.inputs[2].Value(), m.inputs[3].Value()); err != nil {
+						m.err = err
+						return m, nil
+					}
+
 					m.loading = true
 					return m, m.register
 				}
