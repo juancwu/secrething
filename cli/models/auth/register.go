@@ -60,12 +60,14 @@ func NewRegister() registerModel {
 	pi.Validate = func(s string) error {
 		return validatePasswords(s)
 	}
+	pi.EchoMode = textinput.EchoPassword
 
 	cpi := textinput.New()
 	cpi.Placeholder = "Confirm password"
 	cpi.Validate = func(s string) error {
 		return nil
 	}
+	cpi.EchoMode = textinput.EchoPassword
 
 	keys := registerKeyMap{
 		Enter: key.NewBinding(
