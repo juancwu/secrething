@@ -147,6 +147,9 @@ func (m registerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case tea.KeyTab:
 				m.switchInput(1)
 				return m, nil
+			case tea.KeyShiftTab:
+				m.switchInput(-1)
+				return m, nil
 			case tea.KeyUp:
 				m.switchInput(-1)
 				return m, nil
