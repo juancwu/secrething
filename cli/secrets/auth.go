@@ -20,6 +20,7 @@ const (
 
 var authToken string
 var userEmail string
+var tokenType string
 
 // CheckAuth checks if the current auth token is still valid or not.
 func CheckAuth() (err error) {
@@ -75,6 +76,7 @@ func CheckAuth() (err error) {
 
 	authToken = parts[0]
 	userEmail = parts[1]
+	tokenType = resBody["type"]
 
 	// save new token in keyring
 	SaveCredentials(authToken, userEmail)
@@ -94,13 +96,23 @@ func UserEmail() string {
 	return userEmail
 }
 
+func TokenType() string {
+	return tokenType
+}
+
+func SetAuthToken(s string) {
+	authToken = s
+}
+
+func SetUserEmail(s string) {
+	userEmail = s
+}
+
+func SetTokenType(s string) {
+	tokenType = s
+}
+
 // SaveCredentials saves the auth token and user email in system keyring.
 func SaveCredentials(token string, email string) error {
-	err := keyring.Set(serviceName, serviceUser, fmt.Sprintf("%s %s", token, email))
-	if err != nil {
-		return err
-	}
-	authToken = token
-	userEmail = email
-	return nil
+	return keyring.Set(serviceName, serviceUser, fmt.Sprintf("%s %s", token, email))
 }
