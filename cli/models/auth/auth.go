@@ -38,7 +38,6 @@ func (k loginKeyMap) FullHelp() [][]key.Binding {
 
 type loginModel struct {
 	spinner                    spinner.Model
-	showModal                  bool
 	emailInput                 textinput.Model
 	passwordInput              textinput.Model
 	loading                    bool
@@ -77,7 +76,6 @@ func NewLogin() loginModel {
 
 	return loginModel{
 		spinner:       s,
-		showModal:     false,
 		emailInput:    eti,
 		passwordInput: pti,
 		keys:          keys,
