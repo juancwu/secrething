@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"errors"
+	commonApi "konbini/common/api"
 	"konbini/server/db"
 	"konbini/server/memcache"
 	"konbini/server/middlewares"
@@ -717,13 +718,9 @@ func RemoveTOTP(connector *db.DBConnector) echo.HandlerFunc {
 	}
 }
 
-type CheckAuthTokenRequest struct {
-	AuthToken string `json:"auth_token" validate:"required"`
-}
-
 func CheckAuthToken() echo.HandlerFunc {
 	return func(c echo.Context) error {
-		body, err := middlewares.GetJsonBody[CheckAuthTokenRequest](c)
+		body, err := middlewares.GetJsonBody[commonApi.CheckAuthTokenRequest](c)
 		if err != nil {
 			return err
 		}

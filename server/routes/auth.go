@@ -1,6 +1,7 @@
 package routes
 
 import (
+	commonApi "konbini/common/api"
 	"konbini/server/handlers"
 	"konbini/server/middlewares"
 	"reflect"
@@ -21,7 +22,7 @@ func setupAuthRoutes(routeConfig *RouteConfig) {
 	routeConfig.Echo.POST(
 		"/auth/check/token",
 		handlers.CheckAuthToken(),
-		middlewares.ValidateJson(reflect.TypeOf(handlers.CheckAuthTokenRequest{})),
+		middlewares.ValidateJson(reflect.TypeOf(commonApi.CheckAuthTokenRequest{})),
 	)
 
 	routeConfig.Echo.POST(
