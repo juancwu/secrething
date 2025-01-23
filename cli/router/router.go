@@ -85,26 +85,7 @@ func (r *Router) Navigate(to string, params map[string]interface{}) (tea.Cmd, er
 		return nil, fmt.Errorf("No page builder registered for route: %s", to)
 	}
 
-	var cmds []tea.Cmd
-
-	if hook, ok := r.current.model.(LifecycleHooks); ok {
-		if !hook.BeforeNavigateAway() {
-			return nil, fmt.Errorf("Navigation cancelled by current page: %s", r.current.route)
-		}
-
-		if cmd := hook.AfterNavigateAway(); cmd != nil {
-			cmds = append(cmds, cmd)
-		}
-
-		if cmd := hook.OnExit(); cmd != nil {
-			cmds = append(cmds, cmd)
-		}
-	}
-
 	model, cmd := r.initalizePage(builder, params)
-	if cmd != nil {
-		cmds = append(cmds, cmd)
-	}
 
 	node := &HistoryNode{
 		route:  to,
@@ -117,73 +98,7 @@ func (r *Router) Navigate(to string, params map[string]interface{}) (tea.Cmd, er
 	r.current.next = node
 	r.current = node
 
-	return tea.Batch(cmds...), nil
-}
-
-func (r *Router) Back() (tea.Model, tea.Cmd) {
-	if r.current.prev == nil {
-		return r.current.model, nil
-	}
-
-	var cmds []tea.Cmd
-
-	if hook, ok := r.current.model.(LifecycleHooks); ok {
-		if !hook.BeforeNavigateAway() {
-			return r.current.model, nil
-		}
-
-		if cmd := hook.AfterNavigateAway(); cmd != nil {
-			cmds = append(cmds, cmd)
-		}
-
-		if cmd := hook.OnExit(); cmd != nil {
-			cmds = append(cmds, cmd)
-		}
-	}
-
-	r.current = r.current.prev
-
-	// Only call OnEnter when going back (Init already called during initialization of page)
-	if hook, ok := r.current.model.(LifecycleHooks); ok {
-		if cmd := hook.OnEnter(r.current.params); cmd != nil {
-			cmds = append(cmds, cmd)
-		}
-	}
-
-	return r.current.model, tea.Batch(cmds...)
-}
-
-func (r *Router) Forward() (tea.Model, tea.Cmd) {
-	if r.current.next == nil {
-		return r.current.model, nil
-	}
-
-	var cmds []tea.Cmd
-
-	if hook, ok := r.current.model.(LifecycleHooks); ok {
-		if !hook.BeforeNavigateAway() {
-			return r.current.model, nil
-		}
-
-		if cmd := hook.AfterNavigateAway(); cmd != nil {
-			cmds = append(cmds, cmd)
-		}
-
-		if cmd := hook.OnExit(); cmd != nil {
-			cmds = append(cmds, cmd)
-		}
-	}
-
-	r.current = r.current.next
-
-	// Only call OnEnter when going forward (skip Init since page was already initialized)
-	if hook, ok := r.current.model.(LifecycleHooks); ok {
-		if cmd := hook.OnEnter(r.current.params); cmd != nil {
-			cmds = append(cmds, cmd)
-		}
-	}
-
-	return r.current.model, tea.Batch(cmds...)
+	return cmd, nil
 }
 
 func (r *Router) CurrentModel() tea.Model {
@@ -215,20 +130,6 @@ func (r *Router) HistoryString() string {
 
 func (r *Router) initalizePage(builder PageBuilder, params map[string]interface{}) (tea.Model, tea.Cmd) {
 	model := builder(params)
-
-	var cmds []tea.Cmd
-	var cmd tea.Cmd
-
-	cmd = model.Init()
-	if cmd != nil {
-		cmds = append(cmds, cmd)
-	}
-
-	if hook, ok := model.(LifecycleHooks); ok {
-		if cmd := hook.OnEnter(params); cmd != nil {
-			cmds = append(cmds, cmd)
-		}
-	}
-
-	return model, tea.Batch(cmds...)
+	cmd := model.Init()
+	return model, cmd
 }
