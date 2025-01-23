@@ -110,15 +110,9 @@ func Register(connector *db.DBConnector) echo.HandlerFunc {
 	}
 }
 
-type LoginRequest struct {
-	Email    string  `json:"email" validate:"required,email"`
-	Password string  `json:"password" validate:"required"`
-	TOTPCode *string `json:"totp_code,omitempty" validate:"omitnil,omitempty,required,len=6|len=32"`
-}
-
 func Login(connector *db.DBConnector) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		body, err := middlewares.GetJsonBody[LoginRequest](c)
+		body, err := middlewares.GetJsonBody[commonApi.LoginRequest](c)
 		if err != nil {
 			return err
 		}
@@ -226,7 +220,7 @@ func Login(connector *db.DBConnector) echo.HandlerFunc {
 			return err
 		}
 
-		return c.JSON(http.StatusOK, map[string]string{"token": token, "type": tokType.String()})
+		return c.JSON(http.StatusOK, commonApi.LoginResponse{Token: token, Type: tokType.String()})
 	}
 }
 
@@ -386,12 +380,8 @@ func SetupTOTP(connector *db.DBConnector) echo.HandlerFunc {
 
 		url := key.URL()
 
-		return c.JSON(http.StatusOK, map[string]string{"url": url})
+		return c.JSON(http.StatusOK, commonApi.SetupTOTPResponse{URL: url})
 	}
-}
-
-type SetupTOTPLockRequest struct {
-	Code string `json:"code" validate:"required,len=6"`
 }
 
 // SetupTOTPLock finishes the TOTP setup and generates backup codes for the client.
@@ -417,7 +407,7 @@ func SetupTOTPLock(connector *db.DBConnector) echo.HandlerFunc {
 			}
 		}
 
-		body, err := middlewares.GetJsonBody[SetupTOTPLockRequest](c)
+		body, err := middlewares.GetJsonBody[commonApi.SetupTOTPLockRequest](c)
 		if err != nil {
 			return APIError{
 				Code:           http.StatusInternalServerError,
@@ -508,9 +498,11 @@ func SetupTOTPLock(connector *db.DBConnector) echo.HandlerFunc {
 		}
 
 		var token string
+		var ttype string = services.PARTIAL_USER_TOKEN_TYPE.String()
 		if user.EmailVerified {
 			// generate a full token for the user to start using instead of the partial token
 			authToken, err := newAuthToken(c.Request().Context(), q, user.ID, services.FULL_USER_TOKEN_TYPE)
+			ttype = services.FULL_USER_TOKEN_TYPE.String()
 			if err != nil {
 				if err := tx.Rollback(); err != nil {
 					logger.Error().Err(err).Msg("Failed to rollback")
@@ -563,16 +555,10 @@ func SetupTOTPLock(connector *db.DBConnector) echo.HandlerFunc {
 			}
 		}
 
-		if token != "" {
-			return c.JSON(http.StatusOK, map[string]interface{}{
-				"recover_codes": codes,
-				"token":         token,
-				"type":          services.FULL_USER_TOKEN_TYPE.String(),
-			})
-		}
-
-		return c.JSON(http.StatusOK, map[string][]string{
-			"recover_codes": codes,
+		return c.JSON(http.StatusOK, commonApi.LockTOTPResponse{
+			RecoveryCodes: codes,
+			Token:         token,
+			Type:          ttype,
 		})
 	}
 }

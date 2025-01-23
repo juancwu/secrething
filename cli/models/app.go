@@ -28,8 +28,12 @@ type app struct {
 	width  int
 	height int
 
+	// Steps that needs to be done before hand
 	windowSizeDone bool
 	authCheckDone  bool
+
+	// If it has been all initialized or not
+	initialized bool
 
 	debugProfile debugProfile
 	debugMode    bool
@@ -85,30 +89,22 @@ func NewApp() app {
 	s.Spinner = spinner.Dot
 
 	return app{
-		router:       r,
-		spinner:      s,
-		keys:         defaultKeyMap(),
-		help:         help.New(),
-		debugProfile: debugProfile{},
-		debugMode:    true,
-		debugOverlay: newDebugOverlay(0, 0),
-		showDebug:    false,
+		router:         r,
+		spinner:        s,
+		keys:           defaultKeyMap(),
+		help:           help.New(),
+		debugProfile:   debugProfile{},
+		debugMode:      true,
+		debugOverlay:   newDebugOverlay(0, 0),
+		showDebug:      false,
+		authCheckDone:  false,
+		windowSizeDone: false,
+		initialized:    false,
 	}
 }
 
 func (a app) Init() tea.Cmd {
-	var cmds []tea.Cmd
-	var cmd tea.Cmd
-	var err error
-	cmd, err = a.router.SetInitialPage(menuPageID, nil)
-	if err != nil {
-		panic(err)
-	}
-	if cmd != nil {
-		cmds = append(cmds, cmd)
-	}
-	cmds = append(cmds, a.persistAuth, a.spinner.Tick)
-	return tea.Batch(cmds...)
+	return a.spinner.Tick
 }
 
 func (a app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -136,20 +132,28 @@ func (a app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a, newErrMsg(err)
 		}
 		return a, cmd
-	case initMsg:
+	case authCheckMsg:
 		a.authCheckDone = true
-		return a, router.NewNavigationMsg(msg.redirectTo, nil)
 	}
 
 	if !a.ready() {
 		a.spinner, cmd = a.spinner.Update(msg)
 		cmds = append(cmds, cmd)
+	} else if !a.initialized {
+		// ready to set initial page
+		cmd, err := a.router.SetInitialPage(menuPageID, nil)
+		if err != nil {
+			panic(err)
+		}
+		a.initialized = true
+		return a, cmd
+	} else {
+		// Update current page
+		currentModel, cmd := a.router.CurrentModel().Update(msg)
+		a.router.UpdateCurrentModel(currentModel)
+		cmds = append(cmds, cmd)
 	}
 
-	// Update current page
-	currentModel, cmd := a.router.CurrentModel().Update(msg)
-	a.router.UpdateCurrentModel(currentModel)
-	cmds = append(cmds, cmd)
 	return a, tea.Batch(cmds...)
 }
 
@@ -167,14 +171,14 @@ func (a app) View() string {
 	return view
 }
 
-type initMsg struct {
+type authCheckMsg struct {
 	redirectTo string
 }
 
 // persistAuth checks if the current
 func (a app) persistAuth() tea.Msg {
 	err := secrets.CheckAuth()
-	msg := initMsg{redirectTo: menuPageID}
+	msg := authCheckMsg{redirectTo: menuPageID}
 	// check for partial token
 	if err == nil && !secrets.TOTPSet() {
 		// redirect to totp setup

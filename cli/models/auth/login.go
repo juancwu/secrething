@@ -1,7 +1,16 @@
 package auth
 
 import (
+	"bytes"
+	"encoding/json"
+	"errors"
+	"io"
+	"konbini/cli/config"
 	"konbini/cli/router"
+	"konbini/cli/secrets"
+	"konbini/common/api"
+	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -42,10 +51,13 @@ type loginModel struct {
 	spinner                    spinner.Model
 	emailInput                 textinput.Model
 	passwordInput              textinput.Model
+	totpInput                  textinput.Model
+	showTOTPInput              bool
 	loading                    bool
 	keys                       loginKeyMap
 	help                       help.Model
 	needConfirmationBeforeExit bool
+	err                        error
 }
 
 func NewLogin() loginModel {
@@ -61,6 +73,21 @@ func NewLogin() loginModel {
 		return validatePasswords(s)
 	}
 
+	totp := textinput.New()
+	totp.Placeholder = "Enter 2FA Code (6 digits)"
+	totp.Validate = func(s string) error {
+		match, err := regexp.MatchString("^[0-9]{6}$", s)
+		if err != nil {
+			return err
+		}
+
+		if !match {
+			return errors.New("Invalid code")
+		}
+
+		return nil
+	}
+
 	s := spinner.New()
 	s.Spinner = spinner.Dot
 	s.Style = spinnerStyles
@@ -72,7 +99,7 @@ func NewLogin() loginModel {
 		),
 		Enter: key.NewBinding(
 			key.WithKeys("enter"),
-			key.WithHelp("enter", "Confirm input/submit"),
+			key.WithHelp("enter", "Login"),
 		),
 		Quit: key.NewBinding(
 			key.WithKeys("esc"),
@@ -84,6 +111,8 @@ func NewLogin() loginModel {
 		spinner:       s,
 		emailInput:    eti,
 		passwordInput: pti,
+		totpInput:     totp,
+		showTOTPInput: false,
 		keys:          keys,
 		help:          help.New(),
 		loading:       false,
@@ -119,6 +148,14 @@ func (m loginModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 				return m, router.NewNavigationMsg("menu", nil)
 			case tea.KeyEnter:
+				if m.showTOTPInput {
+					if err := m.totpInput.Validate(m.totpInput.Value()); err != nil {
+						// TODO: do something here
+						return m, nil
+					}
+					m.loading = true
+					return m, m.login
+				}
 				if m.emailInput.Focused() {
 					m.emailInput.Blur()
 					m.passwordInput.Focus()
@@ -137,6 +174,11 @@ func (m loginModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 
+			if m.showTOTPInput {
+				m.totpInput, cmd = m.totpInput.Update(msg)
+				return m, cmd
+			}
+
 			if m.emailInput.Focused() {
 				m.emailInput, cmd = m.emailInput.Update(msg)
 				return m, cmd
@@ -145,16 +187,39 @@ func (m loginModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, cmd
 		}
 
-	case loginResponseMsg:
+	case totpMsg:
 		m.loading = false
+		m.showTOTPInput = true
+		m.totpInput.Focus()
+		m.emailInput.Blur()
+		m.passwordInput.Blur()
+
+	case api.LoginResponse:
+		m.loading = false
+		secrets.SaveCredentials(msg.Token)
+		return m, router.NewNavigationMsg("menu", nil)
+
+	case error:
+		m.loading = false
+		m.err = msg
 	}
 
 	return m, nil
 }
 
 func (m loginModel) View() string {
+	var parts []string
 
-	parts := []string{m.emailInput.View(), m.passwordInput.View()}
+	if m.showTOTPInput {
+		parts = append(parts, m.totpInput.View())
+	} else {
+		parts = append(parts, m.emailInput.View(), m.passwordInput.View())
+
+	}
+
+	if m.err != nil {
+		parts = append(parts, redTextStyles.Render(m.err.Error()))
+	}
 
 	if m.loading {
 		parts = append(parts, m.spinner.View()+" Waiting...")
@@ -169,13 +234,65 @@ func (m loginModel) View() string {
 	return wrapperStyles.Render(strings.Join(parts, "\n\n"))
 }
 
-type loginResponseMsg struct {
-	Status    int
-	AuthToken string
-}
+// totpMsg signals that totp code is needed to login
+type totpMsg struct{}
 
 // login makes a login request and passes the response in a loginResponseMsg
 func (m loginModel) login() tea.Msg {
-	time.Sleep(time.Second * 3)
-	return loginResponseMsg{Status: 200, AuthToken: ""}
+	reqBody := api.LoginRequest{
+		Email:    m.emailInput.Value(),
+		Password: m.passwordInput.Value(),
+		TOTPCode: nil,
+	}
+
+	if m.totpInput.Value() != "" {
+		code := m.totpInput.Value()
+		reqBody.TOTPCode = &code
+	}
+
+	reqBodyData, err := json.Marshal(reqBody)
+	if err != nil {
+		return err
+	}
+
+	reader := bytes.NewReader(reqBodyData)
+
+	req, err := http.NewRequest(
+		http.MethodPost,
+		config.BackendUrl()+"/auth/login",
+		reader,
+	)
+	req.Header.Add("Content-Type", "application/json")
+
+	c := http.Client{Timeout: time.Second * 10}
+	res, err := c.Do(req)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+
+	data, err := io.ReadAll(res.Body)
+	if err != nil {
+		return err
+	}
+
+	switch res.StatusCode {
+	case http.StatusOK:
+		var body api.LoginResponse
+		err = json.Unmarshal(data, &body)
+		if err != nil {
+			return err
+		}
+		return body
+	default:
+		var body api.ErrorResponse
+		err = json.Unmarshal(data, &body)
+		if err != nil {
+			return err
+		}
+		if strings.Contains(body.Message, "code is required") {
+			return totpMsg{}
+		}
+		return errors.New(body.Message)
+	}
 }

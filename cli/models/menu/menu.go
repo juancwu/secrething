@@ -39,6 +39,39 @@ type menuModel struct {
 func New(width int, height int) menuModel {
 	var items []list.Item
 
+	// Initialize list
+	delegate := list.NewDefaultDelegate()
+	delegate.Styles.SelectedTitle = delegate.Styles.SelectedTitle.
+		BorderLeft(true).
+		BorderStyle(lipgloss.NormalBorder()).
+		BorderForeground(lipgloss.Color("62"))
+
+	delegate.Styles.SelectedDesc = delegate.Styles.SelectedDesc.
+		BorderLeft(true).
+		BorderStyle(lipgloss.NormalBorder()).
+		BorderForeground(lipgloss.Color("62"))
+
+	l := list.New(items, delegate, 50, 4*len(items))
+	l.Title = "Konbini CLI"
+	l.SetShowHelp(true)
+
+	return menuModel{
+		list:   l,
+		width:  width,
+		height: height,
+	}
+}
+
+func (m menuModel) Init() tea.Cmd {
+	return m.updateItems
+}
+
+type updateItemsMsg struct {
+	Items []list.Item
+}
+
+func (m menuModel) updateItems() tea.Msg {
+	var items []list.Item
 	if secrets.AuthToken() == "" {
 		items = append(items,
 			menuItem{
@@ -71,32 +104,7 @@ func New(width int, height int) menuModel {
 			},
 		)
 	}
-
-	// Initialize list
-	delegate := list.NewDefaultDelegate()
-	delegate.Styles.SelectedTitle = delegate.Styles.SelectedTitle.
-		BorderLeft(true).
-		BorderStyle(lipgloss.NormalBorder()).
-		BorderForeground(lipgloss.Color("62"))
-
-	delegate.Styles.SelectedDesc = delegate.Styles.SelectedDesc.
-		BorderLeft(true).
-		BorderStyle(lipgloss.NormalBorder()).
-		BorderForeground(lipgloss.Color("62"))
-
-	l := list.New(items, delegate, 50, 4*len(items))
-	l.Title = "Konbini CLI"
-	l.SetShowHelp(true)
-
-	return menuModel{
-		list:   l,
-		width:  width,
-		height: height,
-	}
-}
-
-func (m menuModel) Init() tea.Cmd {
-	return nil
+	return updateItemsMsg{Items: items}
 }
 
 func (m menuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -114,6 +122,8 @@ func (m menuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, router.NewNavigationMsg(i.route, nil)
 			}
 		}
+	case updateItemsMsg:
+		m.list.SetItems(msg.Items)
 	}
 
 	var cmd tea.Cmd

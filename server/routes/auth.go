@@ -11,7 +11,7 @@ func setupAuthRoutes(routeConfig *RouteConfig) {
 	routeConfig.Echo.POST(
 		"/auth/login",
 		handlers.Login(routeConfig.DBConnector),
-		middlewares.ValidateJson(reflect.TypeOf(handlers.LoginRequest{})),
+		middlewares.ValidateJson(reflect.TypeOf(commonApi.LoginRequest{})),
 	)
 	routeConfig.Echo.POST(
 		"/auth/register",
@@ -34,7 +34,7 @@ func setupAuthRoutes(routeConfig *RouteConfig) {
 		"/auth/totp/lock",
 		handlers.SetupTOTPLock(routeConfig.DBConnector),
 		middlewares.ProtectAll(routeConfig.DBConnector),
-		middlewares.ValidateJson(reflect.TypeOf(handlers.SetupTOTPLockRequest{})),
+		middlewares.ValidateJson(reflect.TypeOf(commonApi.SetupTOTPLockRequest{})),
 	)
 	routeConfig.Echo.DELETE(
 		"/auth/totp",
