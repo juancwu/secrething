@@ -7,7 +7,8 @@ import (
 )
 
 type Vault struct {
-	Token string
+	Token   string
+	TOTPSet bool
 }
 
 const (
@@ -24,7 +25,8 @@ func Init() error {
 	}
 
 	vault = &Vault{
-		Token: token,
+		Token:   token,
+		TOTPSet: false,
 	}
 
 	return nil
@@ -50,6 +52,11 @@ func SetToken(token string) error {
 	}
 	vault.Token = token
 	return nil
+}
+
+func IsTOTPSet() bool {
+	assertVault()
+	return vault.TOTPSet
 }
 
 // assertVault make sures the vault has been initialized before usage. Panics if not initiliazed
