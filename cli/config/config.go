@@ -1,5 +1,7 @@
 package config
 
+import "fmt"
+
 var backendUrl string
 
 type terminal struct {
@@ -15,8 +17,12 @@ func Init() {
 	}
 }
 
-func BackendUrl() string {
-	return backendUrl
+func BackendUrl(path string) string {
+	if path == "" {
+		return backendUrl
+	}
+
+	return fmt.Sprintf("%s/%s", backendUrl, path)
 }
 
 func TermWidth() int {

@@ -1,19 +1,18 @@
-package models
+package app
 
 import (
 	"konbini/cli/config"
 	"konbini/cli/models/auth"
 	"konbini/cli/models/menu"
 	"konbini/cli/router"
-	"konbini/cli/secrets"
 
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-// app is the main app that is used to render the TUI
-type app struct {
+// model is the main model that is used to render the TUI
+type model struct {
 	// pointer to a router because the router maps should not be copied
 	// but just in-place updated.
 	router *router.Router
@@ -45,7 +44,7 @@ type debugProfile struct {
 	Input string
 }
 
-func NewApp() app {
+func NewApp() model {
 	r := router.NewRouter()
 
 	r.RegisterPage(
@@ -88,7 +87,7 @@ func NewApp() app {
 	s := spinner.New()
 	s.Spinner = spinner.Dot
 
-	return app{
+	return model{
 		router:         r,
 		spinner:        s,
 		keys:           defaultKeyMap(),
@@ -103,11 +102,11 @@ func NewApp() app {
 	}
 }
 
-func (a app) Init() tea.Cmd {
+func (a model) Init() tea.Cmd {
 	return a.spinner.Tick
 }
 
-func (a app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (a model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	var cmds []tea.Cmd
 	switch msg := msg.(type) {
@@ -158,7 +157,7 @@ func (a app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 // View only renders the activeModel view
-func (a app) View() string {
+func (a model) View() string {
 	if !a.ready() {
 		return a.spinner.View() + " Loading..."
 	}
@@ -171,22 +170,6 @@ func (a app) View() string {
 	return view
 }
 
-type authCheckMsg struct {
-	redirectTo string
-}
-
-// persistAuth checks if the current
-func (a app) persistAuth() tea.Msg {
-	err := secrets.CheckAuth()
-	msg := authCheckMsg{redirectTo: menuPageID}
-	// check for partial token
-	if err == nil && !secrets.TOTPSet() {
-		// redirect to totp setup
-		msg.redirectTo = setupTOTPPageID
-	}
-	return msg
-}
-
-func (a app) ready() bool {
+func (a model) ready() bool {
 	return a.authCheckDone && a.windowSizeDone
 }

@@ -1,5 +1,10 @@
 package api
 
+import (
+	"encoding/json"
+	"io"
+)
+
 type SetupTOTPResponse struct {
 	URL string `json:"url"`
 }
@@ -35,4 +40,19 @@ type ErrorResponse struct {
 	Message   string   `json:"message"`
 	Errors    []string `json:"errors,omitempty"`
 	RequestId string   `json:"request_id"`
+}
+
+func ReadErrorResponse(body io.Reader) (*ErrorResponse, error) {
+	data, err := io.ReadAll(body)
+	if err != nil {
+		return nil, err
+	}
+
+	var res ErrorResponse
+	err = json.Unmarshal(data, &res)
+	if err != nil {
+		return nil, err
+	}
+
+	return &res, nil
 }
