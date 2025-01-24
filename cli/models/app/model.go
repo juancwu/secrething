@@ -44,7 +44,7 @@ type debugProfile struct {
 	Input string
 }
 
-func NewApp() model {
+func New() model {
 	r := router.NewRouter()
 
 	r.RegisterPage(
