@@ -15,7 +15,7 @@ func BackendUrl(path string) string {
 		return backendUrl
 	}
 
-	return fmt.Sprintf("%s/%s", backendUrl, path)
+	return fmt.Sprintf("%s%s", backendUrl, path)
 }
 
 type Auth struct {
