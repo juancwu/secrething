@@ -4,13 +4,6 @@ import "fmt"
 
 var backendUrl string
 
-type terminal struct {
-	width  int
-	height int
-}
-
-var t terminal
-
 func Init() {
 	if backendUrl == "" {
 		backendUrl = "http://localhost:3000/api/v1"
@@ -25,21 +18,19 @@ func BackendUrl(path string) string {
 	return fmt.Sprintf("%s/%s", backendUrl, path)
 }
 
-func TermWidth() int {
-	return t.width
+type Auth struct {
+	Token         string
+	TokenType     string
+	TOTP          bool
+	EmailVerified bool
 }
 
-func TermHeight() int {
-	return t.height
+var _auth *Auth = nil
+
+func SetAuth(auth Auth) {
+	_auth = &auth
 }
 
-func TermSize() (width int, height int) {
-	width = t.width
-	height = t.height
-	return
-}
-
-func UpdateTermSize(width int, height int) {
-	t.width = width
-	t.height = height
+func GetAuth() *Auth {
+	return _auth
 }

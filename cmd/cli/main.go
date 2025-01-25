@@ -9,13 +9,13 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"konbini/cli/models/app"
+	"konbini/cli/tui"
 )
 
 func main() {
 	config.Init()
 	if len(os.Args) == 1 {
-		m := app.New()
+		m := tui.New()
 		p := tea.NewProgram(m, tea.WithAltScreen())
 		_, err := p.Run()
 		if err != nil {
