@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"konbini/cli/config"
+	"konbini/common/api"
 	commonAPI "konbini/common/api"
 )
 
@@ -24,7 +25,7 @@ func Register(email string, nickname string, password string) (commonAPI.Registe
 
 	reader := bytes.NewReader(body)
 
-	req, err := http.NewRequest(http.MethodPost, config.BackendUrl()+"/auth/register", reader)
+	req, err := http.NewRequest(http.MethodPost, config.BackendUrl(api.UriRegister), reader)
 	if err != nil {
 		return commonAPI.RegisterResponse{}, err
 	}

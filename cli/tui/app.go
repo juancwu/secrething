@@ -18,6 +18,12 @@ import (
 	keyring "github.com/zalando/go-keyring"
 )
 
+const (
+	pageMenu        = "menu"
+	pageSetupTOTP   = "setup-totp"
+	pageVerifyEmail = "verify-email"
+)
+
 type GlobalKeyMap struct {
 	ForceQuit key.Binding
 }
@@ -55,8 +61,16 @@ type App struct {
 func New() App {
 	r := router.NewRouter()
 
-	r.RegisterPage("menu", func(params map[string]interface{}) tea.Model {
+	r.RegisterPage(pageMenu, func(params map[string]interface{}) tea.Model {
 		return newMenu(params)
+	})
+
+	r.RegisterPage(pageSetupTOTP, func(params map[string]interface{}) tea.Model {
+		return newSetupTOTP(params)
+	})
+
+	r.RegisterPage(pageVerifyEmail, func(params map[string]interface{}) tea.Model {
+		return newVerifyEmail(params)
 	})
 
 	keys := GlobalKeyMap{
@@ -127,7 +141,15 @@ func (m App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	if m.ready() {
 		if !m.routerInitialized {
-			m.r.SetInitialPage("menu", m.globalParams(nil))
+			auth := config.GetAuth()
+			switch {
+			case auth != nil && !auth.EmailVerified:
+				m.r.SetInitialPage(pageVerifyEmail, m.globalParams(nil))
+			case auth != nil && !auth.TOTP:
+				m.r.SetInitialPage(pageSetupTOTP, m.globalParams(nil))
+			default:
+				m.r.SetInitialPage(pageMenu, m.globalParams(nil))
+			}
 			m.routerInitialized = true
 		}
 
