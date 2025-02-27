@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	commonApi "konbini/common/api"
 	"konbini/server/db"
 	"konbini/server/memcache"
@@ -165,6 +166,27 @@ func Login(connector *db.DBConnector) echo.HandlerFunc {
 				})
 				if err != nil {
 					if err == sql.ErrNoRows {
+						// Record failed TOTP recovery code attempt
+						middlewares.RecordFailedTOTPAttempt(user.ID)
+
+						// Check if user is now rate limited after this attempt
+						key := middlewares.TOTPAttemptsKeyPrefix + user.ID
+						attemptsData, found := memcache.Cache().Get(key)
+
+						if found {
+							attempts := attemptsData.(middlewares.TOTPAttempts)
+							if attempts.Attempts >= middlewares.MaxTOTPAttempts {
+								cooldownEnd := attempts.LastAttempt.Add(middlewares.TOTPCooldownDuration)
+								retryAfter := int(time.Until(cooldownEnd).Seconds())
+								c.Response().Header().Set("Retry-After", fmt.Sprintf("%d", retryAfter))
+
+								return APIError{
+									Code:          http.StatusTooManyRequests,
+									PublicMessage: fmt.Sprintf("Too many failed attempts. Try again in %d seconds.", retryAfter),
+								}
+							}
+						}
+
 						return APIError{
 							Code:           http.StatusBadRequest,
 							PublicMessage:  "Invalid recovery code.",
@@ -180,6 +202,27 @@ func Login(connector *db.DBConnector) echo.HandlerFunc {
 				}
 
 				if recoveryCode.Used {
+					// Record failed TOTP attempt for used recovery code
+					middlewares.RecordFailedTOTPAttempt(user.ID)
+
+					// Check if user is now rate limited after this attempt
+					key := middlewares.TOTPAttemptsKeyPrefix + user.ID
+					attemptsData, found := memcache.Cache().Get(key)
+
+					if found {
+						attempts := attemptsData.(middlewares.TOTPAttempts)
+						if attempts.Attempts >= middlewares.MaxTOTPAttempts {
+							cooldownEnd := attempts.LastAttempt.Add(middlewares.TOTPCooldownDuration)
+							retryAfter := int(time.Until(cooldownEnd).Seconds())
+							c.Response().Header().Set("Retry-After", fmt.Sprintf("%d", retryAfter))
+
+							return APIError{
+								Code:          http.StatusTooManyRequests,
+								PublicMessage: fmt.Sprintf("Too many failed attempts. Try again in %d seconds.", retryAfter),
+							}
+						}
+					}
+
 					return APIError{
 						Code:           http.StatusBadRequest,
 						PublicMessage:  "Recovery code has been used before. Please use another one.",
@@ -199,11 +242,44 @@ func Login(connector *db.DBConnector) echo.HandlerFunc {
 					}
 				}
 			} else if !totp.Validate(*body.TOTPCode, *user.TotpSecret) {
+				// Record failed TOTP attempt
+				middlewares.RecordFailedTOTPAttempt(user.ID)
+
+				// Check if user is now rate limited after this attempt
+				key := middlewares.TOTPAttemptsKeyPrefix + user.ID
+				attemptsData, found := memcache.Cache().Get(key)
+
+				if found {
+					attempts := attemptsData.(middlewares.TOTPAttempts)
+					if attempts.Attempts >= middlewares.MaxTOTPAttempts {
+						cooldownEnd := attempts.LastAttempt.Add(middlewares.TOTPCooldownDuration)
+						retryAfter := int(time.Until(cooldownEnd).Seconds())
+						c.Response().Header().Set("Retry-After", fmt.Sprintf("%d", retryAfter))
+
+						return APIError{
+							Code:          http.StatusTooManyRequests,
+							PublicMessage: fmt.Sprintf("Too many failed TOTP attempts. Try again in %d seconds.", retryAfter),
+						}
+					}
+
+					// Add rate limit headers
+					remainingAttempts := middlewares.MaxTOTPAttempts - attempts.Attempts
+					if remainingAttempts < 0 {
+						remainingAttempts = 0
+					}
+					c.Response().Header().Set("X-RateLimit-Limit", fmt.Sprintf("%d", middlewares.MaxTOTPAttempts))
+					c.Response().Header().Set("X-RateLimit-Remaining", fmt.Sprintf("%d", remainingAttempts))
+					c.Response().Header().Set("X-RateLimit-Reset", fmt.Sprintf("%d", attempts.LastAttempt.Add(middlewares.TOTPCooldownDuration).Unix()))
+				}
+
 				return APIError{
 					Code:          http.StatusBadRequest,
 					PublicMessage: "Invalid TOTP code.",
 				}
 			}
+
+			// Reset rate limiting counter on successful TOTP validation
+			middlewares.ResetTOTPAttempts(user.ID)
 
 			tokType = services.FULL_USER_TOKEN_TYPE
 		} else {
@@ -555,6 +631,9 @@ func SetupTOTPLock(connector *db.DBConnector) echo.HandlerFunc {
 			}
 		}
 
+		// Reset rate limiting counter on successful TOTP setup
+		middlewares.ResetTOTPAttempts(user.ID)
+
 		return c.JSON(http.StatusOK, commonApi.LockTOTPResponse{
 			RecoveryCodes: codes,
 			Token:         token,
@@ -597,6 +676,27 @@ func RemoveTOTP(connector *db.DBConnector) echo.HandlerFunc {
 		switch len(body.Code) {
 		case 6:
 			if !totp.Validate(body.Code, *user.TotpSecret) {
+				// Record failed TOTP attempt
+				middlewares.RecordFailedTOTPAttempt(user.ID)
+
+				// Check if user is now rate limited after this attempt
+				key := middlewares.TOTPAttemptsKeyPrefix + user.ID
+				attemptsData, found := memcache.Cache().Get(key)
+
+				if found {
+					attempts := attemptsData.(middlewares.TOTPAttempts)
+					if attempts.Attempts >= middlewares.MaxTOTPAttempts {
+						cooldownEnd := attempts.LastAttempt.Add(middlewares.TOTPCooldownDuration)
+						retryAfter := int(time.Until(cooldownEnd).Seconds())
+						c.Response().Header().Set("Retry-After", fmt.Sprintf("%d", retryAfter))
+
+						return APIError{
+							Code:          http.StatusTooManyRequests,
+							PublicMessage: fmt.Sprintf("Too many failed attempts. Try again in %d seconds.", retryAfter),
+						}
+					}
+				}
+
 				return APIError{
 					Code:          http.StatusBadRequest,
 					PublicMessage: "Invalid TOTP code.",
@@ -634,6 +734,24 @@ func RemoveTOTP(connector *db.DBConnector) echo.HandlerFunc {
 		case 32:
 			q := db.New(conn)
 			if err := verifyRecoveryCode(c.Request().Context(), q, user.ID, body.Code); err != nil {
+				// Check if user has exceeded rate limits
+				key := middlewares.TOTPAttemptsKeyPrefix + user.ID
+				attemptsData, found := memcache.Cache().Get(key)
+
+				if found {
+					attempts := attemptsData.(middlewares.TOTPAttempts)
+					if attempts.Attempts >= middlewares.MaxTOTPAttempts {
+						cooldownEnd := attempts.LastAttempt.Add(middlewares.TOTPCooldownDuration)
+						retryAfter := int(time.Until(cooldownEnd).Seconds())
+						c.Response().Header().Set("Retry-After", fmt.Sprintf("%d", retryAfter))
+
+						return APIError{
+							Code:          http.StatusTooManyRequests,
+							PublicMessage: fmt.Sprintf("Too many failed attempts. Try again in %d seconds.", retryAfter),
+						}
+					}
+				}
+
 				return APIError{
 					Code:           http.StatusBadRequest,
 					PublicMessage:  "Invalid TOTP code.",
@@ -705,6 +823,9 @@ func RemoveTOTP(connector *db.DBConnector) echo.HandlerFunc {
 				InternalError:  err,
 			}
 		}
+
+		// Reset rate limiting counter on successful TOTP removal
+		middlewares.ResetTOTPAttempts(user.ID)
 
 		return c.NoContent(http.StatusOK)
 	}
