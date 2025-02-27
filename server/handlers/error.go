@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"fmt"
-	commonApi "konbini/common/api"
+	commonApi "github.com/juancwu/konbini/common/api"
 	"net/http"
 
 	"github.com/labstack/echo/v4"

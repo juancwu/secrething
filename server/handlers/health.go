@@ -2,8 +2,8 @@ package handlers
 
 import (
 	"context"
-	"konbini/server/config"
-	"konbini/server/db"
+	"github.com/juancwu/konbini/server/config"
+	"github.com/juancwu/konbini/server/db"
 	"net/http"
 	"time"
 

@@ -3,8 +3,8 @@ package services
 import (
 	"errors"
 	"io"
-	"konbini/cli/config"
-	"konbini/common/api"
+	"github.com/juancwu/konbini/cli/config"
+	"github.com/juancwu/konbini/common/api"
 	"net/http"
 	"time"
 )

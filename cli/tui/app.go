@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"konbini/cli/config"
-	"konbini/cli/router"
-	"konbini/common/api"
+	"github.com/juancwu/konbini/cli/config"
+	"github.com/juancwu/konbini/cli/router"
+	"github.com/juancwu/konbini/common/api"
 	"net/http"
 	"time"
 

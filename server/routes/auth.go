@@ -1,9 +1,9 @@
 package routes
 
 import (
-	commonApi "konbini/common/api"
-	"konbini/server/handlers"
-	"konbini/server/middlewares"
+	commonApi "github.com/juancwu/konbini/common/api"
+	"github.com/juancwu/konbini/server/handlers"
+	"github.com/juancwu/konbini/server/middlewares"
 	"reflect"
 
 	"github.com/labstack/echo/v4"

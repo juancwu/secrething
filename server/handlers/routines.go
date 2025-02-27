@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"context"
-	"konbini/server/services"
+	"github.com/juancwu/konbini/server/services"
 	"time"
 
 	"github.com/rs/zerolog"

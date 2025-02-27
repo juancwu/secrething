@@ -2,7 +2,7 @@ package middlewares
 
 import (
 	"fmt"
-	"konbini/server/memcache"
+	"github.com/juancwu/konbini/server/memcache"
 	"net/http"
 	"sync"
 	"time"

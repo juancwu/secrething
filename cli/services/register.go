@@ -8,9 +8,9 @@ import (
 	"net/http"
 	"time"
 
-	"konbini/cli/config"
-	"konbini/common/api"
-	commonAPI "konbini/common/api"
+	"github.com/juancwu/konbini/cli/config"
+	"github.com/juancwu/konbini/common/api"
+	commonAPI "github.com/juancwu/konbini/common/api"
 )
 
 func Register(email string, nickname string, password string) (commonAPI.RegisterResponse, error) {

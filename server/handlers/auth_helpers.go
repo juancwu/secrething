@@ -3,10 +3,10 @@ package handlers
 import (
 	"context"
 	"errors"
-	"konbini/server/db"
-	"konbini/server/middlewares"
-	"konbini/server/services"
-	"konbini/server/utils"
+	"github.com/juancwu/konbini/server/db"
+	"github.com/juancwu/konbini/server/middlewares"
+	"github.com/juancwu/konbini/server/services"
+	"github.com/juancwu/konbini/server/utils"
 	"time"
 )
 

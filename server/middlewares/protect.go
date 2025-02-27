@@ -3,8 +3,8 @@ package middlewares
 import (
 	"database/sql"
 	"errors"
-	"konbini/server/db"
-	"konbini/server/services"
+	"github.com/juancwu/konbini/server/db"
+	"github.com/juancwu/konbini/server/services"
 	"net/http"
 	"strings"
 

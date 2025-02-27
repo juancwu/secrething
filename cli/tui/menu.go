@@ -1,7 +1,7 @@
 package tui
 
 import (
-	"konbini/cli/config"
+	"github.com/juancwu/konbini/cli/config"
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"

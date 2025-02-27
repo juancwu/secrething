@@ -1,8 +1,8 @@
 package routes
 
 import (
-	"konbini/server/config"
-	"konbini/server/db"
+	"github.com/juancwu/konbini/server/config"
+	"github.com/juancwu/konbini/server/db"
 
 	"github.com/labstack/echo/v4"
 )

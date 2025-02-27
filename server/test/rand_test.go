@@ -1,7 +1,7 @@
 package test
 
 import (
-	"konbini/server/utils"
+	"github.com/juancwu/konbini/server/utils"
 	"testing"
 
 	"github.com/stretchr/testify/require"

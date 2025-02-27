@@ -1,7 +1,7 @@
 package routes
 
 import (
-	"konbini/server/middlewares"
+	"github.com/juancwu/konbini/server/middlewares"
 
 	"github.com/rs/zerolog/log"
 )

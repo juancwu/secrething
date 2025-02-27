@@ -1,7 +1,7 @@
 package test
 
 import (
-	"konbini/server/config"
+	"github.com/juancwu/konbini/server/config"
 	"os"
 	"testing"
 

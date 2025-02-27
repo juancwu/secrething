@@ -2,7 +2,7 @@ package tui
 
 import (
 	"fmt"
-	"konbini/cli/services"
+	"github.com/juancwu/konbini/cli/services"
 	"strings"
 	"time"
 

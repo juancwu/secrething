@@ -1,8 +1,8 @@
 package routes
 
 import (
-	"konbini/server/handlers"
-	"konbini/server/middlewares"
+	"github.com/juancwu/konbini/server/handlers"
+	"github.com/juancwu/konbini/server/middlewares"
 	"reflect"
 )
 

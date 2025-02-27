@@ -3,8 +3,8 @@ package services
 import (
 	"encoding/base64"
 	"errors"
-	"konbini/server/config"
-	"konbini/server/utils"
+	"github.com/juancwu/konbini/server/config"
+	"github.com/juancwu/konbini/server/utils"
 	"time"
 
 	"github.com/google/uuid"

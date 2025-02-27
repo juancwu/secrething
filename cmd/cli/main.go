@@ -4,12 +4,12 @@ import (
 	"log"
 	"os"
 
-	command "konbini/cli/commands"
-	"konbini/cli/config"
+	command "github.com/juancwu/konbini/cli/commands"
+	"github.com/juancwu/konbini/cli/config"
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"konbini/cli/tui"
+	"github.com/juancwu/konbini/cli/tui"
 )
 
 func main() {

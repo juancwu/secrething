@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"konbini/server/config"
-	"konbini/server/views"
+	"github.com/juancwu/konbini/server/config"
+	"github.com/juancwu/konbini/server/views"
 
 	"github.com/resend/resend-go/v2"
 	"github.com/rs/zerolog/log"

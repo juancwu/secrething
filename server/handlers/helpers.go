@@ -2,8 +2,8 @@ package handlers
 
 import (
 	"fmt"
-	"konbini/server/memcache"
-	"konbini/server/services"
+	"github.com/juancwu/konbini/server/memcache"
+	"github.com/juancwu/konbini/server/services"
 	"time"
 )
 

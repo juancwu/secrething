@@ -1,11 +1,11 @@
 package main
 
 import (
-	"konbini/server/config"
-	"konbini/server/db"
-	"konbini/server/handlers"
-	"konbini/server/routes"
-	inner_validator "konbini/server/validator"
+	"github.com/juancwu/konbini/server/config"
+	"github.com/juancwu/konbini/server/db"
+	"github.com/juancwu/konbini/server/handlers"
+	"github.com/juancwu/konbini/server/routes"
+	inner_validator "github.com/juancwu/konbini/server/validator"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"

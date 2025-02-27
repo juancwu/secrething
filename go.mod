@@ -1,4 +1,4 @@
-module konbini
+module github.com/juancwu/konbini
 
 go 1.23.4
 
@@ -11,6 +11,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.5.1
 	github.com/labstack/echo/v4 v4.13.3
+	github.com/mdp/qrterminal/v3 v3.2.0
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pquerna/otp v1.4.0
 	github.com/resend/resend-go/v2 v2.13.0
@@ -18,6 +19,7 @@ require (
 	github.com/spf13/cobra v1.8.1
 	github.com/stretchr/testify v1.10.0
 	github.com/tursodatabase/go-libsql v0.0.0-20241221181756-6121e81fbf92
+	github.com/zalando/go-keyring v0.2.6
 	golang.org/x/crypto v0.31.0
 )
 
@@ -45,18 +47,15 @@ require (
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-localereader v0.0.1 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect
-	github.com/mdp/qrterminal/v3 v3.2.0 // indirect
 	github.com/muesli/ansi v0.0.0-20230316100256-276c6243b2f6 // indirect
 	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/muesli/termenv v0.15.3-0.20240509142007-81b8f94111d5 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/sahilm/fuzzy v0.1.1 // indirect
-	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasttemplate v1.2.2 // indirect
-	github.com/zalando/go-keyring v0.2.6 // indirect
 	golang.org/x/exp v0.0.0-20240325151524-a685a6edb6d8 // indirect
 	golang.org/x/net v0.33.0 // indirect
 	golang.org/x/sync v0.10.0 // indirect
