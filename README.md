@@ -1,9 +1,135 @@
-# Konbini: your go to convenient store for your secrets
+# 🍱 Konbini: Secure Secret Management Made Simple
 
-Konbini the backend service that stores secrets in a database and make them
-accessible to your team, IC, and just yourself. The secrets are never saved in plaintext.
-In fact, Konbini never knows the plaintext version of your secret.
-The client is responsible of encrypting the secrets, which also means no key store in Konbini as well.
-In combination with the CLI tool [Mi](https://github.com/juancwu/mi) the process is made even easier.
+Konbini (Japanese for "convenience store") is your go-to solution for securely storing, managing, and sharing sensitive information within your organization. Like a well-organized bento box, Konbini keeps your secrets neatly compartmentalized and protected.
 
-> Notice: The repository is undergoing a major do-over.
+## ✨ Features
+
+- **End-to-End Encryption**: Secrets are encrypted on the client side - Konbini never sees plaintext data
+- **Team Sharing**: Securely share credentials with team members through the groups system
+- **Fine-grained Permissions**: Control who can access, view, and modify your secrets
+- **Two-Factor Authentication**: Enhanced security with TOTP (Time-based One-Time Password)
+- **Intuitive CLI**: Command-line interface with TUI support for easy management
+- **API Access**: RESTful API for integration with your existing tools
+- **Audit Logs**: Track who accessed what and when
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Go 1.21+
+- SQLite database (or Turso for production)
+- Resend.com account (for email verification)
+
+### Installation
+
+1. Clone the repository
+
+```bash
+git clone https://github.com/juancwu/konbini.git
+cd konbini
+```
+
+2. Install dependencies
+
+```bash
+go mod download
+```
+
+3. Create a `.env` file in the project root with the following variables:
+
+```
+PORT=8080
+DB_URL=file:konbini.db
+JWT_SECRET=your-secret-key
+RESEND_API_KEY=your-resend-api-key
+APP_URL=http://localhost:8080
+```
+
+4. Build the project
+
+```bash
+# Build the server
+go build -o bin/konbini cmd/server/main.go
+
+# Build the CLI
+go build -o bin/konbini-cli cmd/cli/main.go
+```
+
+## 📚 Usage
+
+### Start the Server
+
+```bash
+./bin/konbini
+```
+
+### Using the CLI
+
+The CLI can be run in two modes:
+
+#### Interactive TUI Mode
+
+```bash
+./bin/konbini-cli
+```
+
+This launches an interactive terminal user interface where you can:
+
+- Register/login to your account
+- Set up 2FA with TOTP
+- Manage your bentos (secret containers)
+- Create and join groups
+- Invite team members
+
+#### Command Mode
+
+```bash
+# Login to your account
+./bin/konbini-cli login
+
+# Create a new bento
+./bin/konbini-cli bento new my-api-keys
+
+# Add a secret to a bento
+./bin/konbini-cli bento add my-api-keys AWS_SECRET_KEY=abcdefg
+
+# List all bentos
+./bin/konbini-cli bento list
+
+# Share a bento with a group
+./bin/konbini-cli group invite DevTeam john@example.com
+```
+
+## 🎯 What is a Bento?
+
+In Konbini, a "bento" is a container for your secrets:
+
+- Each bento has a unique name and can contain multiple "ingredients" (key-value pairs)
+- Bentos can be shared with other users through groups
+- Permissions control who can view or modify each bento
+- All bento contents are encrypted on the client side before being sent to the server
+
+## 🛡️ Security
+
+Konbini is designed with security at its core:
+
+- Client-side encryption ensures your secrets never leave your machine in plaintext
+- Two-factor authentication (TOTP) protects your account
+- Fine-grained permission system prevents unauthorized access
+- No plaintext storage of sensitive data
+- Email verification for new accounts
+
+## 📝 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1. Fork the project
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
