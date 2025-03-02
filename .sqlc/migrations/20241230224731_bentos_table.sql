@@ -1,7 +1,7 @@
 -- +goose Up
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS bentos (
-    id TEXT NOT NULL PRIMARY KEY DEFAULT (uuid4()),
+    id TEXT NOT NULL PRIMARY KEY,
     user_id TEXT NOT NULL CHECK (user_id != ''),
     name TEXT NOT NULL CHECK (name != ''),
     created_at TEXT NOT NULL CHECK (created_at != ''),

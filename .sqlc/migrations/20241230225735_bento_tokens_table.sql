@@ -1,7 +1,7 @@
 -- +goose Up
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS bento_tokens(
-    id TEXT NOT NULL PRIMARY KEY DEFAULT (gen_random_uuid()),
+    id TEXT NOT NULL PRIMARY KEY,
     bento_id TEXT NOT NULL CHECK (bento_id != ''),
     token_salt BLOB NOT NULL UNIQUE,
     created_by TEXT NOT NULL CHECK (created_by != ''),

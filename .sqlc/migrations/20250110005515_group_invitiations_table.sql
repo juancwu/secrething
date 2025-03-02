@@ -1,7 +1,7 @@
 -- +goose Up
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS group_invitations (
-    id TEXT NOT NULL PRIMARY KEY DEFAULT (gen_random_uuid()),
+    id TEXT NOT NULL PRIMARY KEY,
     user_id TEXT NOT NULL CHECK (user_id != ''),
     group_id TEXT NOT NULL CHECK (group_id != ''),
     created_at TEXT NOT NULL CHECK (created_at != ''),

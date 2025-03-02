@@ -1,7 +1,7 @@
 -- +goose Up
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS totp_recovery_codes (
-    id TEXT NOT NULL PRIMARY KEY DEFAULT (gen_random_uuid()),
+    id TEXT NOT NULL PRIMARY KEY,
     user_id TEXT NOT NULL CHECK (user_id != ''),
     code TEXT NOT NULL CHECK (code != ''),
     used BOOL NOT NULL DEFAULT false,

@@ -1,7 +1,7 @@
 -- +goose Up
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS bento_ingredients (
-    id TEXT NOT NULL PRIMARY KEY DEFAULT (gen_random_uuid()),
+    id TEXT NOT NULL PRIMARY KEY,
     bento_id TEXT NOT NULL CHECK (bento_id != ''),
     name TEXT NOT NULL CHECK (name != ''),
     value BLOB NOT NULL,
