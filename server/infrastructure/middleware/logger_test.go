@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/labstack/echo/v4"
+	echomiddleware "github.com/labstack/echo/v4/middleware"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
@@ -41,7 +42,8 @@ func TestLoggerMiddleware(t *testing.T) {
 	req.Header.Set("User-Agent", "test-agent")
 
 	// Run the middleware
-	middleware := LoggerMiddleware()(testHandler)
+	withLogger := LoggerMiddleware()(testHandler)
+	middleware := echomiddleware.RequestID()(withLogger)
 	err := middleware(c)
 
 	// Assertions
