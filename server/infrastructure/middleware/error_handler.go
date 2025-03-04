@@ -65,7 +65,7 @@ func HTTPErrorHandler(err error, c echo.Context) {
 			logLevel = string(LogLevelWarn)
 			logErrorWithLevel(logLevel, appErr, requestID)
 		}
-	} else if stderrors.As(err, echoHTTPError) {
+	} else if stderrors.As(err, &echoHTTPError) {
 		// Handle Echo's built-in HTTP errors
 		statusCode = echoHTTPError.Code
 
