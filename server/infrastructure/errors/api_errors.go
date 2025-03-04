@@ -142,4 +142,3 @@ func NewRateLimitError(message string) AppError {
 		PublicMessage: message,
 	}
 }
-
