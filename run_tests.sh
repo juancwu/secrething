@@ -16,7 +16,7 @@ echo "Wait for local db instance to boot..."
 sleep 2
 
 echo "Run migrations..."
-GOOSE_DRIVER=turso GOOSE_DBSTRING="$LOCAL_TURSO_DB_URL:$LOCAL_TURSO_DB_PORT" GOOSE_MIGRATION_DIR="./.sqlc/migrations" goose up
+GOOSE_DRIVER=turso GOOSE_DBSTRING="$LOCAL_TURSO_DB_URL:$LOCAL_TURSO_DB_PORT" GOOSE_MIGRATION_DIR="./server/db/migrations" goose up
 
 echo "Run tests..."
 DATABASE_URL="$LOCAL_TURSO_DB_URL:$LOCAL_TURSO_DB_PORT" go test -v -coverprofile=coverage.out ./...
