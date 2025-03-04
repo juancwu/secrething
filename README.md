@@ -57,6 +57,66 @@ go build -o bin/konbini-cli cmd/cli/main.go
 
 ## 📚 Usage
 
+### Development Scripts
+
+The project includes several utility scripts to make development easier:
+
+#### Setup Script
+
+```bash
+./setup.sh
+```
+
+Sets up the local development environment by:
+- Creating required directories
+- Installing dependencies (Go, Air, Goose, sqlc, Turso CLI)
+- Downloading Go dependencies
+- Generating SQL code
+- Setting up a local database
+- Running database migrations
+
+#### Development Server
+
+```bash
+./dev.sh
+```
+
+Runs the development server with hot reload using Air.
+
+#### CLI Shortcut
+
+```bash
+./cli.sh
+```
+
+Runs the CLI application in interactive TUI mode.
+
+#### Database Migrations
+
+```bash
+./migrate.sh [command]
+```
+
+Database migration utility with the following commands:
+- `up`: Apply all migrations
+- `up-by-one`: Apply next migration
+- `down`: Roll back all migrations
+- `down-by-one`: Roll back most recent migration
+- `status`: Show migration status
+- `create [name]`: Create a new migration
+
+#### Run Tests
+
+```bash
+./run_tests.sh
+```
+
+Runs tests with coverage by:
+- Starting a local Turso database instance
+- Running migrations
+- Executing tests and generating coverage report
+- Terminating the database instance
+
 ### Start the Server
 
 ```bash
