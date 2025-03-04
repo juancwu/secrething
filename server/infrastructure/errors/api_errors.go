@@ -27,13 +27,13 @@ const (
 
 // AppError represents a structured application error
 type AppError struct {
-	Type           ErrorType  // The type of error
-	Code           int        // HTTP status code
-	RequestID      string     // Request ID for tracking
-	PublicMessage  string     // Message that can be shown to the user
-	PrivateMessage string     // Internal message with more details (not shown to user)
-	Errors         []string   // List of additional error details
-	InternalError  error      // The original error if wrapped
+	Type           ErrorType // The type of error
+	Code           int       // HTTP status code
+	RequestID      string    // Request ID for tracking
+	PublicMessage  string    // Message that can be shown to the user
+	PrivateMessage string    // Internal message with more details (not shown to user)
+	Errors         []string  // List of additional error details
+	InternalError  error     // The original error if wrapped
 }
 
 // Error implements the error interface
@@ -49,7 +49,7 @@ type ErrorResponse struct {
 	Code    int      `json:"code"`
 	Message string   `json:"message"`
 	Errors  []string `json:"errors,omitempty"`
-	ReqID   string   `json:"req_id,omitempty"`
+	ReqID   string   `json:"request_id,omitempty"`
 }
 
 // NewValidationError creates a new validation error
@@ -142,3 +142,4 @@ func NewRateLimitError(message string) AppError {
 		PublicMessage: message,
 	}
 }
+

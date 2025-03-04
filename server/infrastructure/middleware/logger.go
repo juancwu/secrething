@@ -22,7 +22,7 @@ func LoggerMiddleware() echo.MiddlewareFunc {
 			duration := time.Since(start)
 
 			// Get request ID
-			requestID := req.Header.Get(echo.HeaderXRequestID)
+			requestID := res.Header().Get(echo.HeaderXRequestID)
 
 			// Check for Cloudflare headers
 			cfCountry := req.Header.Get("CF-IPCountry")

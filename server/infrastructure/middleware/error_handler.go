@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/juancwu/konbini/server/infrastructure/errors"
+	"github.com/juancwu/konbini/server/infrastructure/observability"
 	"github.com/labstack/echo/v4"
 	"github.com/rs/zerolog/log"
 )
@@ -33,6 +34,8 @@ func HTTPErrorHandler(err error, c echo.Context) {
 	var message string
 	var details []string
 	var logLevel string
+
+	observability.ReportError(err, c)
 
 	requestID := c.Response().Header().Get(echo.HeaderXRequestID)
 
