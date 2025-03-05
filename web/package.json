@@ -6,8 +6,14 @@
 	"scripts": {
 		"dev": "vite",
 		"build": "tsc -b && vite build",
-		"lint": "biome lint",
-		"preview": "vite preview",
+        "preview": "vite preview",
+
+		"lint:check": "biome lint",
+		"lint:fix": "biome lint --fix",
+
+		"format:check": "biome format",
+		"format:fix": "biome format --fix",
+
 		"test": "vitest --workspace=vitest.browser.ts",
 		"test:ci": "vitest run --workspace=vitest.browser.ts",
 		"test:coverage": "vitest run --workspace=vitest.coverage.ts --coverage"
