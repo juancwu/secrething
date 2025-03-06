@@ -1,7 +1,5 @@
 import { useState } from "react";
-import { ModeToggle } from "@/components/ui/mode-toggle";
 import { Button } from "@/components/ui/button";
-import { GitHubLogo } from "@/components/github-logo";
 import {
 	Sparkles,
 	Package,
@@ -24,55 +22,6 @@ import {
 function Landing() {
 	return (
 		<div className="min-h-screen bg-background text-foreground flex flex-col">
-			<header className="container mx-auto py-6 px-4 flex justify-between items-center">
-				<div className="flex items-center gap-2">
-					<span className="text-2xl font-bold flex items-center gap-2">
-						<Package className="h-6 w-6" /> Konbini
-					</span>
-				</div>
-				<div className="flex items-center gap-4">
-					<nav className="hidden md:flex gap-6">
-						<a
-							href="#features"
-							className="hover:text-primary transition-colors"
-						>
-							Features
-						</a>
-						<a
-							href="#what-is-bento"
-							className="hover:text-primary transition-colors"
-						>
-							What is a Bento?
-						</a>
-						<a
-							href="#security"
-							className="hover:text-primary transition-colors"
-						>
-							Security
-						</a>
-						<a
-							href="#getting-started"
-							className="hover:text-primary transition-colors"
-						>
-							Getting Started
-						</a>
-					</nav>
-					<div className="flex items-center gap-4">
-						<Button asChild variant="outline" size="icon">
-							<a
-								href="https://github.com/juancwu/konbini"
-								target="_blank"
-								rel="noreferrer"
-							>
-								<GitHubLogo className="w-4 h-4" />
-								<span className="sr-only">GitHub</span>
-							</a>
-						</Button>
-						<ModeToggle />
-					</div>
-				</div>
-			</header>
-
 			<main>
 				{/* Hero Section */}
 				<section className="py-20 md:py-32 border-b">
