@@ -1,13 +1,24 @@
+import { useState } from "react";
 import { ModeToggle } from "@/components/ui/mode-toggle";
 import { Button } from "@/components/ui/button";
 import { GitHubLogo } from "@/components/github-logo";
-import { Sparkles, Package, Target, Shield, Rocket } from "lucide-react";
+import {
+	Sparkles,
+	Package,
+	Target,
+	Shield,
+	Rocket,
+	Copy,
+	Terminal,
+	CheckCircle2,
+} from "lucide-react";
 import {
 	Card,
 	CardTitle,
 	CardDescription,
 	CardHeader,
 	CardContent,
+	CardFooter,
 } from "@/components/ui/card";
 
 function Landing() {
@@ -159,26 +170,7 @@ function Landing() {
 									being sent to the server
 								</li>
 							</ul>
-							<Card className="mt-10">
-								<CardHeader>
-									<CardTitle>Example CLI Usage:</CardTitle>
-								</CardHeader>
-								<CardContent>
-									<pre className="bg-black text-white p-4 rounded overflow-x-auto">
-										<code>{`# Create a new bento
-konbini-cli bento new my-api-keys
-
-# Add a secret to a bento
-konbini-cli bento add my-api-keys AWS_SECRET_KEY=abcdefg
-
-# List all bentos
-konbini-cli bento list
-
-# Share a bento with a group
-konbini-cli group invite DevTeam john@example.com`}</code>
-									</pre>
-								</CardContent>
-							</Card>
+							<CLIExampleCard />
 						</div>
 					</div>
 				</section>
@@ -339,6 +331,118 @@ function FeatureCard({
 				<CardTitle>{title}</CardTitle>
 				<CardDescription>{description}</CardDescription>
 			</CardHeader>
+		</Card>
+	);
+}
+
+function CLIExampleCard() {
+	const [copied, setCopied] = useState<string | null>(null);
+
+	const commands = [
+		{
+			id: "create-new-bento",
+			title: "Create a new bento",
+			command: "konbini-cli bento new my-api-keys",
+			description: "Quickly create a new bento to store your API keys",
+		},
+		{
+			id: "add-secret-to-bento",
+			title: "Add a secret to a bento",
+			command: "konbini-cli bento add my-api-keys SECRET_KEY",
+			description:
+				"The CLI will ask for the secret value and not echo it to the console",
+		},
+		{
+			id: "list-all-bentos",
+			title: "List all bentos",
+			command: "konbini-cli bento list",
+			description: "Get a list of all of your bentos",
+		},
+		{
+			id: "share-bento-with-group",
+			title: "Share a bento with a group",
+			command: "konbini-cli group invite DevTeam john@example.com",
+			description:
+				"Invite john to join the group DevTeam to share the group's bentos",
+		},
+	];
+
+	const copyToClipboard = (text: string, id: string) => {
+		navigator.clipboard.writeText(text);
+		setCopied(id);
+		setTimeout(() => setCopied(null), 2000);
+	};
+
+	return (
+		<Card className="mt-10 w-full max-w-2xl border-border shadow-md">
+			<CardHeader className="bg-card border-b border-border">
+				<div className="flex items-center gap-2">
+					<Terminal className="h-5 w-5 text-primary" />
+					<CardTitle>Example CLI Usage</CardTitle>
+				</div>
+				<CardDescription className="mb-6">
+					Learn how to use the command line interface with these examples
+				</CardDescription>
+			</CardHeader>
+			<CardContent className="p-6 pt-0 pb-0 space-y-6">
+				{commands.map((cmd) => (
+					<div key={cmd.id} className="space-y-2">
+						<h3 className="text-sm font-medium">{cmd.title}</h3>
+						<div className="bg-muted rounded-md p-4 relative">
+							<div className="flex items-start">
+								<div className="flex-1 font-mono text-sm overflow-x-auto">
+									<span className="text-muted-foreground">$</span> {cmd.command}
+								</div>
+								<Button
+									variant="ghost"
+									size="icon"
+									className="h-8 w-8 absolute right-2 top-2"
+									onClick={() => copyToClipboard(cmd.command, cmd.id)}
+								>
+									{copied === cmd.id ? (
+										<CheckCircle2 className="h-4 w-4 text-green-500" />
+									) : (
+										<Copy className="h-4 w-4" />
+									)}
+									<span className="sr-only">Copy command</span>
+								</Button>
+							</div>
+							{cmd.id === "init" && (
+								<div className="mt-2 text-sm text-muted-foreground font-mono">
+									<div className="text-green-500">
+										✓ Created directory my-project
+									</div>
+									<div className="text-green-500">
+										✓ Initialized configuration
+									</div>
+									<div className="text-green-500">✓ Installed dependencies</div>
+									<div>Project ready! Run 'cd my-project' to get started</div>
+								</div>
+							)}
+							{cmd.id === "build" && (
+								<div className="mt-2 text-sm text-muted-foreground font-mono">
+									<div>Building project...</div>
+									<div className="text-green-500">
+										✓ Compiled successfully in 2.34s
+									</div>
+									<div className="text-green-500">
+										✓ Output written to ./dist
+									</div>
+									<div>Build complete! 🚀</div>
+								</div>
+							)}
+						</div>
+						<p className="text-sm text-muted-foreground">{cmd.description}</p>
+					</div>
+				))}
+			</CardContent>
+			<CardFooter className="bg-muted/50 p-4 border-t border-border">
+				<div className="text-sm text-muted-foreground">
+					<span className="font-medium">Pro tip:</span> Use the{" "}
+					<code className="bg-muted px-1 py-0.5 rounded text-xs">--help</code>{" "}
+					flag with any command to see available options.
+				</div>
+			</CardFooter>
 		</Card>
 	);
 }
