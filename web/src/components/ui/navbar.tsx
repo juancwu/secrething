@@ -2,7 +2,7 @@ import { useRef, useEffect, useState } from "react";
 import { ModeToggle } from "@/components/ui/mode-toggle";
 import { Button } from "@/components/ui/button";
 import { GitHubLogo } from "@/components/logos/github";
-import { Package } from "lucide-react";
+import { Package, Terminal } from "lucide-react";
 import { motion } from "motion/react";
 import { Link } from "@tanstack/react-router";
 
@@ -29,6 +29,12 @@ export function Navbar() {
 		<motion.header
 			ref={navRef}
 			animate={scrolled ? "scrolled" : "initial"}
+			initial={{
+				paddingInline: "calc(var(--spacing) * 4)",
+				paddingBlock: "calc(var(--spacing) * 6)",
+				boxShadow:
+					"var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow)",
+			}}
 			className="fixed top-0 left-0 right-0 z-50 flex bg-background"
 			variants={{
 				initial: {
@@ -36,9 +42,6 @@ export function Navbar() {
 					paddingBlock: "calc(var(--spacing) * 6)",
 					boxShadow:
 						"var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow)",
-					transition: {
-						duration: 0.2,
-					},
 				},
 				scrolled: {
 					paddingInline: "calc(var(--spacing) * 4)",
@@ -47,16 +50,16 @@ export function Navbar() {
 						"var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow)",
 					"--tw-shadow":
 						"0 1px 3px 0 var(--tw-shadow-color, rgb(0 0 0 / 0.1)), 0 1px 2px -1px var(--tw-shadow-color, rgb(0 0 0 / 0.1))",
-					transition: {
-						duration: 0.2,
-					},
 				},
 			}}
 			transition={{ type: "spring", stiffness: 300, damping: 30 }}
 		>
 			<div className="container mx-auto px-4 flex justify-between items-center">
 				<div className="flex items-center gap-2">
-					<Link to="/" className="text-2xl font-bold flex items-center gap-2">
+					<Link
+						to="/"
+						className="text-2xl font-bold flex items-center gap-2 transition-colors hover:text-primary"
+					>
 						<Package className="h-6 w-6" /> Konbini
 					</Link>
 				</div>
@@ -80,6 +83,12 @@ export function Navbar() {
 						>
 							<span className="align-middle">Security</span>
 						</a>
+						<Button variant={scrolled ? "default" : "outline"} asChild>
+							<Link to="/register">
+								<Terminal />
+								Get Started
+							</Link>
+						</Button>
 					</nav>
 					<div className="flex items-center gap-4">
 						<Button asChild variant="outline" size="icon">
@@ -99,3 +108,4 @@ export function Navbar() {
 		</motion.header>
 	);
 }
+
