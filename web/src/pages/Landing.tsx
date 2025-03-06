@@ -5,7 +5,6 @@ import {
 	Package,
 	Target,
 	Shield,
-	Rocket,
 	Copy,
 	Terminal,
 	CheckCircle2,
@@ -152,75 +151,6 @@ function Landing() {
 								<li>No plaintext storage of sensitive data</li>
 								<li>Email verification for new accounts</li>
 							</ul>
-						</div>
-					</div>
-				</section>
-
-				{/* Getting Started Section */}
-				<section id="getting-started" className="py-20">
-					<div className="container mx-auto px-4">
-						<h2 className="text-3xl md:text-4xl font-bold mb-12 text-center">
-							<span className="flex items-center justify-center gap-2">
-								<Rocket className="h-8 w-8 text-orange-500 dark:text-orange-400" />
-								Getting Started
-							</span>
-						</h2>
-						<div className="max-w-3xl mx-auto">
-							<h3 className="text-xl font-semibold mb-4">Prerequisites</h3>
-							<ul className="space-y-2 list-disc pl-6 mb-8">
-								<li>Go 1.21+</li>
-								<li>SQLite database (or Turso for production)</li>
-								<li>Resend.com account (for email verification)</li>
-								<li>
-									<a
-										href="https://github.com/pressly/goose"
-										className="text-primary hover:underline"
-									>
-										Goose
-									</a>{" "}
-									for database migrations
-								</li>
-							</ul>
-
-							<h3 className="text-xl font-semibold mb-4">Installation</h3>
-							<div className="space-y-6">
-								<div>
-									<p className="mb-2">1. Clone the repository</p>
-									<pre className="bg-black text-white p-4 rounded overflow-x-auto">
-										<code>{`git clone https://github.com/juancwu/konbini.git
-cd konbini`}</code>
-									</pre>
-								</div>
-								<div>
-									<p className="mb-2">2. Install dependencies</p>
-									<pre className="bg-black text-white p-4 rounded overflow-x-auto">
-										<code>go mod download</code>
-									</pre>
-								</div>
-								<div>
-									<p className="mb-2">
-										3. Create a .env file in the project root with the following
-										variables:
-									</p>
-									<pre className="bg-black text-white p-4 rounded overflow-x-auto">
-										<code>{`PORT=8080
-DB_URL=file:konbini.db
-JWT_SECRET=your-secret-key
-RESEND_API_KEY=your-resend-api-key
-APP_URL=http://localhost:8080`}</code>
-									</pre>
-								</div>
-								<div>
-									<p className="mb-2">4. Build the project</p>
-									<pre className="bg-black text-white p-4 rounded overflow-x-auto">
-										<code>{`# Build the server
-go build -o bin/konbini cmd/server/main.go
-
-# Build the CLI
-go build -o bin/konbini-cli cmd/cli/main.go`}</code>
-									</pre>
-								</div>
-							</div>
 						</div>
 					</div>
 				</section>
