@@ -3,6 +3,13 @@ import { Button } from "@/components/ui/button";
 import { ThemeProvider } from "@/providers/theme-provider";
 import { GitHubLogo } from "@/components/github-logo";
 import { Sparkles, Package, Target, Shield, Rocket } from "lucide-react";
+import {
+	Card,
+	CardTitle,
+	CardDescription,
+	CardHeader,
+	CardContent,
+} from "@/components/ui/card";
 
 function App() {
 	return (
@@ -155,12 +162,13 @@ function App() {
 										being sent to the server
 									</li>
 								</ul>
-								<div className="mt-10 p-6 border rounded-lg bg-muted/30">
-									<h3 className="text-xl font-semibold mb-4">
-										Example CLI Usage:
-									</h3>
-									<pre className="bg-black text-white p-4 rounded overflow-x-auto">
-										<code>{`# Create a new bento
+								<Card className="mt-10">
+									<CardHeader>
+										<CardTitle>Example CLI Usage:</CardTitle>
+									</CardHeader>
+									<CardContent>
+										<pre className="bg-black text-white p-4 rounded overflow-x-auto">
+											<code>{`# Create a new bento
 konbini-cli bento new my-api-keys
 
 # Add a secret to a bento
@@ -171,8 +179,9 @@ konbini-cli bento list
 
 # Share a bento with a group
 konbini-cli group invite DevTeam john@example.com`}</code>
-									</pre>
-								</div>
+										</pre>
+									</CardContent>
+								</Card>
 							</div>
 						</div>
 					</section>
@@ -331,10 +340,12 @@ function FeatureCard({
 	description,
 }: { title: string; description: string }) {
 	return (
-		<div className="p-6 border rounded-lg bg-card hover:shadow-md transition-shadow">
-			<h3 className="text-xl font-semibold mb-2">{title}</h3>
-			<p className="text-muted-foreground">{description}</p>
-		</div>
+		<Card>
+			<CardHeader>
+				<CardTitle>{title}</CardTitle>
+				<CardDescription>{description}</CardDescription>
+			</CardHeader>
+		</Card>
 	);
 }
 
