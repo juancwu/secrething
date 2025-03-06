@@ -17,6 +17,7 @@ import {
 	CardContent,
 	CardFooter,
 } from "@/components/ui/card";
+import { Link } from "@tanstack/react-router";
 
 function Landing() {
 	return (
@@ -36,10 +37,10 @@ function Landing() {
 						</p>
 						<div className="flex flex-col sm:flex-row gap-4 justify-center">
 							<Button size="lg" asChild>
-								<a href="#getting-started">
+								<Link to="/register">
 									<Terminal />
 									Get Started
-								</a>
+								</Link>
 							</Button>
 							<Button size="lg" variant="outline" asChild>
 								<a
