@@ -38,7 +38,8 @@ export function Navbar() {
 				scrolled: {
 					paddingInline: "calc(var(--spacing) * 4)",
 					paddingBlock: "calc(var(--spacing) * 4)",
-					boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
+					boxShadow:
+						"0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
 				},
 			}}
 			transition={{ type: "spring", stiffness: 300, damping: 30, mass: 0.8 }}
@@ -68,12 +69,6 @@ export function Navbar() {
 							className="hover:text-primary transition-colors"
 						>
 							Security
-						</a>
-						<a
-							href="#getting-started"
-							className="hover:text-primary transition-colors"
-						>
-							Getting Started
 						</a>
 					</nav>
 					<div className="flex items-center gap-4">
