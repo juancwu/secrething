@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { GitHubLogo } from "@/components/logos/github";
 import { Package } from "lucide-react";
 import { motion } from "motion/react";
+import { Link } from "@tanstack/react-router";
 
 export function Navbar() {
 	const navRef = useRef<HTMLElement>(null);
@@ -33,22 +34,31 @@ export function Navbar() {
 				initial: {
 					paddingInline: "calc(var(--spacing) * 4)",
 					paddingBlock: "calc(var(--spacing) * 6)",
-					boxShadow: "none",
+					boxShadow:
+						"var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow)",
+					transition: {
+						duration: 0.2,
+					},
 				},
 				scrolled: {
 					paddingInline: "calc(var(--spacing) * 4)",
 					paddingBlock: "calc(var(--spacing) * 4)",
 					boxShadow:
-						"0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
+						"var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow)",
+					"--tw-shadow":
+						"0 1px 3px 0 var(--tw-shadow-color, rgb(0 0 0 / 0.1)), 0 1px 2px -1px var(--tw-shadow-color, rgb(0 0 0 / 0.1))",
+					transition: {
+						duration: 0.2,
+					},
 				},
 			}}
-			transition={{ type: "spring", stiffness: 300, damping: 30, mass: 0.8 }}
+			transition={{ type: "spring", stiffness: 300, damping: 30 }}
 		>
 			<div className="container mx-auto px-4 flex justify-between items-center">
 				<div className="flex items-center gap-2">
-					<span className="text-2xl font-bold flex items-center gap-2">
+					<Link to="/" className="text-2xl font-bold flex items-center gap-2">
 						<Package className="h-6 w-6" /> Konbini
-					</span>
+					</Link>
 				</div>
 				<div className="flex items-center gap-4">
 					<nav className="hidden md:flex gap-6">
@@ -62,13 +72,13 @@ export function Navbar() {
 							href="#what-is-bento"
 							className="hover:text-primary transition-colors"
 						>
-							What is a Bento?
+							<span className="align-middle">What is a Bento?</span>
 						</a>
 						<a
 							href="#security"
 							className="hover:text-primary transition-colors"
 						>
-							Security
+							<span className="align-middle">Security</span>
 						</a>
 					</nav>
 					<div className="flex items-center gap-4">
