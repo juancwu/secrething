@@ -63,7 +63,7 @@ export function Navbar() {
 					</Link>
 				</div>
 				<div className="flex items-center gap-4">
-					<nav className="hidden md:flex gap-6">
+					<nav className="flex gap-6">
 						<Button variant={scrolled ? "default" : "outline"} asChild>
 							<Link to="/login">
 								<Terminal />
