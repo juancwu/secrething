@@ -1,5 +1,4 @@
 import { useRef, useEffect, useState } from "react";
-import { ModeToggle } from "@/components/ui/mode-toggle";
 import { Button } from "@/components/ui/button";
 import { GitHubLogo } from "@/components/logos/github";
 import { Package, Terminal } from "lucide-react";
@@ -65,28 +64,10 @@ export function Navbar() {
 				</div>
 				<div className="flex items-center gap-4">
 					<nav className="hidden md:flex gap-6">
-						<a
-							href="#features"
-							className="hover:text-primary transition-colors"
-						>
-							Features
-						</a>
-						<a
-							href="#what-is-bento"
-							className="hover:text-primary transition-colors"
-						>
-							<span className="align-middle">What is a Bento?</span>
-						</a>
-						<a
-							href="#security"
-							className="hover:text-primary transition-colors"
-						>
-							<span className="align-middle">Security</span>
-						</a>
 						<Button variant={scrolled ? "default" : "outline"} asChild>
-							<Link to="/register">
+							<Link to="/login">
 								<Terminal />
-								Get Started
+								Login
 							</Link>
 						</Button>
 					</nav>
@@ -101,11 +82,9 @@ export function Navbar() {
 								<span className="sr-only">GitHub</span>
 							</a>
 						</Button>
-						<ModeToggle />
 					</div>
 				</div>
 			</div>
 		</motion.header>
 	);
 }
-
