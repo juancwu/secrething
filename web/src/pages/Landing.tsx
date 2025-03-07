@@ -107,7 +107,7 @@ function Landing() {
 							value={activeTab}
 							className="w-full"
 						>
-							<TabsList className="grid w-full grid-cols-3 max-w-2xl mx-auto">
+							<TabsList className="w-full grid-cols-3 max-w-2xl mx-auto">
 								<TabsTrigger value="concept">The Concept</TabsTrigger>
 								<TabsTrigger value="features">Key Features</TabsTrigger>
 								<TabsTrigger value="example">See It In Action</TabsTrigger>
@@ -185,7 +185,7 @@ function Landing() {
 								<div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
 									{features.map((feature) => (
 										<Card key={feature.id}>
-											<CardContent className="pt-6">
+											<CardContent>
 												<div className="rounded-full bg-green-100 p-3 w-12 h-12 flex items-center justify-center mb-4">
 													{feature.icon}
 												</div>
