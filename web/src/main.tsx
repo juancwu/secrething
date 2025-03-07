@@ -4,16 +4,22 @@ import { ThemeProvider } from "@/providers/theme-provider.tsx";
 import { RouterProvider, createRouter } from "@tanstack/react-router";
 import { routeTree } from "./routeTree.gen";
 
+import { AuthProvider } from "@/providers/auth";
+import { useAuth } from "@/providers/auth/useAuth";
+
 import "./index.css";
 
 // Create a new router instance
-const router = createRouter({ routeTree });
+const router = createRouter({
+	routeTree,
+	context: {
+		auth: undefined,
+	},
+});
 
-// Register the router instance for type safety
-declare module "@tanstack/react-router" {
-	interface Register {
-		router: typeof router;
-	}
+function App() {
+	const auth = useAuth();
+	return <RouterProvider router={router} context={{ auth }} />;
 }
 
 const root = document.getElementById("root");
@@ -23,7 +29,9 @@ if (root === null) {
 createRoot(root).render(
 	<StrictMode>
 		<ThemeProvider defaultTheme="system" storageKey="konbini-theme">
-			<RouterProvider router={router} />
+			<AuthProvider>
+				<App />
+			</AuthProvider>
 		</ThemeProvider>
 	</StrictMode>,
 );

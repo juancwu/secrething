@@ -10,104 +10,182 @@
 
 // Import Routes
 
-import { Route as rootRoute } from "./routes/__root";
-import { Route as RegisterImport } from "./routes/register";
-import { Route as LoginImport } from "./routes/login";
-import { Route as IndexImport } from "./routes/index";
+import { Route as rootRoute } from './routes/__root'
+import { Route as ResetPasswordImport } from './routes/reset-password'
+import { Route as DashboardImport } from './routes/dashboard'
+import { Route as noauthImport } from './routes/__noauth'
+import { Route as IndexImport } from './routes/index'
+import { Route as noauthRegisterImport } from './routes/__noauth/register'
+import { Route as noauthLoginImport } from './routes/__noauth/login'
 
 // Create/Update Routes
 
-const RegisterRoute = RegisterImport.update({
-	id: "/register",
-	path: "/register",
-	getParentRoute: () => rootRoute,
-} as any);
+const ResetPasswordRoute = ResetPasswordImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRoute,
+} as any)
 
-const LoginRoute = LoginImport.update({
-	id: "/login",
-	path: "/login",
-	getParentRoute: () => rootRoute,
-} as any);
+const DashboardRoute = DashboardImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const noauthRoute = noauthImport.update({
+  id: '/__noauth',
+  getParentRoute: () => rootRoute,
+} as any)
 
 const IndexRoute = IndexImport.update({
-	id: "/",
-	path: "/",
-	getParentRoute: () => rootRoute,
-} as any);
+  id: '/',
+  path: '/',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const noauthRegisterRoute = noauthRegisterImport.update({
+  id: '/register',
+  path: '/register',
+  getParentRoute: () => noauthRoute,
+} as any)
+
+const noauthLoginRoute = noauthLoginImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => noauthRoute,
+} as any)
 
 // Populate the FileRoutesByPath interface
 
-declare module "@tanstack/react-router" {
-	interface FileRoutesByPath {
-		"/": {
-			id: "/";
-			path: "/";
-			fullPath: "/";
-			preLoaderRoute: typeof IndexImport;
-			parentRoute: typeof rootRoute;
-		};
-		"/login": {
-			id: "/login";
-			path: "/login";
-			fullPath: "/login";
-			preLoaderRoute: typeof LoginImport;
-			parentRoute: typeof rootRoute;
-		};
-		"/register": {
-			id: "/register";
-			path: "/register";
-			fullPath: "/register";
-			preLoaderRoute: typeof RegisterImport;
-			parentRoute: typeof rootRoute;
-		};
-	}
+declare module '@tanstack/react-router' {
+  interface FileRoutesByPath {
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexImport
+      parentRoute: typeof rootRoute
+    }
+    '/__noauth': {
+      id: '/__noauth'
+      path: ''
+      fullPath: ''
+      preLoaderRoute: typeof noauthImport
+      parentRoute: typeof rootRoute
+    }
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardImport
+      parentRoute: typeof rootRoute
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordImport
+      parentRoute: typeof rootRoute
+    }
+    '/__noauth/login': {
+      id: '/__noauth/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof noauthLoginImport
+      parentRoute: typeof noauthImport
+    }
+    '/__noauth/register': {
+      id: '/__noauth/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof noauthRegisterImport
+      parentRoute: typeof noauthImport
+    }
+  }
 }
 
 // Create and export the route tree
 
+interface noauthRouteChildren {
+  noauthLoginRoute: typeof noauthLoginRoute
+  noauthRegisterRoute: typeof noauthRegisterRoute
+}
+
+const noauthRouteChildren: noauthRouteChildren = {
+  noauthLoginRoute: noauthLoginRoute,
+  noauthRegisterRoute: noauthRegisterRoute,
+}
+
+const noauthRouteWithChildren =
+  noauthRoute._addFileChildren(noauthRouteChildren)
+
 export interface FileRoutesByFullPath {
-	"/": typeof IndexRoute;
-	"/login": typeof LoginRoute;
-	"/register": typeof RegisterRoute;
+  '/': typeof IndexRoute
+  '': typeof noauthRouteWithChildren
+  '/dashboard': typeof DashboardRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/login': typeof noauthLoginRoute
+  '/register': typeof noauthRegisterRoute
 }
 
 export interface FileRoutesByTo {
-	"/": typeof IndexRoute;
-	"/login": typeof LoginRoute;
-	"/register": typeof RegisterRoute;
+  '/': typeof IndexRoute
+  '': typeof noauthRouteWithChildren
+  '/dashboard': typeof DashboardRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/login': typeof noauthLoginRoute
+  '/register': typeof noauthRegisterRoute
 }
 
 export interface FileRoutesById {
-	__root__: typeof rootRoute;
-	"/": typeof IndexRoute;
-	"/login": typeof LoginRoute;
-	"/register": typeof RegisterRoute;
+  __root__: typeof rootRoute
+  '/': typeof IndexRoute
+  '/__noauth': typeof noauthRouteWithChildren
+  '/dashboard': typeof DashboardRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/__noauth/login': typeof noauthLoginRoute
+  '/__noauth/register': typeof noauthRegisterRoute
 }
 
 export interface FileRouteTypes {
-	fileRoutesByFullPath: FileRoutesByFullPath;
-	fullPaths: "/" | "/login" | "/register";
-	fileRoutesByTo: FileRoutesByTo;
-	to: "/" | "/login" | "/register";
-	id: "__root__" | "/" | "/login" | "/register";
-	fileRoutesById: FileRoutesById;
+  fileRoutesByFullPath: FileRoutesByFullPath
+  fullPaths:
+    | '/'
+    | ''
+    | '/dashboard'
+    | '/reset-password'
+    | '/login'
+    | '/register'
+  fileRoutesByTo: FileRoutesByTo
+  to: '/' | '' | '/dashboard' | '/reset-password' | '/login' | '/register'
+  id:
+    | '__root__'
+    | '/'
+    | '/__noauth'
+    | '/dashboard'
+    | '/reset-password'
+    | '/__noauth/login'
+    | '/__noauth/register'
+  fileRoutesById: FileRoutesById
 }
 
 export interface RootRouteChildren {
-	IndexRoute: typeof IndexRoute;
-	LoginRoute: typeof LoginRoute;
-	RegisterRoute: typeof RegisterRoute;
+  IndexRoute: typeof IndexRoute
+  noauthRoute: typeof noauthRouteWithChildren
+  DashboardRoute: typeof DashboardRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
 }
 
 const rootRouteChildren: RootRouteChildren = {
-	IndexRoute: IndexRoute,
-	LoginRoute: LoginRoute,
-	RegisterRoute: RegisterRoute,
-};
+  IndexRoute: IndexRoute,
+  noauthRoute: noauthRouteWithChildren,
+  DashboardRoute: DashboardRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
+}
 
 export const routeTree = rootRoute
-	._addFileChildren(rootRouteChildren)
-	._addFileTypes<FileRouteTypes>();
+  ._addFileChildren(rootRouteChildren)
+  ._addFileTypes<FileRouteTypes>()
 
 /* ROUTE_MANIFEST_START
 {
@@ -116,18 +194,34 @@ export const routeTree = rootRoute
       "filePath": "__root.tsx",
       "children": [
         "/",
-        "/login",
-        "/register"
+        "/__noauth",
+        "/dashboard",
+        "/reset-password"
       ]
     },
     "/": {
       "filePath": "index.tsx"
     },
-    "/login": {
-      "filePath": "login.tsx"
+    "/__noauth": {
+      "filePath": "__noauth.tsx",
+      "children": [
+        "/__noauth/login",
+        "/__noauth/register"
+      ]
     },
-    "/register": {
-      "filePath": "register.tsx"
+    "/dashboard": {
+      "filePath": "dashboard.tsx"
+    },
+    "/reset-password": {
+      "filePath": "reset-password.tsx"
+    },
+    "/__noauth/login": {
+      "filePath": "__noauth/login.tsx",
+      "parent": "/__noauth"
+    },
+    "/__noauth/register": {
+      "filePath": "__noauth/register.tsx",
+      "parent": "/__noauth"
     }
   }
 }
