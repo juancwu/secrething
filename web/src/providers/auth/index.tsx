@@ -21,6 +21,7 @@ import {
 	transformResponseToUser,
 } from "@/lib/auth";
 import { apiRequest } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface AuthProviderProps {
 	children: ReactNode;
@@ -55,6 +56,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 			await checkSession();
 		} catch (error) {
 			console.error("Login failed:", error);
+			toast.error("Login Failed");
 			throw error;
 		} finally {
 			setIsLoading(false);

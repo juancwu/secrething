@@ -1,11 +1,18 @@
 import { Navbar } from "@/components/ui/navbar";
-import { createRootRoute, Outlet } from "@tanstack/react-router";
+import { Toaster } from "@/components/ui/sonner";
+import { AuthProviderState } from "@/providers/auth/types";
+import { createRootRouteWithContext, Outlet } from "@tanstack/react-router";
 
-export const Route = createRootRoute({
+interface RouterContext {
+	auth?: AuthProviderState;
+}
+
+export const Route = createRootRouteWithContext<RouterContext>()({
 	component: () => (
 		<>
 			<Navbar />
 			<Outlet />
+			<Toaster />
 		</>
 	),
 });
