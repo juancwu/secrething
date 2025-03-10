@@ -1,8 +1,12 @@
 #!/bin/bash
 
+# Use the passed CWD or default to the current directory
+CWD=${CWD:-$(pwd)}
+cd "$CWD" || exit 1
+
 GOOSE_DRIVER=turso
-GOOSE_DBSTRING=file:./local/local.db
-GOOSE_MIGRATION_DIR=./server/db/migrations
+GOOSE_DBSTRING=file:$CWD/.local/local.db
+GOOSE_MIGRATION_DIR=$CWD/server/db/migrations
 
 usage() {
   echo "Usage: $0 [command]"

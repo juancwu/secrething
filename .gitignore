@@ -11,4 +11,4 @@ coverage.html
 # Added by cargo
 
 /target
-local
+.local

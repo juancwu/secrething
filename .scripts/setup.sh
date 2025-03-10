@@ -2,11 +2,15 @@
 
 set -e
 
+# Use the passed CWD or default to the current directory
+CWD=${CWD:-$(pwd)}
+cd "$CWD" || exit 1
+
 echo "Setting up Konbini local development environment..."
 
 # Create necessary directories
 echo "Creating required directories..."
-mkdir -p ./local
+mkdir -p "$CWD/.local"
 
 # Check and install required tools
 echo "Checking for required tools..."
@@ -70,26 +74,26 @@ sqlc generate
 
 # Set up local database
 echo "Setting up local database..."
-if [ ! -f "./local/local.db" ]; then
+if [ ! -f "$CWD/.local/local.db" ]; then
   echo "Creating new local database..."
-  turso dev new --db-file ./local/local.db
+  turso dev new --db-file "$CWD/.local/local.db"
 fi
 
 # Run migrations
 echo "Running database migrations..."
-chmod +x ./migrate.sh
-./migrate.sh up
+chmod +x "$CWD/.scripts/migrate.sh"
+"$CWD/.scripts/migrate.sh" up
 
 echo "Setup complete! You can now run the development server with:"
-echo "  ./dev.sh"
+echo "  gopack run dev:server"
 echo ""
 echo "Available commands:"
-echo "  ./cli.sh       - Run the CLI"
-echo "  ./dev.sh       - Run the development server with hot reload"
-echo "  ./migrate.sh   - Manage database migrations"
-echo "  ./run_tests.sh - Run tests"
+echo "  gopack run build:cli   - Build the CLI"
+echo "  gopack run dev:server  - Run the development server with hot reload"
+echo "  gopack run migrate     - Manage database migrations"
+echo "  gopack run test        - Run tests"
 echo ""
 echo "Happy coding!"
 
 # Make scripts executable if they aren't already
-chmod +x ./cli.sh ./dev.sh ./migrate.sh ./run_tests.sh
+chmod +x "$CWD/.scripts/migrate.sh" "$CWD/.scripts/run_tests.sh"
