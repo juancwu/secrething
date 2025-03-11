@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS users (
     name TEXT NOT NULL CHECK (name != ''),
     email_verified BOOL NOT NULL DEFAULT false,
     totp_secret TEXT,
-    totp_locked BOOL NOT NULL DEFAULT false,
+    totp_activated BOOL NOT NULL DEFAULT false,
     created_at TEXT NOT NULL CHECK(created_at != ''),
     updated_at TEXT NOT NULL CHECK(updated_at != '')
 );

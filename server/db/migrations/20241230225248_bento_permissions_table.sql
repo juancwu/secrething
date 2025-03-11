@@ -3,7 +3,7 @@
 CREATE TABLE IF NOT EXISTS bento_permissions (
     user_id TEXT NOT NULL CHECK (user_id != ''),
     bento_id TEXT NOT NULL CHECK (bento_id != ''),
-    bytes BLOB NOT NULL,
+    permissions TEXT NOT NULL CHECK (permissions != ''),
     created_at TEXT NOT NULL CHECK (created_at != ''),
     updated_at TEXT NOT NULL CHECK (updated_at != ''),
     CONSTRAINT pk_bento_permissions PRIMARY KEY (user_id, bento_id),
