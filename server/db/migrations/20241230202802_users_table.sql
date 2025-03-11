@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS users (
     id TEXT NOT NULL PRIMARY KEY,
     email TEXT NOT NULL UNIQUE CHECK (email != ''),
     password TEXT NOT NULL CHECK (password != ''),
-    nickname TEXT NOT NULL CHECK (nickname != ''),
+    name TEXT NOT NULL CHECK (name != ''),
     email_verified BOOL NOT NULL DEFAULT false,
     totp_secret TEXT,
     totp_locked BOOL NOT NULL DEFAULT false,
