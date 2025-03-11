@@ -4,7 +4,7 @@ import (
 	"os"
 
 	sentryecho "github.com/getsentry/sentry-go/echo"
-	"github.com/joho/godotenv"
+	appconfig "github.com/juancwu/konbini/server/application/config"
 	"github.com/juancwu/konbini/server/db"
 	"github.com/juancwu/konbini/server/infrastructure/middleware"
 	"github.com/juancwu/konbini/server/infrastructure/observability"
@@ -14,26 +14,27 @@ import (
 )
 
 func main() {
-	if err := godotenv.Load(); err != nil {
-		log.Fatal().Err(err).Msg("Failed to load .env")
+	cfg, err := appconfig.Load()
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to load configuration")
 	}
 
 	// Establish database connection
 	tursoConnector := db.NewTursoConnector(os.Getenv("DATABASE_URL"), os.Getenv("DATABASE_AUTH_TOKEN"))
-	_, err := tursoConnector.Connect()
+	_, err = tursoConnector.Connect()
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to establish connection with database")
 	}
 
 	err = observability.InitSentry(observability.SentryConfig{
-		DSN:              os.Getenv("SENTRY_DSN"),
-		Environment:      os.Getenv("ENVIRONMENT"),
-		Debug:            os.Getenv("DEBUG") == "true",
+		DSN:              cfg.SentryDSN,
+		Environment:      string(cfg.Environment),
+		Debug:            cfg.Debug,
 		SampleRate:       1.0,
 		TracesSampleRate: 0.2,
 		MaxBreadcrumbs:   100,
 		EnableTracing:    true,
-		ServerName:       os.Getenv("SERVER_NAME"),
+		ServerName:       cfg.ServerName,
 	})
 
 	e := echo.New()
@@ -50,7 +51,7 @@ func main() {
 	// Global HTTP error handler
 	e.HTTPErrorHandler = middleware.ErrorHandlerMiddleware()
 
-	if err := e.Start(":" + os.Getenv("PORT")); err != nil {
+	if err := e.Start(cfg.GetAddress()); err != nil {
 		log.Fatal().Err(err).Msg("Failed to start server.")
 	}
 }
