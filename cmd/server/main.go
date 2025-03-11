@@ -1,26 +1,25 @@
 package main
 
 import (
-	"os"
-
 	sentryecho "github.com/getsentry/sentry-go/echo"
-	appconfig "github.com/juancwu/konbini/server/application/config"
+	"github.com/juancwu/konbini/server/config"
 	"github.com/juancwu/konbini/server/db"
-	"github.com/juancwu/konbini/server/infrastructure/middleware"
-	"github.com/juancwu/konbini/server/infrastructure/observability"
+	"github.com/juancwu/konbini/server/middleware"
+	"github.com/juancwu/konbini/server/observability"
+	"github.com/juancwu/konbini/server/routes"
 	"github.com/labstack/echo/v4"
 	echomiddleware "github.com/labstack/echo/v4/middleware"
 	"github.com/rs/zerolog/log"
 )
 
 func main() {
-	cfg, err := appconfig.Load()
+	cfg, err := config.Load()
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to load configuration")
 	}
 
 	// Establish database connection
-	tursoConnector := db.NewTursoConnector(os.Getenv("DATABASE_URL"), os.Getenv("DATABASE_AUTH_TOKEN"))
+	tursoConnector := db.NewTursoConnector(cfg.DatabaseURL, cfg.DatabaseAuthToken)
 	_, err = tursoConnector.Connect()
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to establish connection with database")
@@ -50,6 +49,9 @@ func main() {
 
 	// Global HTTP error handler
 	e.HTTPErrorHandler = middleware.ErrorHandlerMiddleware()
+
+	// Register routes
+	routes.RegisterRoutes(e, cfg, tursoConnector)
 
 	if err := e.Start(cfg.GetAddress()); err != nil {
 		log.Fatal().Err(err).Msg("Failed to start server.")

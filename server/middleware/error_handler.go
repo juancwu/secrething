@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/juancwu/konbini/server/infrastructure/errors"
-	"github.com/juancwu/konbini/server/infrastructure/observability"
+	"github.com/juancwu/konbini/server/errors"
+	"github.com/juancwu/konbini/server/observability"
 	"github.com/labstack/echo/v4"
 	"github.com/rs/zerolog/log"
 )
@@ -107,13 +107,41 @@ func HTTPErrorHandler(err error, c echo.Context) {
 		return
 	}
 
-	// Send the error response
-	if err := c.JSON(statusCode, errors.ErrorResponse{
+	// Prepare the error response
+	errorResponse := errors.ErrorResponse{
 		Code:    statusCode,
 		Message: message,
 		Errors:  details,
 		ReqID:   requestID,
-	}); err != nil {
+	}
+
+	// Check if this is a field validation error
+	var fieldErrors map[string]interface{}
+	if appErr.InternalError != nil {
+		// Try to extract field errors if available
+		if fieldValidationErr, ok := appErr.InternalError.(errors.FieldValidationError); ok {
+			fieldErrors = make(map[string]interface{})
+			for field, msg := range fieldValidationErr.FieldErrors {
+				fieldErrors[field] = msg
+			}
+			// Add field errors to the response
+			if err := c.JSON(statusCode, map[string]interface{}{
+				"code":    statusCode,
+				"message": message,
+				"errors":  fieldErrors,
+				"req_id":  requestID,
+			}); err != nil {
+				log.Error().
+					Str("request_id", requestID).
+					Err(err).
+					Msg("Failed to send field validation error response")
+			}
+			return
+		}
+	}
+
+	// Send standard error response
+	if err := c.JSON(statusCode, errorResponse); err != nil {
 		log.Error().
 			Str("request_id", requestID).
 			Err(err).

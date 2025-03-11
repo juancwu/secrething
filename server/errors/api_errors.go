@@ -52,6 +52,9 @@ type ErrorResponse struct {
 	ReqID   string   `json:"request_id,omitempty"`
 }
 
+// FieldErrors represents validation errors mapped by field name
+type FieldErrors map[string]string
+
 // NewValidationError creates a new validation error
 func NewValidationError(publicMessage string, errors []string) AppError {
 	return AppError{
@@ -60,6 +63,24 @@ func NewValidationError(publicMessage string, errors []string) AppError {
 		PublicMessage: publicMessage,
 		Errors:        errors,
 	}
+}
+
+// NewValidationErrorWithFieldErrors creates a new validation error with field-specific error messages
+func NewValidationErrorWithFieldErrors(publicMessage string, errors []string, fieldErrors map[string]string) AppError {
+	appErr := NewValidationError(publicMessage, errors)
+	// Store the field errors in InternalError so they can be accessed by the error handler
+	appErr.InternalError = FieldValidationError{FieldErrors: fieldErrors}
+	return appErr
+}
+
+// FieldValidationError is a custom error type that holds field-specific validation errors
+type FieldValidationError struct {
+	FieldErrors map[string]string
+}
+
+// Error implements the error interface
+func (e FieldValidationError) Error() string {
+	return "Field validation error"
 }
 
 // NewNotFoundError creates a new not found error
