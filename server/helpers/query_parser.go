@@ -137,4 +137,3 @@ func (qp *QueryParser) Required(key string) (string, error) {
 	}
 	return val, nil
 }
-

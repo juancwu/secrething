@@ -11,10 +11,10 @@ import (
 func RegisterRoutes(e *echo.Echo, cfg *config.Config, db *db.TursoConnector) {
 	// Auth routes
 	authHandler := auth.NewAuthHandler(cfg, db)
-	
+
 	// Define auth routes
 	authGroup := e.Group("/api/v1/auth")
 	authGroup.POST("/register", authHandler.Register)
-	
+
 	// Add more route groups here as they are implemented
 }
