@@ -2,7 +2,7 @@
   "scripts": {
     "build:server": "go build -o konbini-server ./cmd/server",
     "build:cli": "go build -o konbini-cli ./cmd/cli",
-    "dev:server": "ENVIRONMENT=development air",
+    "dev": "ENVIRONMENT=development air",
     "test": "CWD=$(pwd) .scripts/run_tests.sh",
     "migrate": "CWD=$(pwd) .scripts/migrate.sh",
     "migrate:up": "CWD=$(pwd) .scripts/migrate.sh up",
