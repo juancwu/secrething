@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/hex"
 	"fmt"
 	"os"
 	"strconv"
@@ -28,10 +29,10 @@ type Config struct {
 	PasswordResetEmailAddress string
 
 	// Security keys
-	AuthTokenKey  string
-	BentoTokenKey string
-	EmailTokenKey string
-	AESKey        string
+	AuthTokenKey  []byte
+	BentoTokenKey []byte
+	EmailTokenKey []byte
+	AESKey        []byte
 
 	// Observability
 	SentryDSN string
@@ -82,28 +83,44 @@ func Load() (*Config, error) {
 			if len(val) != 64 {
 				return fmt.Errorf("AUTH_TOKEN_KEY must be a 256-bit hexadecimal string (64 characters)")
 			}
-			config.AuthTokenKey = val
+			data, err := hex.DecodeString(val)
+			if err != nil {
+				return fmt.Errorf("AUTH_TOKEN_KEY must be a 256-bit hexadecimal string (64 characters)")
+			}
+			config.AuthTokenKey = data
 			return nil
 		}},
 		{"BENTO_TOKEN_KEY", func(val string) error {
 			if len(val) != 64 {
 				return fmt.Errorf("BENTO_TOKEN_KEY must be a 256-bit hexadecimal string (64 characters)")
 			}
-			config.BentoTokenKey = val
+			data, err := hex.DecodeString(val)
+			if err != nil {
+				return fmt.Errorf("BENTO_TOKEN_KEY must be a 256-bit hexadecimal string (64 characters)")
+			}
+			config.BentoTokenKey = data
 			return nil
 		}},
 		{"EMAIL_TOKEN_KEY", func(val string) error {
 			if len(val) != 64 {
 				return fmt.Errorf("EMAIL_TOKEN_KEY must be a 256-bit hexadecimal string (64 characters)")
 			}
-			config.EmailTokenKey = val
+			data, err := hex.DecodeString(val)
+			if err != nil {
+				return fmt.Errorf("EMAIL_TOKEN_KEY must be a 256-bit hexadecimal string (64 characters)")
+			}
+			config.EmailTokenKey = data
 			return nil
 		}},
 		{"AES_KEY", func(val string) error {
 			if len(val) != 64 {
 				return fmt.Errorf("AES_KEY must be a 256-bit hexadecimal string (64 characters)")
 			}
-			config.AESKey = val
+			data, err := hex.DecodeString(val)
+			if err != nil {
+				return fmt.Errorf("AES_KEY must be a 256-bit hexadecimal string (64 characters)")
+			}
+			config.AESKey = data
 			return nil
 		}},
 	}
