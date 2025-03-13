@@ -366,9 +366,10 @@ func TestFormatValidationErrors(t *testing.T) {
 
 // Define nested struct types for testing
 type Address struct {
-	Street string `json:"street" validate:"required"`
-	City   string `json:"city" validate:"required"`
-	Zip    string `json:"zip" validate:"required"`
+	Street    string `json:"street" validate:"required"`
+	City      string `json:"city" validate:"required"`
+	Zip       string `json:"zip" validate:"required"`
+	FirstName string `json:"firstName" validate:"required"` // Deliberately same field name as in Profile for testing
 }
 
 type Profile struct {
@@ -377,11 +378,34 @@ type Profile struct {
 	Bio       string `json:"bio" validate:"max=100"`
 }
 
+// Attribute represents an attribute of an item
+type Attribute struct {
+	Key   string `json:"key" validate:"required"`
+	Value string `json:"value" validate:"required"`
+}
+
+// Item represents an item in a list
+type Item struct {
+	Name       string      `json:"name" validate:"required"`
+	Quantity   int         `json:"quantity" validate:"min=1"`
+	Price      float64     `json:"price" validate:"required,gt=0"`
+	Attributes []Attribute `json:"attributes" validate:"dive"`
+	SubItems   []SubItem   `json:"subItems" validate:"dive"`
+}
+
+// SubItem represents a nested item within an item
+type SubItem struct {
+	Name     string `json:"name" validate:"required"`
+	Quantity int    `json:"quantity" validate:"min=1"`
+}
+
 type UserWithNestedFields struct {
 	Username string  `json:"username" validate:"required"`
 	Email    string  `json:"email" validate:"required,email"`
 	Profile  Profile `json:"profile" validate:"required"`
 	Address  Address `json:"address" validate:"required"`
+	Items    []Item  `json:"items" validate:"required,dive"`   // Add items slice with nested structures
+	Matrix   [][]int `json:"matrix" validate:"dive,dive,gt=0"` // 2D array for testing multiple dive levels
 }
 
 func TestNestedValidationFormatting(t *testing.T) {
@@ -437,7 +461,223 @@ func TestNestedValidationFormatting(t *testing.T) {
 	t.Logf("Formatted validation errors: %s", string(jsonBytes))
 }
 
+func TestCustomMessagesForNestedFields(t *testing.T) {
+	// Create a validator
+	validator := NewCustomValidator()
+
+	// Set custom messages for nested fields by leaf field name
+	validator.translator.SetFieldError("firstName", "required", "First name is mandatory")
+	validator.translator.SetFieldError("lastName", "required", "Last name is mandatory")
+	validator.translator.SetFieldError("street", "required", "Street address cannot be empty")
+	validator.translator.SetFieldError("bio", "max", "Bio is too long")
+
+	// Create an instance with validation errors
+	invalidUser := UserWithNestedFields{
+		Username: "testuser",      // valid
+		Email:    "test@test.com", // valid
+		Profile: Profile{
+			FirstName: "",                                                                                                                                       // required error
+			LastName:  "",                                                                                                                                       // required error
+			Bio:       "This is a very long bio that exceeds the maximum length limit of 100 characters. It should trigger a validation error for the max tag.", // max error
+		},
+		Address: Address{
+			Street: "",         // required error
+			City:   "New York", // valid
+			Zip:    "10001",    // valid
+		},
+	}
+
+	// Validate
+	err := validator.Validate(&invalidUser)
+	assert.NotNil(t, err, "Expected validation error")
+
+	// Convert to ValidationErrors
+	validationErrors, ok := err.(ValidationErrors)
+	assert.True(t, ok, "Expected ValidationErrors type")
+
+	// Verify custom messages
+	fieldErrors := make(map[string]string)
+	for _, err := range validationErrors {
+		fieldErrors[err.Field] = err.Message
+	}
+
+	// Check for custom messages by full field path
+	assert.Equal(t, "First name is mandatory", fieldErrors["profile.firstName"])
+	assert.Equal(t, "Last name is mandatory", fieldErrors["profile.lastName"])
+	assert.Equal(t, "Bio is too long", fieldErrors["profile.bio"])
+	assert.Equal(t, "Street address cannot be empty", fieldErrors["address.street"])
+
+	// Format the errors into a nested structure
+	formattedErrors := FormatValidationErrors(validationErrors)
+
+	// Output formatted errors for debugging
+	jsonBytes, _ := json.MarshalIndent(formattedErrors, "", "  ")
+	t.Logf("Formatted validation errors: %s", string(jsonBytes))
+
+	// Verify that formatted errors maintain the custom messages
+	profileMap, ok := formattedErrors["profile"].(map[string]interface{})
+	assert.True(t, ok, "Expected 'profile' to be a nested map")
+	assert.Equal(t, "First name is mandatory", profileMap["firstName"])
+	assert.Equal(t, "Last name is mandatory", profileMap["lastName"])
+	assert.Equal(t, "Bio is too long", profileMap["bio"])
+
+	addressMap, ok := formattedErrors["address"].(map[string]interface{})
+	assert.True(t, ok, "Expected 'address' to be a nested map")
+	assert.Equal(t, "Street address cannot be empty", addressMap["street"])
+}
+
+func TestCustomMessagesForNestedFieldsWithContext(t *testing.T) {
+	// Create a base validator
+	baseValidator := NewCustomValidator()
+
+	// Create a validation context
+	ctx := NewValidationContext(baseValidator)
+
+	// Set custom messages for nested fields using the context
+	ctx.SetFieldError("firstName", "required", "Please enter your first name")
+	ctx.SetFieldError("lastName", "required", "Please enter your last name")
+	ctx.SetFieldError("bio", "max", "Your biography is too detailed, please shorten it")
+	ctx.SetFieldError("street", "required", "Please provide a street address")
+
+	// Create an instance with validation errors
+	invalidUser := UserWithNestedFields{
+		Username: "testuser",      // valid
+		Email:    "test@test.com", // valid
+		Profile: Profile{
+			FirstName: "",                                                                                                                                       // required error
+			LastName:  "",                                                                                                                                       // required error
+			Bio:       "This is a very long bio that exceeds the maximum length limit of 100 characters. It should trigger a validation error for the max tag.", // max error
+		},
+		Address: Address{
+			Street: "",         // required error
+			City:   "New York", // valid
+			Zip:    "10001",    // valid
+		},
+	}
+
+	// Validate using the context
+	err := ctx.Validate(&invalidUser)
+	assert.NotNil(t, err, "Expected validation error")
+
+	// Convert to ValidationErrors
+	validationErrors, ok := err.(ValidationErrors)
+	assert.True(t, ok, "Expected ValidationErrors type")
+
+	// Verify custom messages
+	fieldErrors := make(map[string]string)
+	for _, err := range validationErrors {
+		fieldErrors[err.Field] = err.Message
+	}
+
+	// Check for custom messages by full field path
+	assert.Equal(t, "Please enter your first name", fieldErrors["profile.firstName"])
+	assert.Equal(t, "Please enter your last name", fieldErrors["profile.lastName"])
+	assert.Equal(t, "Your biography is too detailed, please shorten it", fieldErrors["profile.bio"])
+	assert.Equal(t, "Please provide a street address", fieldErrors["address.street"])
+
+	// Verify that the base validator is unchanged
+	// Create a new instance for testing the base validator
+	anotherInvalidUser := UserWithNestedFields{
+		Username: "",
+		Email:    "",
+		Profile: Profile{
+			FirstName: "",
+			LastName:  "",
+		},
+		Address: Address{
+			Street: "",
+			City:   "",
+			Zip:    "",
+		},
+	}
+
+	baseErr := baseValidator.Validate(&anotherInvalidUser)
+	baseValidationErrors, _ := baseErr.(ValidationErrors)
+
+	// The base validator should still use default messages
+	for _, err := range baseValidationErrors {
+		if err.Field == "profile.firstName" && err.Tag == "required" {
+			assert.NotEqual(t, "Please enter your first name", err.Message,
+				"Base validator message should not be affected by context")
+		}
+	}
+
+	// Format the errors into a nested structure using the context validation errors
+	formattedErrors := FormatValidationErrors(validationErrors)
+
+	// Verify that formatted errors maintain the custom messages
+	profileMap, ok := formattedErrors["profile"].(map[string]interface{})
+	assert.True(t, ok, "Expected 'profile' to be a nested map")
+	assert.Equal(t, "Please enter your first name", profileMap["firstName"])
+	assert.Equal(t, "Please enter your last name", profileMap["lastName"])
+	assert.Equal(t, "Your biography is too detailed, please shorten it", profileMap["bio"])
+
+	addressMap, ok := formattedErrors["address"].(map[string]interface{})
+	assert.True(t, ok, "Expected 'address' to be a nested map")
+	assert.Equal(t, "Please provide a street address", addressMap["street"])
+}
+
 // TestGlobalErrorHandler was removed as GlobalErrorHandler was moved to the middleware package
+
+func TestFullPathCustomMessages(t *testing.T) {
+	// Create a validator
+	validator := NewCustomValidator()
+
+	// Set custom messages for fields with the same leaf name but different paths
+	validator.translator.SetFieldError("profile.firstName", "required", "Profile first name is required")
+	validator.translator.SetFieldError("address.firstName", "required", "Contact first name is required")
+
+	// Create an instance with validation errors in both fields with the same leaf name
+	invalidUser := UserWithNestedFields{
+		Username: "testuser",      // valid
+		Email:    "test@test.com", // valid
+		Profile: Profile{
+			FirstName: "",      // required error - should get profile-specific message
+			LastName:  "Smith", // valid
+		},
+		Address: Address{
+			Street:    "123 Main St", // valid
+			City:      "New York",    // valid
+			Zip:       "10001",       // valid
+			FirstName: "",            // required error - should get address-specific message
+		},
+		Items: []Item{},
+	}
+
+	// Validate
+	err := validator.Validate(&invalidUser)
+	assert.NotNil(t, err, "Expected validation error")
+
+	// Convert to ValidationErrors
+	validationErrors, ok := err.(ValidationErrors)
+	assert.True(t, ok, "Expected ValidationErrors type")
+
+	// Verify that each firstName field gets its specific custom message
+	fieldErrors := make(map[string]string)
+	for _, err := range validationErrors {
+		fieldErrors[err.Field] = err.Message
+	}
+
+	// Each path should have its own custom message
+	assert.Equal(t, "Profile first name is required", fieldErrors["profile.firstName"])
+	assert.Equal(t, "Contact first name is required", fieldErrors["address.firstName"])
+
+	// Format the errors into a nested structure
+	formattedErrors := FormatValidationErrors(validationErrors)
+
+	// Output formatted errors for debugging
+	jsonBytes, _ := json.MarshalIndent(formattedErrors, "", "  ")
+	t.Logf("Formatted validation errors: %s", string(jsonBytes))
+
+	// Verify that formatted errors maintain the path-specific custom messages
+	profileMap, ok := formattedErrors["profile"].(map[string]interface{})
+	assert.True(t, ok, "Expected 'profile' to be a nested map")
+	assert.Equal(t, "Profile first name is required", profileMap["firstName"])
+
+	addressMap, ok := formattedErrors["address"].(map[string]interface{})
+	assert.True(t, ok, "Expected 'address' to be a nested map")
+	assert.Equal(t, "Contact first name is required", addressMap["firstName"])
+}
 
 func TestCloneValidator(t *testing.T) {
 	original := NewCustomValidator()
@@ -706,4 +946,149 @@ func TestIntegrationWithEcho(t *testing.T) {
 	assert.True(t, ok)
 	assert.Equal(t, "John Doe", user["name"])
 	assert.Equal(t, "john@example.com", user["email"])
+}
+
+func TestArrayOfStructsValidation(t *testing.T) {
+	// Define address struct
+	type AddressStruct struct {
+		Street       string `json:"street" validate:"required"`
+		SecondStreet string `json:"second_street" validate:"required"`
+		City         string `json:"city" validate:"required"`
+		ZipCode      string `json:"zip_code" validate:"required"`
+	}
+
+	// Define profile struct with addresses
+	type ProfileStruct struct {
+		FirstName string          `json:"first_name" validate:"required"`
+		LastName  string          `json:"last_name" validate:"required"`
+		Addresses []AddressStruct `json:"addresses" validate:"required,dive"`
+	}
+
+	// Define the main test struct
+	type TestUser struct {
+		Username string        `json:"username" validate:"required"`
+		Email    string        `json:"email" validate:"required,email"`
+		Profile  ProfileStruct `json:"profile" validate:"required"`
+	}
+
+	// Create a validator
+	validator := NewCustomValidator()
+
+	// Set custom error messages
+	validator.translator.SetFieldError("username", "required", "Username is required")
+	validator.translator.SetFieldError("email", "email", "Invalid email format")
+	validator.translator.SetFieldError("profile.first_name", "required", "First name is required")
+	validator.translator.SetFieldError("profile.addresses", "required", "At least one address is required")
+	validator.translator.SetFieldError("street", "required", "Street is required")
+	validator.translator.SetFieldError("second_street", "required", "Second street is required")
+	validator.translator.SetFieldError("city", "required", "City is required")
+	validator.translator.SetFieldError("zip_code", "required", "Zip code is required")
+
+	// Create an invalid test user with multiple validation errors in address structs
+	invalidUser := TestUser{
+		Username: "",
+		Email:    "invalid-email",
+		Profile: ProfileStruct{
+			FirstName: "",
+			LastName:  "Doe",
+			Addresses: []AddressStruct{
+				{
+					Street:       "", // Required error
+					SecondStreet: "", // Required error
+					City:         "New York",
+					ZipCode:      "10001",
+				},
+				{
+					Street:       "456 Other St",
+					SecondStreet: "Apt 789",
+					City:         "", // Required error
+					ZipCode:      "", // Required error
+				},
+			},
+		},
+	}
+
+	// Validate
+	err := validator.Validate(&invalidUser)
+	assert.NotNil(t, err, "Expected validation error")
+
+	// Convert to ValidationErrors
+	validationErrors, ok := err.(ValidationErrors)
+	assert.True(t, ok, "Expected ValidationErrors type")
+
+	// Log all validation errors for debugging
+	for _, err := range validationErrors {
+		t.Logf("Field: %s, Tag: %s, Message: %s", err.Field, err.Tag, err.Message)
+	}
+
+	// Format the errors
+	formattedErrors := FormatValidationErrors(validationErrors)
+
+	// Output formatted errors for debugging
+	jsonBytes, _ := json.MarshalIndent(formattedErrors, "", "  ")
+	t.Logf("Formatted validation errors: %s", string(jsonBytes))
+
+	// Verify the nested structure with arrays of structs
+
+	// 1. Verify top-level fields
+	assert.Equal(t, "Username is required", formattedErrors["username"])
+	assert.Equal(t, "Invalid email format", formattedErrors["email"])
+
+	// 2. Verify profile fields
+	profile, ok := formattedErrors["profile"].(map[string]interface{})
+	assert.True(t, ok, "Expected 'profile' to be a map")
+	assert.Equal(t, "First name is required", profile["first_name"])
+
+	// 3. Verify addresses array contains structs with their own validation errors
+	addresses, ok := profile["addresses"].([]interface{})
+	assert.True(t, ok, "Expected 'addresses' to be an array")
+	assert.Equal(t, 2, len(addresses), "Expected 2 addresses in the array")
+
+	// 4. Verify first address validation errors with index information
+	firstAddress, ok := addresses[0].(map[string]interface{})
+	assert.True(t, ok, "Expected first address to be a map")
+	assert.Equal(t, 0, firstAddress["index"])
+
+	firstAddressErrors, ok := firstAddress["field_errors"].(map[string]interface{})
+	assert.True(t, ok, "Expected field_errors to be a map")
+	assert.Equal(t, "Street is required", firstAddressErrors["street"])
+	assert.Equal(t, "Second street is required", firstAddressErrors["second_street"])
+
+	// 5. Verify second address validation errors with index information
+	secondAddress, ok := addresses[1].(map[string]interface{})
+	assert.True(t, ok, "Expected second address to be a map")
+	assert.Equal(t, 1, secondAddress["index"])
+
+	secondAddressErrors, ok := secondAddress["field_errors"].(map[string]interface{})
+	assert.True(t, ok, "Expected field_errors to be a map")
+	assert.Equal(t, "City is required", secondAddressErrors["city"])
+	assert.Equal(t, "Zip code is required", secondAddressErrors["zip_code"])
+
+	// 6. Ensure expected structure matches exactly with index information
+	expectedStructure := map[string]interface{}{
+		"username": "Username is required",
+		"email":    "Invalid email format",
+		"profile": map[string]interface{}{
+			"first_name": "First name is required",
+			"addresses": []interface{}{
+				map[string]interface{}{
+					"index": 0,
+					"field_errors": map[string]interface{}{
+						"street":        "Street is required",
+						"second_street": "Second street is required",
+					},
+				},
+				map[string]interface{}{
+					"index": 1,
+					"field_errors": map[string]interface{}{
+						"city":     "City is required",
+						"zip_code": "Zip code is required",
+					},
+				},
+			},
+		},
+	}
+
+	// Deep equality check against expected structure
+	assert.Equal(t, expectedStructure, formattedErrors, "Formatted errors should match expected structure")
 }

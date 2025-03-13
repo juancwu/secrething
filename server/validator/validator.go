@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
+	"regexp"
+	"strconv"
 	"strings"
 
 	govalidator "github.com/go-playground/validator/v10"
@@ -91,10 +93,25 @@ func (t *ErrorTranslator) SetDefaultMessage(message string) {
 
 // Translate translates a validation error to a custom message
 func (t *ErrorTranslator) Translate(field string, tag string) string {
-	// Check if there's a custom message for this field and tag
+	// First, check if there's a custom message for the full field path and tag
 	if fieldMessages, ok := t.fieldErrors[field]; ok {
 		if message, ok := fieldMessages[tag]; ok {
 			return message
+		}
+	}
+
+	// If no full path match, check if there's a leaf field name match
+	// Only apply this if the field contains a dot (meaning it's a nested field)
+	if strings.Contains(field, ".") {
+		leafField := field
+		if idx := strings.LastIndex(field, "."); idx >= 0 {
+			leafField = field[idx+1:]
+		}
+
+		if fieldMessages, ok := t.fieldErrors[leafField]; ok {
+			if message, ok := fieldMessages[tag]; ok {
+				return message
+			}
 		}
 	}
 
@@ -142,13 +159,9 @@ func (cv *CustomValidator) Validate(i interface{}) error {
 			// Get the JSON field name path
 			jsonFieldPath := getJSONFieldPath(i, err)
 
-			// Translate the error using the leaf field name
-			leafField := jsonFieldPath
-			if idx := strings.LastIndex(jsonFieldPath, "."); idx >= 0 {
-				leafField = jsonFieldPath[idx+1:]
-			}
-
-			message := cv.translator.Translate(leafField, tag)
+			// Translate the error using the full path - our enhanced translator
+			// will handle both full path and leaf name lookups
+			message := cv.translator.Translate(jsonFieldPath, tag)
 
 			// Create a validation error
 			validationError := ValidationError{
@@ -169,6 +182,7 @@ func (cv *CustomValidator) Validate(i interface{}) error {
 
 // getJSONFieldPath returns the JSON field path for a validation error
 // For nested fields, it returns a dot-separated path like "profile.firstName"
+// For array/slice fields, it returns indexed paths like "items[0].name"
 func getJSONFieldPath(obj interface{}, fieldError govalidator.FieldError) string {
 	// Build the namespace path based on JSON field names rather than struct field names
 	namespace := fieldError.Namespace()
@@ -179,31 +193,105 @@ func getJSONFieldPath(obj interface{}, fieldError govalidator.FieldError) string
 
 	// Build a new path with JSON names
 	var jsonParts []string
-	currentType := reflect.TypeOf(obj).Elem()
+	currentObj := obj
+	currentType := reflect.TypeOf(currentObj).Elem()
+	currentValue := reflect.ValueOf(currentObj).Elem()
 
-	for _, part := range parts {
-		// Find the struct field
-		field, found := currentType.FieldByName(part)
-		if !found {
-			// If we can't find the field, just use the original part
-			jsonParts = append(jsonParts, part)
-			continue
-		}
+	for i, part := range parts {
+		// Check if this part refers to an array/slice index
+		indexMatch := regexp.MustCompile(`^(\w+)\[(\d+)\]$`).FindStringSubmatch(part)
 
-		// Get the JSON tag name
-		jsonName := strings.SplitN(field.Tag.Get("json"), ",", 2)[0]
-		if jsonName == "" || jsonName == "-" {
-			// If there's no JSON tag or it's "-", use the original field name
-			jsonParts = append(jsonParts, part)
+		if len(indexMatch) == 3 {
+			// This is an array/slice index reference like 'Items[0]'
+			fieldName := indexMatch[1]
+			indexStr := indexMatch[2]
+			index, _ := strconv.Atoi(indexStr)
+
+			// Find the struct field for the array/slice
+			field, found := currentType.FieldByName(fieldName)
+			if !found {
+				// If we can't find the field, just use the original part
+				jsonParts = append(jsonParts, part)
+				continue
+			}
+
+			// Get the JSON tag name for the array/slice field
+			jsonName := strings.SplitN(field.Tag.Get("json"), ",", 2)[0]
+			if jsonName == "" || jsonName == "-" {
+				jsonName = fieldName
+			}
+
+			// Add the field name and index to the path
+			jsonParts = append(jsonParts, fmt.Sprintf("%s[%d]", jsonName, index))
+
+			// Update currentType/currentValue for the next iteration
+			fieldValue := currentValue.FieldByName(fieldName)
+			if !fieldValue.IsValid() || index >= fieldValue.Len() {
+				// If the field value is invalid or index is out of bounds, we can't continue
+				// Just append the remaining parts as is
+				for j := i + 1; j < len(parts); j++ {
+					jsonParts = append(jsonParts, parts[j])
+				}
+				break
+			}
+
+			// Get the element at the specified index
+			elemValue := fieldValue.Index(index)
+
+			// Update currentType and currentValue based on the element type
+			if elemValue.Kind() == reflect.Struct {
+				currentType = elemValue.Type()
+				currentValue = elemValue
+			} else if elemValue.Kind() == reflect.Ptr && elemValue.Elem().Kind() == reflect.Struct {
+				currentType = elemValue.Elem().Type()
+				currentValue = elemValue.Elem()
+			} else {
+				// If the element is not a struct, we can't go deeper
+				// Just append the remaining parts as is
+				for j := i + 1; j < len(parts); j++ {
+					jsonParts = append(jsonParts, parts[j])
+				}
+				break
+			}
 		} else {
-			jsonParts = append(jsonParts, jsonName)
-		}
+			// Regular struct field
+			field, found := currentType.FieldByName(part)
+			if !found {
+				// If we can't find the field, just use the original part
+				jsonParts = append(jsonParts, part)
+				continue
+			}
 
-		// Update currentType for the next iteration if this field is a struct
-		if field.Type.Kind() == reflect.Struct {
-			currentType = field.Type
-		} else if field.Type.Kind() == reflect.Ptr && field.Type.Elem().Kind() == reflect.Struct {
-			currentType = field.Type.Elem()
+			// Get the JSON tag name
+			jsonName := strings.SplitN(field.Tag.Get("json"), ",", 2)[0]
+			if jsonName == "" || jsonName == "-" {
+				// If there's no JSON tag or it's "-", use the original field name
+				jsonParts = append(jsonParts, part)
+			} else {
+				jsonParts = append(jsonParts, jsonName)
+			}
+
+			// Update currentType and currentValue for the next iteration
+			fieldValue := currentValue.FieldByName(part)
+
+			if field.Type.Kind() == reflect.Struct {
+				currentType = field.Type
+				if fieldValue.IsValid() {
+					currentValue = fieldValue
+				}
+			} else if field.Type.Kind() == reflect.Ptr && field.Type.Elem().Kind() == reflect.Struct {
+				currentType = field.Type.Elem()
+				if fieldValue.IsValid() && !fieldValue.IsNil() {
+					currentValue = fieldValue.Elem()
+				}
+			} else {
+				// If the field is not a struct or pointer to struct, we can't go deeper
+				// Just append the remaining parts as is
+				for j := i + 1; j < len(parts); j++ {
+					jsonParts = append(jsonParts, parts[j])
+				}
+				break
+			}
 		}
 	}
 
