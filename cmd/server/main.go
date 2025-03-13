@@ -7,6 +7,7 @@ import (
 	"github.com/juancwu/konbini/server/db"
 	"github.com/juancwu/konbini/server/middleware"
 	"github.com/juancwu/konbini/server/observability"
+	"github.com/juancwu/konbini/server/validator"
 	"github.com/labstack/echo/v4"
 	echomiddleware "github.com/labstack/echo/v4/middleware"
 	"github.com/rs/zerolog/log"
@@ -46,6 +47,11 @@ func main() {
 	// Sentry setup
 	e.Use(sentryecho.New(sentryecho.Options{}))
 	e.Use(observability.SentryHubMiddleware())
+
+	// Set the validator
+	v := validator.NewCustomValidator()
+	e.Validator = v
+	cfg.Validator = v
 
 	// Global HTTP error handler
 	e.HTTPErrorHandler = middleware.ErrorHandlerMiddleware()

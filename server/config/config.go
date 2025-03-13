@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
+	"github.com/juancwu/konbini/server/validator"
 )
 
 // Config holds all application configuration
@@ -43,6 +44,9 @@ type Config struct {
 	PasswordResetDuration    time.Duration
 	RecoveryCodeCount        int
 	RecoveryCodeLength       int
+
+	// Validator
+	Validator *validator.CustomValidator
 }
 
 // Load loads configuration from environment variables
