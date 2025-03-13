@@ -1,8 +1,8 @@
 package auth
 
 import (
+	"github.com/juancwu/konbini/server/api/helpers"
 	"github.com/juancwu/konbini/server/errors"
-	"github.com/juancwu/konbini/server/helpers"
 	"github.com/labstack/echo/v4"
 )
 
