@@ -1,9 +1,9 @@
 package routes
 
 import (
+	"github.com/juancwu/konbini/server/api/handlers/auth"
 	"github.com/juancwu/konbini/server/config"
 	"github.com/juancwu/konbini/server/db"
-	"github.com/juancwu/konbini/server/handlers/auth"
 	"github.com/labstack/echo/v4"
 )
 
