@@ -58,80 +58,8 @@ func (v ValidationErrors) Error() string {
 }
 
 // AsMap converts ValidationErrors to a map for consistent error formatting
-func (v ValidationErrors) AsMap() map[string]string {
-	errMap := make(map[string]string)
-	for _, err := range v {
-		errMap[err.Field] = err.Message
-	}
-	return errMap
-}
-
-// FormatValidationErrors formats ValidationErrors into a standardized map structure
-// This is used by error handlers to format validation errors consistently
-// It supports nested field paths like "user.address.street"
-func FormatValidationErrors(valErrors ValidationErrors) map[string]interface{} {
-	fieldErrors := make(map[string]interface{})
-
-	for _, validationErr := range valErrors {
-		// Check if the field path contains dots indicating nested structure
-		if strings.Contains(validationErr.Field, ".") {
-			setNestedField(fieldErrors, validationErr.Field, validationErr.Message)
-		} else {
-			fieldErrors[validationErr.Field] = validationErr.Message
-		}
-	}
-
-	return fieldErrors
-}
-
-// setNestedField sets a value in a nested map structure based on a dot-separated path
-// Example: "user.address.street" -> map[user]map[address]map[street]message
-func setNestedField(m map[string]interface{}, path string, value string) {
-	parts := strings.Split(path, ".")
-
-	// Handle empty path case
-	if len(parts) == 0 {
-		return
-	}
-
-	lastIndex := len(parts) - 1
-
-	// Handle single-part path (no dots)
-	if lastIndex <= 0 {
-		m[path] = value
-		return
-	}
-
-	// Navigate to the final container
-	current := m
-	for _, part := range parts[:lastIndex] {
-		// Skip empty parts
-		if part == "" {
-			continue
-		}
-
-		// If this part doesn't exist yet, create it
-		if _, exists := current[part]; !exists {
-			current[part] = make(map[string]interface{})
-		}
-
-		// If it's not a map, we can't continue (field name collision)
-		next, ok := current[part].(map[string]interface{})
-		if !ok {
-			// Field exists but is not a map - convert scalar to map and keep previous value
-			nextMap := make(map[string]interface{})
-			nextMap["_value"] = current[part] // Store the scalar value under "_value" key
-			current[part] = nextMap
-			next = nextMap
-		}
-
-		current = next
-	}
-
-	// Set the final value if lastIndex part is not empty
-	if parts[lastIndex] != "" {
-		current[parts[lastIndex]] = value
-	}
+func (v ValidationErrors) AsMap() map[string]interface{} {
+	return FormatValidationErrors(v)
 }
 
 // NewErrorTranslator creates a new ErrorTranslator
@@ -179,30 +107,6 @@ func (t *ErrorTranslator) Translate(field string, tag string) string {
 	return t.defaultMessage
 }
 
-// setDefaultMessages sets commonly used validation error messages
-func setDefaultMessages(translator *ErrorTranslator) {
-	defaults := map[string]string{
-		"required": "This field is required",
-		"email":    "Must be a valid email address",
-		"min":      "Value must be greater than or equal to the minimum",
-		"max":      "Value must be less than or equal to the maximum",
-		"len":      "Must have the exact required length",
-		"eq":       "Value must be equal to the required value",
-		"ne":       "Value cannot be equal to the specified value",
-		"oneof":    "Must be one of the available options",
-		"url":      "Must be a valid URL",
-		"alpha":    "Must contain only letters",
-		"alphanum": "Must contain only letters and numbers",
-		"numeric":  "Must be a valid numeric value",
-		"uuid":     "Must be a valid UUID",
-		"datetime": "Must be a valid date/time",
-	}
-
-	for tag, message := range defaults {
-		translator.SetDefaultError(tag, message)
-	}
-}
-
 // NewCustomValidator creates a new CustomValidator instance
 func NewCustomValidator() *CustomValidator {
 	v := govalidator.New()
@@ -214,6 +118,9 @@ func NewCustomValidator() *CustomValidator {
 		}
 		return name
 	})
+
+	// Register custom validation tag for passwords
+	v.RegisterValidation("password", validatePassword)
 
 	translator := NewErrorTranslator()
 	setDefaultMessages(translator)

@@ -21,6 +21,13 @@ type TestUser struct {
 	Password string `json:"password" validate:"required,min=8"`
 }
 
+// TestUserWithPasswordValidation is a test struct with the password validation tag
+type TestUserWithPasswordValidation struct {
+	Username string `json:"username" validate:"required"`
+	Email    string `json:"email" validate:"required,email"`
+	Password string `json:"password" validate:"required,password"`
+}
+
 // Setup creates an Echo instance and registers the validator
 func setupTestValidator() (*echo.Echo, *CustomValidator) {
 	e := echo.New()
@@ -464,6 +471,90 @@ func TestCloneValidator(t *testing.T) {
 }
 
 // Integration test with Echo
+func TestPasswordValidation(t *testing.T) {
+	validator := NewCustomValidator()
+
+	tests := []struct {
+		name     string
+		password string
+		valid    bool
+	}{
+		{
+			name:     "Valid password with all requirements",
+			password: "Password123!",
+			valid:    true,
+		},
+		{
+			name:     "Valid password with minimum requirements",
+			password: "Aa1!5678",
+			valid:    true,
+		},
+		{
+			name:     "Too short",
+			password: "Aa1!",
+			valid:    false,
+		},
+		{
+			name:     "Missing uppercase",
+			password: "password123!",
+			valid:    false,
+		},
+		{
+			name:     "Missing lowercase",
+			password: "PASSWORD123!",
+			valid:    false,
+		},
+		{
+			name:     "Missing digit",
+			password: "Password!",
+			valid:    false,
+		},
+		{
+			name:     "Missing special character",
+			password: "Password123",
+			valid:    false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			user := TestUserWithPasswordValidation{
+				Username: "testuser",
+				Email:    "test@example.com",
+				Password: tc.password,
+			}
+
+			err := validator.Validate(&user)
+
+			if tc.valid {
+				assert.NoError(t, err, "Expected no validation error")
+			} else {
+				assert.Error(t, err, "Expected validation error")
+
+				if err != nil {
+					validationErrors, ok := err.(ValidationErrors)
+					assert.True(t, ok, "Expected ValidationErrors type")
+
+					// Find password validation error
+					var passwordError *ValidationError
+					for _, validationErr := range validationErrors {
+						if validationErr.Field == "password" && validationErr.Tag == "password" {
+							passwordError = &validationErr
+							break
+						}
+					}
+
+					assert.NotNil(t, passwordError, "Expected password validation error")
+					if passwordError != nil {
+						assert.Equal(t, "password", passwordError.Tag)
+						assert.Contains(t, passwordError.Message, "Password must be at least 8 characters long")
+					}
+				}
+			}
+		})
+	}
+}
+
 func TestDefaultValidationMessages(t *testing.T) {
 	validator := NewCustomValidator()
 
@@ -483,6 +574,7 @@ func TestDefaultValidationMessages(t *testing.T) {
 		"numeric":  "Must be a valid numeric value",
 		"uuid":     "Must be a valid UUID",
 		"datetime": "Must be a valid date/time",
+		"password": "Password must be at least 8 characters long and contain uppercase, lowercase, digit, and at least one special character (!@#$%^&*()-_=+[]{}|;:'\",.<>/?)",
 	}
 
 	// Verify all default messages are set correctly
