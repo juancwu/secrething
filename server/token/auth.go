@@ -10,9 +10,11 @@ import (
 type AuthTokenType string
 
 const (
-	TemporaryToken AuthTokenType = "temporary_token"
-	AccessToken    AuthTokenType = "access_token"
-	RefreshToken   AuthTokenType = "refresh_token"
+	TemporaryToken      AuthTokenType = "temporary_token"
+	LimitedAccessToken  AuthTokenType = "limited_access_token"
+	AccessToken         AuthTokenType = "access_token"
+	LimitedRefreshToken AuthTokenType = "limited_refresh_token"
+	RefreshToken        AuthTokenType = "refresh_token"
 )
 
 func (t AuthTokenType) IsValid() bool {
@@ -26,6 +28,14 @@ func (t AuthTokenType) IsValid() bool {
 type AuthToken struct {
 	UserID string
 	Type   AuthTokenType
+}
+
+// NewAuthToken creates a new auth token with the given token type.
+func NewAuthToken(userID string, tokType AuthTokenType) AuthToken {
+	return AuthToken{
+		UserID: userID,
+		Type:   tokType,
+	}
 }
 
 // Scan reads the data given and store it in the current AuthToken.
@@ -55,24 +65,25 @@ func (t AuthToken) Package(key []byte) (string, error) {
 
 // NewTempAuthToken creates a new temporary token.
 func NewTemporaryToken(userID string) AuthToken {
-	return AuthToken{
-		UserID: userID,
-		Type:   TemporaryToken,
-	}
+	return NewAuthToken(userID, TemporaryToken)
 }
 
 // NewAccessToken creates a new access token.
 func NewAccessToken(userID string) AuthToken {
-	return AuthToken{
-		UserID: userID,
-		Type:   AccessToken,
-	}
+	return NewAuthToken(userID, AccessToken)
 }
 
 // NewRefreshToken creates a new refresh token.
 func NewRefreshToken(userID string) AuthToken {
-	return AuthToken{
-		UserID: userID,
-		Type:   RefreshToken,
-	}
+	return NewAuthToken(userID, RefreshToken)
+}
+
+// NewLimitedAccessToken creates a new limited access token.
+func NewLimitedAccessToken(userID string) AuthToken {
+	return NewAuthToken(userID, LimitedAccessToken)
+}
+
+// NewLimitedRefreshToken creates a new limited refresh token
+func NewLimitedRefreshToken(userID string) AuthToken {
+	return NewAuthToken(userID, LimitedRefreshToken)
 }
