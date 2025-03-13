@@ -2,6 +2,8 @@ package validator
 
 import (
 	"encoding/json"
+	stderrors "errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -339,72 +341,23 @@ func TestValidationErrorsAsMap(t *testing.T) {
 	}
 }
 
-func TestGlobalErrorHandler(t *testing.T) {
-	e := echo.New()
-	req := httptest.NewRequest(http.MethodPost, "/", nil)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-
-	// Test with ValidationErrors
-	validationErrors := ValidationErrors{
+func TestFormatValidationErrors(t *testing.T) {
+	errors := ValidationErrors{
 		{Field: "name", Message: "Name is required", Tag: "required"},
 		{Field: "email", Message: "Invalid email format", Tag: "email"},
+		{Field: "age", Message: "Must be at least 18", Tag: "min"},
 	}
 
-	GlobalErrorHandler(validationErrors, c)
+	fieldErrors := FormatValidationErrors(errors)
 
-	if rec.Code != http.StatusBadRequest {
-		t.Errorf("Expected status code %d, got %d", http.StatusBadRequest, rec.Code)
-	}
-
-	var response map[string]interface{}
-	err := json.Unmarshal(rec.Body.Bytes(), &response)
-	if err != nil {
-		t.Fatalf("Error parsing response JSON: %v", err)
-	}
-
-	if response["code"].(float64) != http.StatusBadRequest {
-		t.Errorf("Expected code %d, got %v", http.StatusBadRequest, response["code"])
-	}
-
-	if response["message"].(string) != "Validation Failed" {
-		t.Errorf("Expected message 'Validation Failed', got '%v'", response["message"])
-	}
-
-	errors, ok := response["errors"].(map[string]interface{})
-	if !ok {
-		t.Fatalf("Expected errors to be a map, got %T", response["errors"])
-	}
-
-	if errors["name"].(string) != "Name is required" {
-		t.Errorf("Expected error for field 'name' to be 'Name is required', got '%v'", errors["name"])
-	}
-
-	// Test with Echo HTTP error
-	rec = httptest.NewRecorder()
-	c = e.NewContext(req, rec)
-
-	httpError := echo.NewHTTPError(http.StatusUnauthorized, "Unauthorized access")
-	GlobalErrorHandler(httpError, c)
-
-	if rec.Code != http.StatusUnauthorized {
-		t.Errorf("Expected status code %d, got %d", http.StatusUnauthorized, rec.Code)
-	}
-
-	response = make(map[string]interface{})
-	err = json.Unmarshal(rec.Body.Bytes(), &response)
-	if err != nil {
-		t.Fatalf("Error parsing response JSON: %v", err)
-	}
-
-	if response["code"].(float64) != http.StatusUnauthorized {
-		t.Errorf("Expected code %d, got %v", http.StatusUnauthorized, response["code"])
-	}
-
-	if response["message"].(string) != "Unauthorized access" {
-		t.Errorf("Expected message 'Unauthorized access', got '%v'", response["message"])
-	}
+	// Check the output structure
+	assert.Equal(t, 3, len(fieldErrors), "Expected 3 entries in the field errors map")
+	assert.Equal(t, "Name is required", fieldErrors["name"])
+	assert.Equal(t, "Invalid email format", fieldErrors["email"])
+	assert.Equal(t, "Must be at least 18", fieldErrors["age"])
 }
+
+// TestGlobalErrorHandler was removed as GlobalErrorHandler was moved to the middleware package
 
 func TestCloneValidator(t *testing.T) {
 	original := NewCustomValidator()
@@ -438,6 +391,60 @@ func TestCloneValidator(t *testing.T) {
 }
 
 // Integration test with Echo
+func TestDefaultValidationMessages(t *testing.T) {
+	validator := NewCustomValidator()
+
+	// Define the expected default messages
+	expectedDefaults := map[string]string{
+		"required": "This field is required",
+		"email":    "Must be a valid email address",
+		"min":      "Value must be greater than or equal to the minimum",
+		"max":      "Value must be less than or equal to the maximum",
+		"len":      "Must have the exact required length",
+		"eq":       "Value must be equal to the required value",
+		"ne":       "Value cannot be equal to the specified value",
+		"oneof":    "Must be one of the available options",
+		"url":      "Must be a valid URL",
+		"alpha":    "Must contain only letters",
+		"alphanum": "Must contain only letters and numbers",
+		"numeric":  "Must be a valid numeric value",
+		"uuid":     "Must be a valid UUID",
+		"datetime": "Must be a valid date/time",
+	}
+
+	// Verify all default messages are set correctly
+	for tag, expectedMessage := range expectedDefaults {
+		actualMessage := validator.translator.Translate("any_field", tag)
+		assert.Equal(t, expectedMessage, actualMessage, "Default message for '%s' tag doesn't match expected value", tag)
+	}
+
+	// Test validation with default messages
+	invalidUser := TestUser{
+		Name:     "",
+		Email:    "not-an-email",
+		Age:      16,
+		Password: "short",
+	}
+
+	err := validator.Validate(&invalidUser)
+	assert.NotNil(t, err, "Expected validation error")
+
+	validationErrors, ok := err.(ValidationErrors)
+	assert.True(t, ok, "Expected ValidationErrors type")
+
+	// Check for specific validation messages
+	for _, validationErr := range validationErrors {
+		switch {
+		case validationErr.Field == "name" && validationErr.Tag == "required":
+			assert.Equal(t, "This field is required", validationErr.Message)
+		case validationErr.Field == "email" && validationErr.Tag == "email":
+			assert.Equal(t, "Must be a valid email address", validationErr.Message)
+		case validationErr.Field == "password" && validationErr.Tag == "min":
+			assert.Equal(t, "Value must be greater than or equal to the minimum", validationErr.Message)
+		}
+	}
+}
+
 func TestIntegrationWithEcho(t *testing.T) {
 	// Create Echo instance with validator
 	e := echo.New()
@@ -458,8 +465,39 @@ func TestIntegrationWithEcho(t *testing.T) {
 		})
 	})
 
-	// Set the error handler
-	e.HTTPErrorHandler = GlobalErrorHandler
+	// Set a test error handler that uses FormatValidationErrors
+	e.HTTPErrorHandler = func(err error, c echo.Context) {
+		var validationErrors ValidationErrors
+		var statusCode int = http.StatusInternalServerError
+		var message string = "Internal server error"
+
+		if stderrors.As(err, &validationErrors) {
+			// Handle validation errors
+			statusCode = http.StatusBadRequest
+			message = "Validation failed"
+
+			// Use the FormatValidationErrors function
+			fieldErrors := FormatValidationErrors(validationErrors)
+
+			c.JSON(statusCode, map[string]interface{}{
+				"code":         statusCode,
+				"message":      message,
+				"field_errors": fieldErrors,
+			})
+			return
+		}
+
+		// Handle other errors
+		if httpErr, ok := err.(*echo.HTTPError); ok {
+			statusCode = httpErr.Code
+			message = fmt.Sprintf("%v", httpErr.Message)
+		}
+
+		c.JSON(statusCode, map[string]interface{}{
+			"code":    statusCode,
+			"message": message,
+		})
+	}
 
 	// Test with invalid data
 	invalidData := `{"name":"","email":"not-an-email"}`
@@ -476,12 +514,12 @@ func TestIntegrationWithEcho(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, float64(http.StatusBadRequest), response["code"])
-	assert.Equal(t, "Validation Failed", response["message"])
+	assert.Equal(t, "Validation failed", response["message"])
 
-	errors, ok := response["errors"].(map[string]interface{})
+	fieldErrors, ok := response["field_errors"].(map[string]interface{})
 	assert.True(t, ok)
-	assert.Equal(t, "Name cannot be empty", errors["name"])
-	assert.Equal(t, "Please provide a valid email", errors["email"])
+	assert.Equal(t, "Name cannot be empty", fieldErrors["name"])
+	assert.Equal(t, "Please provide a valid email", fieldErrors["email"])
 
 	// Test with valid data
 	validData := `{"name":"John Doe","email":"john@example.com","age":25,"password":"password123"}`

@@ -49,10 +49,7 @@ func HTTPErrorHandler(err error, c echo.Context) {
 		message = "Validation failed"
 
 		// Convert ValidationErrors to field errors map
-		fieldErrors := make(map[string]interface{})
-		for _, validationErr := range validationErrors {
-			fieldErrors[validationErr.Field] = validationErr.Message
-		}
+		fieldErrors := validator.FormatValidationErrors(validationErrors)
 
 		// Log validation errors as info level since they're client errors
 		logLevel = string(LogLevelInfo)

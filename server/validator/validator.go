@@ -66,6 +66,18 @@ func (v ValidationErrors) AsMap() map[string]string {
 	return errMap
 }
 
+// FormatValidationErrors formats ValidationErrors into a standardized map structure
+// This is used by error handlers to format validation errors consistently
+func FormatValidationErrors(valErrors ValidationErrors) map[string]interface{} {
+	fieldErrors := make(map[string]interface{})
+
+	for _, validationErr := range valErrors {
+		fieldErrors[validationErr.Field] = validationErr.Message
+	}
+
+	return fieldErrors
+}
+
 // NewErrorTranslator creates a new ErrorTranslator
 func NewErrorTranslator() *ErrorTranslator {
 	return &ErrorTranslator{
@@ -111,6 +123,30 @@ func (t *ErrorTranslator) Translate(field string, tag string) string {
 	return t.defaultMessage
 }
 
+// setDefaultMessages sets commonly used validation error messages
+func setDefaultMessages(translator *ErrorTranslator) {
+	defaults := map[string]string{
+		"required": "This field is required",
+		"email":    "Must be a valid email address",
+		"min":      "Value must be greater than or equal to the minimum",
+		"max":      "Value must be less than or equal to the maximum",
+		"len":      "Must have the exact required length",
+		"eq":       "Value must be equal to the required value",
+		"ne":       "Value cannot be equal to the specified value",
+		"oneof":    "Must be one of the available options",
+		"url":      "Must be a valid URL",
+		"alpha":    "Must contain only letters",
+		"alphanum": "Must contain only letters and numbers",
+		"numeric":  "Must be a valid numeric value",
+		"uuid":     "Must be a valid UUID",
+		"datetime": "Must be a valid date/time",
+	}
+
+	for tag, message := range defaults {
+		translator.SetDefaultError(tag, message)
+	}
+}
+
 // NewCustomValidator creates a new CustomValidator instance
 func NewCustomValidator() *CustomValidator {
 	v := govalidator.New()
@@ -123,9 +159,12 @@ func NewCustomValidator() *CustomValidator {
 		return name
 	})
 
+	translator := NewErrorTranslator()
+	setDefaultMessages(translator)
+
 	return &CustomValidator{
 		validator:  v,
-		translator: NewErrorTranslator(),
+		translator: translator,
 	}
 }
 

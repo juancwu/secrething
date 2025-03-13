@@ -120,7 +120,7 @@ func TestErrorHandlerWithAppError(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "/", nil)
 			rec := httptest.NewRecorder()
 			c := e.NewContext(req, rec)
-			
+
 			// Generate a fake request ID
 			c.Response().Header().Set(echo.HeaderXRequestID, "req-12345")
 
@@ -160,7 +160,7 @@ func TestErrorHandlerWithEchoHTTPError(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
-	
+
 	// Generate a fake request ID
 	c.Response().Header().Set(echo.HeaderXRequestID, "req-12345")
 
@@ -222,7 +222,7 @@ func TestErrorHandlerWithGenericError(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
-	
+
 	// Generate a fake request ID
 	c.Response().Header().Set(echo.HeaderXRequestID, "req-12345")
 
