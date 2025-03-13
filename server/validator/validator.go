@@ -165,53 +165,9 @@ func (cv *CustomValidator) Validate(i interface{}) error {
 	return nil
 }
 
-// GlobalErrorHandler is a custom error handler for Echo
-// This is provided for standalone usage, but it's recommended to integrate
-// with your application's main error handler as shown in the integration examples
-func GlobalErrorHandler(err error, c echo.Context) {
-	code := http.StatusInternalServerError
-	message := "Internal Server Error"
-	var errors interface{} = nil
-	requestID := c.Response().Header().Get(echo.HeaderXRequestID)
-
-	switch e := err.(type) {
-	case ValidationErrors:
-		// Handle validation errors
-		code = http.StatusBadRequest
-		message = "Validation Failed"
-		// Convert to map of field -> message for consistent format
-		fieldErrors := make(map[string]interface{})
-		for _, validationErr := range e {
-			fieldErrors[validationErr.Field] = validationErr.Message
-		}
-		errors = fieldErrors
-	case *echo.HTTPError:
-		// Handle Echo HTTP errors
-		code = e.Code
-		message = fmt.Sprintf("%v", e.Message)
-	default:
-		// Handle other errors
-		if c.Echo().Debug {
-			message = err.Error()
-		}
-	}
-
-	// Return error response
-	if !c.Response().Committed {
-		if c.Request().Method == http.MethodHead {
-			err = c.NoContent(code)
-		} else {
-			err = c.JSON(code, map[string]interface{}{
-				"code":    code,
-				"message": message,
-				"errors":  errors,
-				"req_id":  requestID,
-			})
-		}
-		if err != nil {
-			c.Echo().Logger.Error(err)
-		}
-	}
+// Translator gets the CustomValidator's ErrorTranslator instance
+func (cv *CustomValidator) Translator() *ErrorTranslator {
+	return cv.translator
 }
 
 // Clone creates a copy of the ErrorTranslator
