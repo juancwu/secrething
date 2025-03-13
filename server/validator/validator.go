@@ -245,9 +245,10 @@ func (cv *CustomValidator) Clone() *CustomValidator {
 
 // NewValidationContext creates a new validation context with a cloned validator
 func NewValidationContext(baseValidator *CustomValidator) *ValidationContext {
+	cloned := baseValidator.Clone()
 	return &ValidationContext{
-		validator:  baseValidator.Clone(),
-		translator: baseValidator.translator,
+		validator:  cloned,
+		translator: cloned.translator,
 	}
 }
 
