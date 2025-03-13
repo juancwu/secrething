@@ -1092,3 +1092,239 @@ func TestArrayOfStructsValidation(t *testing.T) {
 	// Deep equality check against expected structure
 	assert.Equal(t, expectedStructure, formattedErrors, "Formatted errors should match expected structure")
 }
+
+func TestNormalizePath(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "Empty path",
+			input:    "",
+			expected: "",
+		},
+		{
+			name:     "Simple field",
+			input:    "name",
+			expected: "name",
+		},
+		{
+			name:     "Nested field",
+			input:    "profile.firstName",
+			expected: "profile.firstName",
+		},
+		{
+			name:     "Path with array index",
+			input:    "addresses[0].street",
+			expected: "addresses[0].street",
+		},
+		{
+			name:     "Path with multiple array indices",
+			input:    "data[0][1].value",
+			expected: "data[0][1].value",
+		},
+		{
+			name:     "Path with array index and nested fields",
+			input:    "user.addresses[0].street",
+			expected: "user.addresses[0].street",
+		},
+		{
+			name:     "Path with spaces",
+			input:    "  user.name  ",
+			expected: "user.name",
+		},
+		{
+			name:     "Path with empty segments",
+			input:    "user..name",
+			expected: "user.name",
+		},
+		{
+			name:     "Path with map key",
+			input:    "metadata[\"key\"].value",
+			expected: "metadata[\"key\"].value",
+		},
+		{
+			name:     "Path with array and whitespace",
+			input:    "items [ 0 ] . name",
+			expected: "items[0].name",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := normalizePath(tt.input)
+			assert.Equal(t, tt.expected, result, "Normalized path should match expected value")
+		})
+	}
+}
+
+func TestExtractLeafName(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "Empty path",
+			input:    "",
+			expected: "",
+		},
+		{
+			name:     "Simple field",
+			input:    "name",
+			expected: "name",
+		},
+		{
+			name:     "Nested field",
+			input:    "profile.firstName",
+			expected: "firstName",
+		},
+		{
+			name:     "Path with array index at leaf",
+			input:    "items[0]",
+			expected: "items[0]",
+		},
+		{
+			name:     "Path with array index in middle",
+			input:    "orders[0].items",
+			expected: "items",
+		},
+		{
+			name:     "Path with array index at leaf after dot",
+			input:    "data.points[0]",
+			expected: "points[0]",
+		},
+		{
+			name:     "Deep nested path",
+			input:    "user.profile.contact.email",
+			expected: "email",
+		},
+		{
+			name:     "Deep nested path with array",
+			input:    "user.addresses[0].street.name",
+			expected: "name",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := extractLeafName(tt.input)
+			assert.Equal(t, tt.expected, result, "Extracted leaf name should match expected value")
+		})
+	}
+}
+
+func TestPathNormalizedValidation(t *testing.T) {
+	// Create a validator
+	validator := NewCustomValidator()
+
+	// Set custom error messages with different path formats
+	validator.translator.SetFieldError("profile.addresses[0].street", "required", "Street is required")
+
+	// Create a test struct with nested fields and arrays
+	type Address struct {
+		Street string `json:"street" validate:"required"`
+		City   string `json:"city" validate:"required"`
+	}
+
+	type Profile struct {
+		Addresses []Address `json:"addresses" validate:"required,dive"`
+	}
+
+	type User struct {
+		Profile Profile `json:"profile" validate:"required"`
+	}
+
+	// Create an invalid user with missing street
+	invalidUser := User{
+		Profile: Profile{
+			Addresses: []Address{
+				{
+					Street: "", // Required error - should match our custom message
+					City:   "New York",
+				},
+			},
+		},
+	}
+
+	// Validate
+	err := validator.Validate(&invalidUser)
+	assert.NotNil(t, err, "Expected validation error")
+
+	// Convert to ValidationErrors
+	validationErrors, ok := err.(ValidationErrors)
+	assert.True(t, ok, "Expected ValidationErrors type")
+
+	// Find the street validation error
+	var streetError *ValidationError
+	for _, validationErr := range validationErrors {
+		if validationErr.Field == "profile.addresses[0].street" && validationErr.Tag == "required" {
+			streetError = &validationErr
+			break
+		}
+	}
+
+	// Verify the custom message was applied correctly
+	assert.NotNil(t, streetError, "Expected street validation error")
+	if streetError != nil {
+		assert.Equal(t, "Street is required", streetError.Message)
+	}
+}
+
+func TestLeafNameFallbackLookup(t *testing.T) {
+	// Create a validator
+	validator := NewCustomValidator()
+
+	// Set custom error message only for the leaf field name
+	validator.translator.SetFieldError("street", "required", "Street address is required")
+
+	// Create a test struct with nested fields
+	type Address struct {
+		Street string `json:"street" validate:"required"`
+		City   string `json:"city" validate:"required"`
+	}
+
+	type User struct {
+		HomeAddress Address `json:"homeAddress" validate:"required"`
+		WorkAddress Address `json:"workAddress" validate:"required"`
+	}
+
+	// Create an invalid user with missing streets in both addresses
+	invalidUser := User{
+		HomeAddress: Address{
+			Street: "", // Should get custom message from leaf field
+			City:   "New York",
+		},
+		WorkAddress: Address{
+			Street: "", // Should get same custom message from leaf field
+			City:   "Chicago",
+		},
+	}
+
+	// Validate
+	err := validator.Validate(&invalidUser)
+	assert.NotNil(t, err, "Expected validation error")
+
+	// Convert to ValidationErrors
+	validationErrors, ok := err.(ValidationErrors)
+	assert.True(t, ok, "Expected ValidationErrors type")
+
+	// Check both street validation errors
+	homeStreetFound := false
+	workStreetFound := false
+
+	for _, validationErr := range validationErrors {
+		if validationErr.Field == "homeAddress.street" && validationErr.Tag == "required" {
+			homeStreetFound = true
+			assert.Equal(t, "Street address is required", validationErr.Message)
+		}
+		if validationErr.Field == "workAddress.street" && validationErr.Tag == "required" {
+			workStreetFound = true
+			assert.Equal(t, "Street address is required", validationErr.Message)
+		}
+	}
+
+	assert.True(t, homeStreetFound, "Expected home address street validation error")
+	assert.True(t, workStreetFound, "Expected work address street validation error")
+}

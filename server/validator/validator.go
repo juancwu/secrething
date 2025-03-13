@@ -20,9 +20,10 @@ type CustomValidator struct {
 
 // ErrorTranslator handles translating validation errors to custom messages
 type ErrorTranslator struct {
-	fieldErrors    map[string]map[string]string // map[field]map[tag]message
-	defaultErrors  map[string]string            // map[tag]message
-	defaultMessage string
+	fieldErrors     map[string]map[string]string // map[field]map[tag]message
+	leafFieldErrors map[string]map[string]string // map[leafName]map[tag]message for fallback
+	defaultErrors   map[string]string            // map[tag]message
+	defaultMessage  string
 }
 
 // ValidationContext stores context-specific validation settings
@@ -64,21 +65,134 @@ func (v ValidationErrors) AsMap() map[string]interface{} {
 	return FormatValidationErrors(v)
 }
 
+// normalizePath standardizes field paths for consistent format handling
+// - Handles array indices consistently: profile.addresses[0].street
+// - Handles map keys: profile.metadata["key"].value
+// The path is normalized to ensure consistent lookup regardless of source format
+func normalizePath(path string) string {
+	// Trim leading/trailing spaces
+	path = strings.TrimSpace(path)
+
+	// Handle empty path case
+	if path == "" {
+		return ""
+	}
+
+	// Replace spaces around dots with just dots
+	path = strings.ReplaceAll(path, " .", ".")
+	path = strings.ReplaceAll(path, ". ", ".")
+
+	// Split by dots to handle each segment
+	segments := strings.Split(path, ".")
+	normalizedSegments := make([]string, 0, len(segments))
+
+	for _, segment := range segments {
+		// Trim spaces from segment
+		segment = strings.TrimSpace(segment)
+
+		// Skip empty segments
+		if segment == "" {
+			continue
+		}
+
+		// Normalize array/map notation if present
+		if strings.Contains(segment, "[") && strings.Contains(segment, "]") {
+			// Extract the field name part (before the bracket)
+			fieldName := segment
+			if idx := strings.Index(segment, "["); idx > 0 {
+				fieldName = strings.TrimSpace(segment[:idx])
+			}
+
+			// Extract all index/key parts but normalize them
+			normalizedIndices := make([]string, 0)
+			remaining := segment
+			for strings.Contains(remaining, "[") && strings.Contains(remaining, "]") {
+				start := strings.Index(remaining, "[")
+				end := strings.Index(remaining, "]")
+
+				if start >= 0 && end > start {
+					// Extract the content between brackets
+					indexContent := strings.TrimSpace(remaining[start+1 : end])
+					// Create normalized index with no spaces
+					normalizedIndex := "[" + indexContent + "]"
+					normalizedIndices = append(normalizedIndices, normalizedIndex)
+
+					// Move past this index/key
+					if end+1 < len(remaining) {
+						remaining = remaining[end+1:]
+					} else {
+						remaining = ""
+					}
+				} else {
+					break
+				}
+			}
+
+			// Reconstruct the segment with normalized field name and indices
+			normalized := fieldName + strings.Join(normalizedIndices, "")
+			normalizedSegments = append(normalizedSegments, normalized)
+		} else {
+			// Regular field segment without array/map notation
+			normalizedSegments = append(normalizedSegments, segment)
+		}
+	}
+
+	// Join segments with dots
+	return strings.Join(normalizedSegments, ".")
+}
+
+// extractLeafName extracts just the leaf field name from a path
+// For example:
+// - "profile.firstName" returns "firstName"
+// - "items[0].name" returns "name"
+// - "data.points[0][1]" returns "points[0][1]"
+func extractLeafName(path string) string {
+	path = strings.TrimSpace(path)
+
+	if path == "" {
+		return ""
+	}
+
+	// If there are no dots, it's already a leaf
+	if !strings.Contains(path, ".") {
+		return path
+	}
+
+	// Split by dots and take the last segment
+	segments := strings.Split(path, ".")
+	return segments[len(segments)-1]
+}
+
 // NewErrorTranslator creates a new ErrorTranslator
 func NewErrorTranslator() *ErrorTranslator {
 	return &ErrorTranslator{
-		fieldErrors:    make(map[string]map[string]string),
-		defaultErrors:  make(map[string]string),
-		defaultMessage: "Invalid value",
+		fieldErrors:     make(map[string]map[string]string),
+		leafFieldErrors: make(map[string]map[string]string),
+		defaultErrors:   make(map[string]string),
+		defaultMessage:  "Invalid value",
 	}
 }
 
 // SetFieldError sets a custom error message for a specific field and validation tag
+// The field path is normalized for consistent lookup during validation
 func (t *ErrorTranslator) SetFieldError(field, tag, message string) {
-	if _, ok := t.fieldErrors[field]; !ok {
-		t.fieldErrors[field] = make(map[string]string)
+	// Normalize the field path for consistent lookup
+	normalizedPath := normalizePath(field)
+
+	// Store by normalized path
+	if _, ok := t.fieldErrors[normalizedPath]; !ok {
+		t.fieldErrors[normalizedPath] = make(map[string]string)
 	}
-	t.fieldErrors[field][tag] = message
+	t.fieldErrors[normalizedPath][tag] = message
+
+	// Also store by leaf name for fallback lookups
+	leafName := extractLeafName(field)
+	if leafName != "" && leafName != normalizedPath {
+		if _, ok := t.leafFieldErrors[leafName]; !ok {
+			t.leafFieldErrors[leafName] = make(map[string]string)
+		}
+		t.leafFieldErrors[leafName][tag] = message
+	}
 }
 
 // SetDefaultError sets a default error message for a validation tag
@@ -93,22 +207,28 @@ func (t *ErrorTranslator) SetDefaultMessage(message string) {
 
 // Translate translates a validation error to a custom message
 func (t *ErrorTranslator) Translate(field string, tag string) string {
-	// First, check if there's a custom message for the full field path and tag
-	if fieldMessages, ok := t.fieldErrors[field]; ok {
+	// Normalize the field path for consistent lookup
+	normalizedPath := normalizePath(field)
+
+	// First, check if there's a custom message for the normalized full field path and tag
+	if fieldMessages, ok := t.fieldErrors[normalizedPath]; ok {
 		if message, ok := fieldMessages[tag]; ok {
 			return message
 		}
 	}
 
-	// If no full path match, check if there's a leaf field name match
-	// Only apply this if the field contains a dot (meaning it's a nested field)
-	if strings.Contains(field, ".") {
-		leafField := field
-		if idx := strings.LastIndex(field, "."); idx >= 0 {
-			leafField = field[idx+1:]
+	// If no normalized path match, check if there's a leaf field name match
+	leafName := extractLeafName(field)
+	if leafName != "" && leafName != normalizedPath {
+		// Check in the dedicated leaf field errors map first
+		if fieldMessages, ok := t.leafFieldErrors[leafName]; ok {
+			if message, ok := fieldMessages[tag]; ok {
+				return message
+			}
 		}
 
-		if fieldMessages, ok := t.fieldErrors[leafField]; ok {
+		// For backward compatibility, also check in the main fieldErrors map
+		if fieldMessages, ok := t.fieldErrors[leafName]; ok {
 			if message, ok := fieldMessages[tag]; ok {
 				return message
 			}
@@ -318,6 +438,14 @@ func (t *ErrorTranslator) Clone() *ErrorTranslator {
 		clone.fieldErrors[field] = make(map[string]string)
 		for tag, msg := range tagMsgs {
 			clone.fieldErrors[field][tag] = msg
+		}
+	}
+
+	// Copy leaf field errors
+	for field, tagMsgs := range t.leafFieldErrors {
+		clone.leafFieldErrors[field] = make(map[string]string)
+		for tag, msg := range tagMsgs {
+			clone.leafFieldErrors[field][tag] = msg
 		}
 	}
 
