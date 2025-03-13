@@ -357,6 +357,79 @@ func TestFormatValidationErrors(t *testing.T) {
 	assert.Equal(t, "Must be at least 18", fieldErrors["age"])
 }
 
+// Define nested struct types for testing
+type Address struct {
+	Street string `json:"street" validate:"required"`
+	City   string `json:"city" validate:"required"`
+	Zip    string `json:"zip" validate:"required"`
+}
+
+type Profile struct {
+	FirstName string `json:"firstName" validate:"required"`
+	LastName  string `json:"lastName" validate:"required"`
+	Bio       string `json:"bio" validate:"max=100"`
+}
+
+type UserWithNestedFields struct {
+	Username string  `json:"username" validate:"required"`
+	Email    string  `json:"email" validate:"required,email"`
+	Profile  Profile `json:"profile" validate:"required"`
+	Address  Address `json:"address" validate:"required"`
+}
+
+func TestNestedValidationFormatting(t *testing.T) {
+	// Create an instance with validation errors
+	invalidUser := UserWithNestedFields{
+		Username: "",             // required error
+		Email:    "not-an-email", // email error
+		Profile: Profile{
+			FirstName: "",                                                                                                                                       // required error
+			LastName:  "",                                                                                                                                       // required error
+			Bio:       "This is a very long bio that exceeds the maximum length limit of 100 characters. It should trigger a validation error for the max tag.", // max error
+		},
+		Address: Address{
+			Street: "", // required error
+			City:   "", // required error
+			Zip:    "", // required error
+		},
+	}
+
+	// Create validator and validate
+	validator := NewCustomValidator()
+	err := validator.Validate(&invalidUser)
+	assert.NotNil(t, err, "Expected validation error")
+
+	// Convert to ValidationErrors
+	validationErrors, ok := err.(ValidationErrors)
+	assert.True(t, ok, "Expected ValidationErrors type")
+	assert.True(t, len(validationErrors) > 0, "Expected at least one validation error")
+
+	// Format the errors
+	fieldErrors := FormatValidationErrors(validationErrors)
+
+	// Verify top-level fields
+	assert.Contains(t, fieldErrors, "username")
+	assert.Contains(t, fieldErrors, "email")
+
+	// Verify nested profile fields
+	profileMap, ok := fieldErrors["profile"].(map[string]interface{})
+	assert.True(t, ok, "Expected 'profile' to be a nested map")
+	assert.Contains(t, profileMap, "firstName")
+	assert.Contains(t, profileMap, "lastName")
+	assert.Contains(t, profileMap, "bio")
+
+	// Verify nested address fields
+	addressMap, ok := fieldErrors["address"].(map[string]interface{})
+	assert.True(t, ok, "Expected 'address' to be a nested map")
+	assert.Contains(t, addressMap, "street")
+	assert.Contains(t, addressMap, "city")
+	assert.Contains(t, addressMap, "zip")
+
+	// Output formatted errors for debugging
+	jsonBytes, _ := json.MarshalIndent(fieldErrors, "", "  ")
+	t.Logf("Formatted validation errors: %s", string(jsonBytes))
+}
+
 // TestGlobalErrorHandler was removed as GlobalErrorHandler was moved to the middleware package
 
 func TestCloneValidator(t *testing.T) {

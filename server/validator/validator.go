@@ -68,14 +68,70 @@ func (v ValidationErrors) AsMap() map[string]string {
 
 // FormatValidationErrors formats ValidationErrors into a standardized map structure
 // This is used by error handlers to format validation errors consistently
+// It supports nested field paths like "user.address.street"
 func FormatValidationErrors(valErrors ValidationErrors) map[string]interface{} {
 	fieldErrors := make(map[string]interface{})
 
 	for _, validationErr := range valErrors {
-		fieldErrors[validationErr.Field] = validationErr.Message
+		// Check if the field path contains dots indicating nested structure
+		if strings.Contains(validationErr.Field, ".") {
+			setNestedField(fieldErrors, validationErr.Field, validationErr.Message)
+		} else {
+			fieldErrors[validationErr.Field] = validationErr.Message
+		}
 	}
 
 	return fieldErrors
+}
+
+// setNestedField sets a value in a nested map structure based on a dot-separated path
+// Example: "user.address.street" -> map[user]map[address]map[street]message
+func setNestedField(m map[string]interface{}, path string, value string) {
+	parts := strings.Split(path, ".")
+
+	// Handle empty path case
+	if len(parts) == 0 {
+		return
+	}
+
+	lastIndex := len(parts) - 1
+
+	// Handle single-part path (no dots)
+	if lastIndex <= 0 {
+		m[path] = value
+		return
+	}
+
+	// Navigate to the final container
+	current := m
+	for _, part := range parts[:lastIndex] {
+		// Skip empty parts
+		if part == "" {
+			continue
+		}
+
+		// If this part doesn't exist yet, create it
+		if _, exists := current[part]; !exists {
+			current[part] = make(map[string]interface{})
+		}
+
+		// If it's not a map, we can't continue (field name collision)
+		next, ok := current[part].(map[string]interface{})
+		if !ok {
+			// Field exists but is not a map - convert scalar to map and keep previous value
+			nextMap := make(map[string]interface{})
+			nextMap["_value"] = current[part] // Store the scalar value under "_value" key
+			current[part] = nextMap
+			next = nextMap
+		}
+
+		current = next
+	}
+
+	// Set the final value if lastIndex part is not empty
+	if parts[lastIndex] != "" {
+		current[parts[lastIndex]] = value
+	}
 }
 
 // NewErrorTranslator creates a new ErrorTranslator
@@ -174,22 +230,22 @@ func (cv *CustomValidator) Validate(i interface{}) error {
 		validationErrors := ValidationErrors{}
 
 		for _, err := range err.(govalidator.ValidationErrors) {
-			field := err.Field()
 			tag := err.Tag()
 
-			// Get the JSON field name
-			structField, _ := reflect.TypeOf(i).Elem().FieldByName(err.StructField())
-			jsonName := strings.SplitN(structField.Tag.Get("json"), ",", 2)[0]
-			if jsonName != "" {
-				field = jsonName
+			// Get the JSON field name path
+			jsonFieldPath := getJSONFieldPath(i, err)
+
+			// Translate the error using the leaf field name
+			leafField := jsonFieldPath
+			if idx := strings.LastIndex(jsonFieldPath, "."); idx >= 0 {
+				leafField = jsonFieldPath[idx+1:]
 			}
 
-			// Translate the error
-			message := cv.translator.Translate(field, tag)
+			message := cv.translator.Translate(leafField, tag)
 
 			// Create a validation error
 			validationError := ValidationError{
-				Field:   field,
+				Field:   jsonFieldPath,
 				Message: message,
 				Tag:     tag,
 				Value:   err.Value(),
@@ -202,6 +258,49 @@ func (cv *CustomValidator) Validate(i interface{}) error {
 	}
 
 	return nil
+}
+
+// getJSONFieldPath returns the JSON field path for a validation error
+// For nested fields, it returns a dot-separated path like "profile.firstName"
+func getJSONFieldPath(obj interface{}, fieldError govalidator.FieldError) string {
+	// Build the namespace path based on JSON field names rather than struct field names
+	namespace := fieldError.Namespace()
+	parts := strings.Split(namespace, ".")
+
+	// The first part is the type name, so we skip it
+	parts = parts[1:]
+
+	// Build a new path with JSON names
+	var jsonParts []string
+	currentType := reflect.TypeOf(obj).Elem()
+
+	for _, part := range parts {
+		// Find the struct field
+		field, found := currentType.FieldByName(part)
+		if !found {
+			// If we can't find the field, just use the original part
+			jsonParts = append(jsonParts, part)
+			continue
+		}
+
+		// Get the JSON tag name
+		jsonName := strings.SplitN(field.Tag.Get("json"), ",", 2)[0]
+		if jsonName == "" || jsonName == "-" {
+			// If there's no JSON tag or it's "-", use the original field name
+			jsonParts = append(jsonParts, part)
+		} else {
+			jsonParts = append(jsonParts, jsonName)
+		}
+
+		// Update currentType for the next iteration if this field is a struct
+		if field.Type.Kind() == reflect.Struct {
+			currentType = field.Type
+		} else if field.Type.Kind() == reflect.Ptr && field.Type.Elem().Kind() == reflect.Struct {
+			currentType = field.Type.Elem()
+		}
+	}
+
+	return strings.Join(jsonParts, ".")
 }
 
 // Translator gets the CustomValidator's ErrorTranslator instance
