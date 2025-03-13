@@ -1,7 +1,7 @@
 -- +goose Up
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS access_logs (
-    id TEXT NOT NULL PRIMARY KEY,
+    access_log_id TEXT NOT NULL PRIMARY KEY,
     user_id TEXT,
     bento_id TEXT,
     group_id TEXT,
