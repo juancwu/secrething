@@ -1,7 +1,7 @@
 package validator
 
 // setDefaultMessages sets commonly used validation error messages
-func setDefaultMessages(translator *ErrorTranslator) {
+func setDefaultMessages(translator *ErrorResolver) {
 	defaults := map[string]string{
 		"required": "This field is required",
 		"email":    "Must be a valid email address",

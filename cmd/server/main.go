@@ -49,7 +49,7 @@ func main() {
 	e.Use(observability.SentryHubMiddleware())
 
 	// Set the validator
-	v := validator.NewCustomValidator()
+	v := validator.NewValidator()
 	e.Validator = v
 	cfg.Validator = v
 
