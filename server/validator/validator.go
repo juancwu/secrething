@@ -21,6 +21,7 @@ type CustomValidator struct {
 // ErrorTranslator handles translating validation errors to custom messages
 type ErrorTranslator struct {
 	fieldErrors     map[string]map[string]string // map[field]map[tag]message
+	patternErrors   map[string]map[string]string // map[pattern]map[tag]message for wildcard patterns like "items[*].name"
 	leafFieldErrors map[string]map[string]string // map[leafName]map[tag]message for fallback
 	defaultErrors   map[string]string            // map[tag]message
 	defaultMessage  string
@@ -163,10 +164,131 @@ func extractLeafName(path string) string {
 	return segments[len(segments)-1]
 }
 
+// splitPathForPatternMatch splits a path into segments for pattern matching
+// Returns a slice of segments where array notations are handled properly
+// Example: "users[0].addresses[1].street" -> ["users[0]", "addresses[1]", "street"]
+func splitPathForPatternMatch(path string) []string {
+	// First normalize the path to handle any spacing inconsistencies
+	normalizedPath := normalizePath(path)
+
+	// Split by dots to get the segments
+	segments := strings.Split(normalizedPath, ".")
+
+	// Create a list of properly handled segments
+	result := make([]string, 0, len(segments))
+	for _, segment := range segments {
+		if segment == "" {
+			continue
+		}
+		result = append(result, segment)
+	}
+
+	return result
+}
+
+// matchesPattern checks if a specific path matches a wildcard pattern
+// It compares segment by segment, allowing [*] in the pattern to match any numeric index
+func matchesPattern(pathSegments, patternSegments []string) bool {
+	if len(pathSegments) != len(patternSegments) {
+		return false
+	}
+
+	for i, patternSegment := range patternSegments {
+		pathSegment := pathSegments[i]
+
+		// Check if this segment contains array notation
+		if strings.Contains(patternSegment, "[*]") {
+			// Extract the field name from both pattern and path
+			patternField := patternSegment
+			pathField := pathSegment
+
+			if idx := strings.Index(patternSegment, "["); idx >= 0 {
+				patternField = patternSegment[:idx]
+			}
+
+			if idx := strings.Index(pathSegment, "["); idx >= 0 {
+				pathField = pathSegment[:idx]
+			}
+
+			// Field names must match
+			if patternField != pathField {
+				return false
+			}
+
+			// Verify that the path segment has a numeric index where the pattern has [*]
+			if strings.Contains(patternSegment, "[*]") {
+				// Extract the indices from both segments
+				patternIndices := extractIndices(patternSegment)
+				pathIndices := extractIndices(pathSegment)
+
+				// Number of indices must match
+				if len(patternIndices) != len(pathIndices) {
+					return false
+				}
+
+				// Each [*] in pattern must correspond to a numeric index in path
+				for j, patternIndex := range patternIndices {
+					pathIndex := pathIndices[j]
+
+					if patternIndex == "[*]" {
+						// For wildcard indices, ensure the path has a numeric index
+						if !isNumericIndex(pathIndex) {
+							return false
+						}
+					} else {
+						// For non-wildcard indices, they must match exactly
+						if patternIndex != pathIndex {
+							return false
+						}
+					}
+				}
+			} else if !strings.HasPrefix(pathSegment, patternField) {
+				// If pattern doesn't have wildcards, the segments should match in their entirety
+				return false
+			}
+		} else if pathSegment != patternSegment {
+			// For non-array segments, direct comparison
+			return false
+		}
+	}
+
+	return true
+}
+
+// extractIndices extracts all array indices from a segment (including [*])
+// Example: "items[0][*][2]" -> ["[0]", "[*]", "[2]"]
+func extractIndices(segment string) []string {
+	var indices []string
+
+	// Find all matches for [...] pattern
+	indexRegex := regexp.MustCompile(`\[[^\]]*\]`)
+	matches := indexRegex.FindAllString(segment, -1)
+
+	if matches != nil {
+		indices = matches
+	}
+
+	return indices
+}
+
+// isNumericIndex checks if an index notation contains a numeric index
+// Example: "[0]" -> true, "[*]" -> false, "[key]" -> false
+func isNumericIndex(index string) bool {
+	// Remove the brackets
+	if len(index) < 3 { // need at least [0]
+		return false
+	}
+
+	content := index[1 : len(index)-1]
+	_, err := strconv.Atoi(content)
+	return err == nil
+}
+
 // NewErrorTranslator creates a new ErrorTranslator
 func NewErrorTranslator() *ErrorTranslator {
 	return &ErrorTranslator{
 		fieldErrors:     make(map[string]map[string]string),
+		patternErrors:   make(map[string]map[string]string),
 		leafFieldErrors: make(map[string]map[string]string),
 		defaultErrors:   make(map[string]string),
 		defaultMessage:  "Invalid value",
@@ -205,6 +327,54 @@ func (t *ErrorTranslator) SetDefaultMessage(message string) {
 	t.defaultMessage = message
 }
 
+// SetPatternError sets a custom error message for a wildcard pattern
+// The pattern can include [*] to match any array index
+// Example: "items[*].name" will match "items[0].name", "items[1].name", etc.
+func (t *ErrorTranslator) SetPatternError(pattern, tag, message string) {
+	// Normalize the pattern for consistent lookup
+	normalizedPattern := normalizePath(pattern)
+
+	// Ensure the pattern contains at least one wildcard
+	if !strings.Contains(normalizedPattern, "[*]") {
+		// If no wildcard, treat it as a regular field error
+		t.SetFieldError(normalizedPattern, tag, message)
+		return
+	}
+
+	// Store by normalized pattern
+	if _, ok := t.patternErrors[normalizedPattern]; !ok {
+		t.patternErrors[normalizedPattern] = make(map[string]string)
+	}
+	t.patternErrors[normalizedPattern][tag] = message
+}
+
+// matchPattern finds a matching wildcard pattern for a given field path
+// Returns the matching error message or empty string if no match found
+func (t *ErrorTranslator) matchPattern(path, tag string) (string, bool) {
+	// Split the path into segments for matching
+	pathSegments := splitPathForPatternMatch(path)
+
+	// Try to find a matching pattern
+	for pattern, tagMessages := range t.patternErrors {
+		// Check if this pattern has a message for this tag
+		message, hasMessage := tagMessages[tag]
+		if !hasMessage {
+			continue
+		}
+
+		// Split the pattern into segments
+		patternSegments := splitPathForPatternMatch(pattern)
+
+		// Check if the pattern matches the path
+		if matchesPattern(pathSegments, patternSegments) {
+			return message, true
+		}
+	}
+
+	// No matching pattern found
+	return "", false
+}
+
 // Translate translates a validation error to a custom message
 func (t *ErrorTranslator) Translate(field string, tag string) string {
 	// Normalize the field path for consistent lookup
@@ -217,7 +387,12 @@ func (t *ErrorTranslator) Translate(field string, tag string) string {
 		}
 	}
 
-	// If no normalized path match, check if there's a leaf field name match
+	// Second, try to match against pattern errors
+	if message, ok := t.matchPattern(normalizedPath, tag); ok {
+		return message
+	}
+
+	// Third, check if there's a leaf field name match
 	leafName := extractLeafName(field)
 	if leafName != "" && leafName != normalizedPath {
 		// Check in the dedicated leaf field errors map first
@@ -441,6 +616,14 @@ func (t *ErrorTranslator) Clone() *ErrorTranslator {
 		}
 	}
 
+	// Copy pattern errors
+	for pattern, tagMsgs := range t.patternErrors {
+		clone.patternErrors[pattern] = make(map[string]string)
+		for tag, msg := range tagMsgs {
+			clone.patternErrors[pattern][tag] = msg
+		}
+	}
+
 	// Copy leaf field errors
 	for field, tagMsgs := range t.leafFieldErrors {
 		clone.leafFieldErrors[field] = make(map[string]string)
@@ -472,6 +655,12 @@ func NewValidationContext(baseValidator *CustomValidator) *ValidationContext {
 // SetFieldError sets a custom error message for a specific field and validation tag
 func (vc *ValidationContext) SetFieldError(field, tag, message string) *ValidationContext {
 	vc.translator.SetFieldError(field, tag, message)
+	return vc
+}
+
+// SetPatternError sets a custom error message for a wildcard pattern in the validation context
+func (vc *ValidationContext) SetPatternError(pattern, tag, message string) *ValidationContext {
+	vc.translator.SetPatternError(pattern, tag, message)
 	return vc
 }
 

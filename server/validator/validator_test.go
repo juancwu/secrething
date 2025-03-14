@@ -1272,6 +1272,301 @@ func TestPathNormalizedValidation(t *testing.T) {
 	}
 }
 
+func TestWildcardPatternMatching(t *testing.T) {
+	// Test basic pattern matching functionality
+	tests := []struct {
+		name        string
+		path        string
+		pattern     string
+		shouldMatch bool
+	}{
+		{
+			name:        "Simple array wildcard match",
+			path:        "items[0].name",
+			pattern:     "items[*].name",
+			shouldMatch: true,
+		},
+		{
+			name:        "Simple array wildcard mismatch - different field",
+			path:        "items[0].price",
+			pattern:     "items[*].name",
+			shouldMatch: false,
+		},
+		{
+			name:        "Simple array wildcard mismatch - different structure",
+			path:        "orders.items[0]",
+			pattern:     "items[*].name",
+			shouldMatch: false,
+		},
+		{
+			name:        "Nested array wildcard match",
+			path:        "departments[0].teams[2].members[1].email",
+			pattern:     "departments[*].teams[*].members[*].email",
+			shouldMatch: true,
+		},
+		{
+			name:        "Nested array with specific index match",
+			path:        "departments[0].teams[2].members[1].email",
+			pattern:     "departments[0].teams[*].members[*].email",
+			shouldMatch: true,
+		},
+		{
+			name:        "Nested array with specific index mismatch",
+			path:        "departments[1].teams[2].members[1].email",
+			pattern:     "departments[0].teams[*].members[*].email",
+			shouldMatch: false,
+		},
+		{
+			name:        "Mixed wildcard and specific indices",
+			path:        "matrix[0][1][2]",
+			pattern:     "matrix[0][*][2]",
+			shouldMatch: true,
+		},
+		{
+			name:        "Mixed wildcard and specific indices mismatch",
+			path:        "matrix[0][1][3]",
+			pattern:     "matrix[0][*][2]",
+			shouldMatch: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			pathSegments := splitPathForPatternMatch(tt.path)
+			patternSegments := splitPathForPatternMatch(tt.pattern)
+
+			result := matchesPattern(pathSegments, patternSegments)
+			assert.Equal(t, tt.shouldMatch, result,
+				"Path %s should %smatch pattern %s",
+				tt.path,
+				map[bool]string{true: "", false: "not "}[tt.shouldMatch],
+				tt.pattern)
+		})
+	}
+}
+
+func TestSetPatternError(t *testing.T) {
+	// Create a validator
+	validator := NewCustomValidator()
+
+	// Set a custom message with a wildcard pattern
+	validator.translator.SetPatternError("items[*].name", "required", "Every item must have a name")
+
+	// Verify the pattern was stored correctly
+	if _, ok := validator.translator.patternErrors["items[*].name"]; !ok {
+		t.Error("Expected pattern to be stored in patternErrors")
+	}
+
+	if validator.translator.patternErrors["items[*].name"]["required"] != "Every item must have a name" {
+		t.Error("Expected pattern message to be stored correctly")
+	}
+}
+
+func TestValidationWithPatternMessages(t *testing.T) {
+	// Create a test struct with nested arrays
+	type Item struct {
+		Name     string  `json:"name" validate:"required"`
+		Price    float64 `json:"price" validate:"required,gt=0"`
+		Quantity int     `json:"quantity" validate:"required,gt=0"`
+	}
+
+	type Order struct {
+		ID    string `json:"id" validate:"required,uuid"`
+		Items []Item `json:"items" validate:"required,dive"`
+	}
+
+	// Create a validator
+	validator := NewCustomValidator()
+
+	// Set custom messages with wildcard patterns
+	validator.translator.SetPatternError("items[*].name", "required", "Every item must have a name")
+	validator.translator.SetPatternError("items[*].price", "gt", "Item prices must be greater than zero")
+
+	// Create an invalid order with multiple validation errors
+	invalidOrder := Order{
+		ID: "not-a-uuid",
+		Items: []Item{
+			{
+				Name:     "", // Required error - should match our wildcard pattern
+				Price:    0,  // GT error - should match our wildcard pattern
+				Quantity: 5,
+			},
+			{
+				Name:     "", // Required error - should match the same wildcard pattern
+				Price:    -1, // GT error - should match the same wildcard pattern
+				Quantity: 3,
+			},
+		},
+	}
+
+	// Debug logging for test troubleshooting
+	t.Logf("Pattern errors: %+v", validator.translator.patternErrors)
+
+	// Validate
+	err := validator.Validate(&invalidOrder)
+	assert.NotNil(t, err, "Expected validation error")
+
+	// Convert to ValidationErrors
+	validationErrors, ok := err.(ValidationErrors)
+	assert.True(t, ok, "Expected ValidationErrors type")
+
+	// Check the custom messages from wildcard patterns
+	nameErrorsFound := 0
+	priceErrorsFound := 0
+
+	// Log all validation errors for debugging
+	t.Logf("All validation errors:")
+	for i, validationErr := range validationErrors {
+		t.Logf("[%d] Field: %s, Tag: %s, Message: %s", i, validationErr.Field, validationErr.Tag, validationErr.Message)
+
+		if strings.HasPrefix(validationErr.Field, "items[") && strings.HasSuffix(validationErr.Field, "].name") && validationErr.Tag == "required" {
+			nameErrorsFound++
+			assert.Equal(t, "Every item must have a name", validationErr.Message,
+				"Expected wildcard pattern message for %s", validationErr.Field)
+		}
+
+		if strings.HasPrefix(validationErr.Field, "items[") && strings.HasSuffix(validationErr.Field, "].price") && validationErr.Tag == "gt" {
+			priceErrorsFound++
+			assert.Equal(t, "Item prices must be greater than zero", validationErr.Message,
+				"Expected wildcard pattern message for %s", validationErr.Field)
+		}
+	}
+
+	assert.Equal(t, 2, nameErrorsFound, "Expected to find 2 name validation errors with wildcard messages")
+	// Fix our expectation: the first item won't have a gt validation error because Price=0, only required error
+	assert.Equal(t, 1, priceErrorsFound, "Expected to find 1 price validation error with wildcard messages")
+}
+
+func TestPatternErrorPrecedence(t *testing.T) {
+	// Create test structs
+	type Item struct {
+		Name  string  `json:"name" validate:"required"`
+		Price float64 `json:"price" validate:"required,gt=0"`
+	}
+
+	type Order struct {
+		Items []Item `json:"items" validate:"required,dive"`
+	}
+
+	// Create a validator
+	validator := NewCustomValidator()
+
+	// Set messages with different specificity levels
+	validator.translator.SetDefaultError("required", "Generic required field message")
+	validator.translator.SetFieldError("name", "required", "Name is required (leaf)")
+	validator.translator.SetPatternError("items[*].name", "required", "Every item needs a name (pattern)")
+	validator.translator.SetFieldError("items[0].name", "required", "First item name is required (exact)")
+
+	// Create an invalid order
+	invalidOrder := Order{
+		Items: []Item{
+			{
+				// First item with empty name - should get exact match message
+				Name:  "",
+				Price: 10,
+			},
+			{
+				// Second item with empty name - should get pattern match message
+				Name:  "",
+				Price: 20,
+			},
+		},
+	}
+
+	// Validate
+	err := validator.Validate(&invalidOrder)
+	validationErrors, _ := err.(ValidationErrors)
+
+	// Verify precedence
+	var firstItemMessage string
+	var secondItemMessage string
+
+	for _, validationErr := range validationErrors {
+		if validationErr.Field == "items[0].name" && validationErr.Tag == "required" {
+			firstItemMessage = validationErr.Message
+		}
+		if validationErr.Field == "items[1].name" && validationErr.Tag == "required" {
+			secondItemMessage = validationErr.Message
+		}
+	}
+
+	// First item should get exact field message (highest priority)
+	assert.Equal(t, "First item name is required (exact)", firstItemMessage)
+
+	// Second item should get pattern message (second priority)
+	assert.Equal(t, "Every item needs a name (pattern)", secondItemMessage)
+}
+
+func TestContextWithPatternErrors(t *testing.T) {
+	// Create test structs
+	type Item struct {
+		Name  string `json:"name" validate:"required"`
+		Price int    `json:"price" validate:"required,gt=0"`
+	}
+
+	type Order struct {
+		ID    string `json:"id" validate:"required"`
+		Items []Item `json:"items" validate:"required,dive"`
+	}
+
+	// Create base validator
+	baseValidator := NewCustomValidator()
+
+	// Create validation context with pattern errors
+	ctx := NewValidationContext(baseValidator)
+	ctx.SetPatternError("items[*].name", "required", "Context: Item name is required")
+	ctx.SetPatternError("items[*].price", "gt", "Context: Item price must be positive")
+
+	// Create invalid order
+	invalidOrder := Order{
+		ID: "123",
+		Items: []Item{
+			{
+				Name:  "", // Required error
+				Price: -5, // GT error - negative value to trigger validation
+			},
+		},
+	}
+
+	// Debug logging
+	t.Logf("Context pattern errors: %+v", ctx.translator.patternErrors)
+
+	// Validate with context
+	err := ctx.Validate(&invalidOrder)
+	assert.NotNil(t, err, "Expected validation error")
+
+	validationErrors, _ := err.(ValidationErrors)
+
+	// Verify context-specific messages
+	nameFound := false
+	priceFound := false
+
+	for _, validationErr := range validationErrors {
+		if validationErr.Field == "items[0].name" && validationErr.Tag == "required" {
+			nameFound = true
+			assert.Equal(t, "Context: Item name is required", validationErr.Message)
+		}
+		if validationErr.Field == "items[0].price" && validationErr.Tag == "gt" {
+			priceFound = true
+			assert.Equal(t, "Context: Item price must be positive", validationErr.Message)
+		}
+	}
+
+	assert.True(t, nameFound, "Expected to find name validation error with context pattern message")
+	assert.True(t, priceFound, "Expected to find price validation error with context pattern message")
+
+	// Verify the base validator is unchanged
+	baseErr := baseValidator.Validate(&invalidOrder)
+	baseValidationErrors, _ := baseErr.(ValidationErrors)
+
+	for _, validationErr := range baseValidationErrors {
+		if validationErr.Field == "items[0].name" && validationErr.Tag == "required" {
+			assert.NotEqual(t, "Context: Item name is required", validationErr.Message,
+				"Base validator should not have context-specific message")
+		}
+	}
+}
+
 func TestLeafNameFallbackLookup(t *testing.T) {
 	// Create a validator
 	validator := NewCustomValidator()
