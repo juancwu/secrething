@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	appErrors "github.com/juancwu/konbini/server/errors"
-	"github.com/juancwu/konbini/server/validator"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 )
@@ -27,37 +26,6 @@ func setupErrorHandlerTest() (*echo.Echo, *httptest.ResponseRecorder, echo.Conte
 	c.Response().Header().Set(echo.HeaderXRequestID, "req-12345")
 
 	return e, rec, c
-}
-
-func TestErrorHandlerWithValidationErrors(t *testing.T) {
-	_, rec, c := setupErrorHandlerTest()
-
-	// Create validation errors
-	validationErrors := validator.ValidationErrors{
-		{Field: "username", Message: "Username is required", Tag: "required"},
-		{Field: "email", Message: "Invalid email format", Tag: "email"},
-	}
-
-	// Call the error handler
-	HTTPErrorHandler(validationErrors, c)
-
-	// Check response status
-	assert.Equal(t, http.StatusBadRequest, rec.Code)
-
-	// Parse response body
-	var response appErrors.ErrorResponse
-	err := json.Unmarshal(rec.Body.Bytes(), &response)
-	assert.NoError(t, err)
-
-	// Verify response structure
-	assert.Equal(t, http.StatusBadRequest, response.Code)
-	assert.Equal(t, "Validation failed", response.Message)
-	assert.Equal(t, "req-12345", response.ReqID)
-
-	// Check that field errors are correctly formatted
-	assert.NotNil(t, response.FieldErrors)
-	assert.Equal(t, "Username is required", response.FieldErrors["username"])
-	assert.Equal(t, "Invalid email format", response.FieldErrors["email"])
 }
 
 func TestErrorHandlerWithAppError(t *testing.T) {
@@ -313,13 +281,6 @@ func TestHTTPErrorHandlerIntegration(t *testing.T) {
 		return appErrors.NewNotFoundError("Resource")
 	})
 
-	e.GET("/validation", func(c echo.Context) error {
-		return validator.ValidationErrors{
-			{Field: "field1", Message: "Error 1", Tag: "required"},
-			{Field: "field2", Message: "Error 2", Tag: "min"},
-		}
-	})
-
 	e.GET("/echo-error", func(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "Bad request")
 	})
@@ -341,22 +302,6 @@ func TestHTTPErrorHandlerIntegration(t *testing.T) {
 
 	assert.Equal(t, http.StatusNotFound, response.Code)
 	assert.Equal(t, "Resource not found", response.Message)
-
-	// Test validation error
-	req = httptest.NewRequest(http.MethodGet, "/validation", nil)
-	rec = httptest.NewRecorder()
-	e.ServeHTTP(rec, req)
-
-	assert.Equal(t, http.StatusBadRequest, rec.Code)
-
-	var respMap map[string]interface{}
-	err = json.Unmarshal(rec.Body.Bytes(), &respMap)
-	assert.NoError(t, err)
-
-	fieldErrors, ok := respMap["field_errors"].(map[string]interface{})
-	assert.True(t, ok)
-	assert.Equal(t, "Error 1", fieldErrors["field1"])
-	assert.Equal(t, "Error 2", fieldErrors["field2"])
 
 	// Test Echo HTTP error
 	req = httptest.NewRequest(http.MethodGet, "/echo-error", nil)

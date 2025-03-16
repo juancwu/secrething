@@ -1,6 +1,6 @@
 module github.com/juancwu/konbini
 
-go 1.23.4
+go 1.24.1
 
 require (
 	github.com/charmbracelet/bubbles v0.20.0
@@ -38,6 +38,7 @@ require (
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
+	github.com/juancwu/go-valkit v1.0.0 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/labstack/gommon v0.4.2 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect

@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
-	"github.com/juancwu/konbini/server/validator"
+	"github.com/juancwu/go-valkit/validator"
 )
 
 // Config holds all application configuration
@@ -46,7 +46,7 @@ type Config struct {
 	RecoveryCodeLength       int
 
 	// Validator
-	Validator *validator.CustomValidator
+	Validator *validator.Validator
 }
 
 // Load loads configuration from environment variables

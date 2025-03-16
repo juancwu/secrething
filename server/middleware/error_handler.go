@@ -10,7 +10,6 @@ import (
 
 	"github.com/juancwu/konbini/server/errors"
 	"github.com/juancwu/konbini/server/observability"
-	"github.com/juancwu/konbini/server/validator"
 )
 
 // LogLevel defines the acceptable log levels
@@ -32,7 +31,6 @@ func ErrorHandlerMiddleware() echo.HTTPErrorHandler {
 func HTTPErrorHandler(err error, c echo.Context) {
 	var appErr errors.AppError
 	var echoHTTPError *echo.HTTPError
-	var validationErrors validator.ValidationErrors
 	var statusCode int
 	var message string
 	var details []string
@@ -42,37 +40,7 @@ func HTTPErrorHandler(err error, c echo.Context) {
 
 	requestID := c.Response().Header().Get(echo.HeaderXRequestID)
 
-	// Check if it's a validation error from our custom validator
-	if stderrors.As(err, &validationErrors) {
-		// Handle validation errors
-		statusCode = http.StatusBadRequest
-		message = "Validation failed"
-
-		// Convert ValidationErrors to field errors map
-		fieldErrors := validator.FormatValidationErrors(validationErrors)
-
-		// Log validation errors as info level since they're client errors
-		logLevel = string(LogLevelInfo)
-		log.Info().
-			Str("request_id", requestID).
-			Int("status", statusCode).
-			Interface("validation_errors", validationErrors).
-			Msg("Validation error")
-
-		// Send validation error response
-		if err := c.JSON(statusCode, errors.ErrorResponse{
-			Code:        statusCode,
-			Message:     message,
-			FieldErrors: fieldErrors,
-			ReqID:       requestID,
-		}); err != nil {
-			log.Error().
-				Str("request_id", requestID).
-				Err(err).
-				Msg("Failed to send validation error response")
-		}
-		return
-	} else if stderrors.As(err, &appErr) {
+	if stderrors.As(err, &appErr) {
 		// Handle AppError
 		statusCode = appErr.Code
 		message = appErr.PublicMessage

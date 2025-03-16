@@ -2,12 +2,12 @@ package main
 
 import (
 	sentryecho "github.com/getsentry/sentry-go/echo"
+	"github.com/juancwu/go-valkit/validator"
 	"github.com/juancwu/konbini/server/api/routes"
 	"github.com/juancwu/konbini/server/config"
 	"github.com/juancwu/konbini/server/db"
 	"github.com/juancwu/konbini/server/middleware"
 	"github.com/juancwu/konbini/server/observability"
-	"github.com/juancwu/konbini/server/validator"
 	"github.com/labstack/echo/v4"
 	echomiddleware "github.com/labstack/echo/v4/middleware"
 	"github.com/rs/zerolog/log"
@@ -49,7 +49,7 @@ func main() {
 	e.Use(observability.SentryHubMiddleware())
 
 	// Set the validator
-	v := validator.NewValidator()
+	v := validator.New()
 	e.Validator = v
 	cfg.Validator = v
 
