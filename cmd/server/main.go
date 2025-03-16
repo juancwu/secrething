@@ -42,7 +42,7 @@ func main() {
 
 	e.Use(echomiddleware.Recover())
 	e.Use(echomiddleware.RequestID())
-	e.Use(echomiddleware.CSRF())
+	// e.Use(echomiddleware.CSRF())
 	e.Use(middleware.LoggerMiddleware())
 
 	// Sentry setup
