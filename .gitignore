@@ -12,3 +12,5 @@ coverage.html
 
 /target
 .local
+
+.DS_Store

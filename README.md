@@ -19,6 +19,7 @@ Konbini (Japanese for "convenience store") is your go-to solution for securely s
 - Go 1.21+
 - SQLite database (or Turso for production)
 - Resend.com account (for email verification)
+- [Goose](https://github.com/pressly/goose) for database migrations
 
 ### Installation
 
