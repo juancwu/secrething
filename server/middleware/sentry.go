@@ -1,4 +1,4 @@
-package observability
+package middleware
 
 import (
 	sentryecho "github.com/getsentry/sentry-go/echo"

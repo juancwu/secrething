@@ -1,4 +1,4 @@
-package observability
+package middleware
 
 import (
 	"net/http"

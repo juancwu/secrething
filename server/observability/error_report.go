@@ -7,7 +7,7 @@ import (
 
 	"github.com/getsentry/sentry-go"
 	sentryecho "github.com/getsentry/sentry-go/echo"
-	"github.com/juancwu/konbini/server/errors"
+	"github.com/juancwu/konbini/server/api/errors"
 	"github.com/labstack/echo/v4"
 )
 

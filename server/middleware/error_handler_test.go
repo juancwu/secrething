@@ -8,7 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	appErrors "github.com/juancwu/konbini/server/errors"
+	apiErrors "github.com/juancwu/konbini/server/api/errors"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 )
@@ -40,45 +40,45 @@ func TestErrorHandlerWithAppError(t *testing.T) {
 	}{
 		{
 			name:           "Validation Error",
-			err:            appErrors.NewValidationError("Validation failed", []string{"Field is invalid"}),
+			err:            apiErrors.NewValidationError("Validation failed", []string{"Field is invalid"}),
 			expectedStatus: http.StatusBadRequest,
-			expectedType:   string(appErrors.ErrorTypeValidation),
+			expectedType:   string(apiErrors.ErrorTypeValidation),
 		},
 		{
 			name:           "Not Found Error",
-			err:            appErrors.NewNotFoundError("User"),
+			err:            apiErrors.NewNotFoundError("User"),
 			expectedStatus: http.StatusNotFound,
-			expectedType:   string(appErrors.ErrorTypeNotFound),
+			expectedType:   string(apiErrors.ErrorTypeNotFound),
 		},
 		{
 			name:           "Authorization Error",
-			err:            appErrors.NewAuthorizationError("Invalid token"),
+			err:            apiErrors.NewAuthorizationError("Invalid token"),
 			expectedStatus: http.StatusUnauthorized,
-			expectedType:   string(appErrors.ErrorTypeAuthorization),
+			expectedType:   string(apiErrors.ErrorTypeAuthorization),
 		},
 		{
 			name:           "Forbidden Error",
-			err:            appErrors.NewForbiddenError("Admin access required"),
+			err:            apiErrors.NewForbiddenError("Admin access required"),
 			expectedStatus: http.StatusForbidden,
-			expectedType:   string(appErrors.ErrorTypeForbidden),
+			expectedType:   string(apiErrors.ErrorTypeForbidden),
 		},
 		{
 			name:           "Rate Limit Error",
-			err:            appErrors.NewRateLimitError("Too many requests"),
+			err:            apiErrors.NewRateLimitError("Too many requests"),
 			expectedStatus: http.StatusTooManyRequests,
-			expectedType:   string(appErrors.ErrorTypeRateLimit),
+			expectedType:   string(apiErrors.ErrorTypeRateLimit),
 		},
 		{
 			name:           "Database Error",
-			err:            appErrors.NewDatabaseError(errors.New("DB connection failed"), "Database error"),
+			err:            apiErrors.NewDatabaseError(errors.New("DB connection failed"), "Database error"),
 			expectedStatus: http.StatusInternalServerError,
-			expectedType:   string(appErrors.ErrorTypeDatabase),
+			expectedType:   string(apiErrors.ErrorTypeDatabase),
 		},
 		{
 			name:           "Internal Error",
-			err:            appErrors.NewInternalError(errors.New("Something went wrong"), "Internal error"),
+			err:            apiErrors.NewInternalError(errors.New("Something went wrong"), "Internal error"),
 			expectedStatus: http.StatusInternalServerError,
-			expectedType:   string(appErrors.ErrorTypeInternal),
+			expectedType:   string(apiErrors.ErrorTypeInternal),
 		},
 	}
 
@@ -93,7 +93,7 @@ func TestErrorHandlerWithAppError(t *testing.T) {
 			c.Response().Header().Set(echo.HeaderXRequestID, "req-12345")
 
 			// Add the request ID to the AppError
-			appErr, ok := tc.err.(appErrors.AppError)
+			appErr, ok := tc.err.(apiErrors.AppError)
 			if ok {
 				appErr.RequestID = "req-12345"
 				tc.err = appErr
@@ -106,7 +106,7 @@ func TestErrorHandlerWithAppError(t *testing.T) {
 			assert.Equal(t, tc.expectedStatus, rec.Code)
 
 			// Parse response body
-			var response appErrors.ErrorResponse
+			var response apiErrors.ErrorResponse
 			err := json.Unmarshal(rec.Body.Bytes(), &response)
 			assert.NoError(t, err)
 
@@ -139,7 +139,7 @@ func TestErrorHandlerWithEchoHTTPError(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 
 	// Parse response body
-	var response appErrors.ErrorResponse
+	var response apiErrors.ErrorResponse
 	err := json.Unmarshal(rec.Body.Bytes(), &response)
 	assert.NoError(t, err)
 
@@ -157,7 +157,7 @@ func TestErrorHandlerWithEchoHTTPError(t *testing.T) {
 	httpErr = echo.NewHTTPError(http.StatusUnauthorized, errors.New("authentication failed"))
 	HTTPErrorHandler(httpErr, c)
 
-	response = appErrors.ErrorResponse{}
+	response = apiErrors.ErrorResponse{}
 	err = json.Unmarshal(rec.Body.Bytes(), &response)
 	assert.NoError(t, err)
 
@@ -174,7 +174,7 @@ func TestErrorHandlerWithEchoHTTPError(t *testing.T) {
 	httpErr = echo.NewHTTPError(http.StatusForbidden, 123)
 	HTTPErrorHandler(httpErr, c)
 
-	response = appErrors.ErrorResponse{}
+	response = apiErrors.ErrorResponse{}
 	err = json.Unmarshal(rec.Body.Bytes(), &response)
 	assert.NoError(t, err)
 
@@ -204,7 +204,7 @@ func TestErrorHandlerWithGenericError(t *testing.T) {
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
 
 	// Parse response body
-	var response appErrors.ErrorResponse
+	var response apiErrors.ErrorResponse
 	err := json.Unmarshal(rec.Body.Bytes(), &response)
 	assert.NoError(t, err)
 
@@ -217,7 +217,7 @@ func TestErrorHandlerWithGenericError(t *testing.T) {
 func TestLogErrorWithLevel(t *testing.T) {
 	// This test mainly ensures the function doesn't panic with different log levels
 	// Since we can't easily check log output without mocking the logger
-	appErr := appErrors.NewValidationError("Test error", []string{"Error detail"})
+	appErr := apiErrors.NewValidationError("Test error", []string{"Error detail"})
 
 	// Test with valid log levels
 	validLevels := []string{
@@ -278,7 +278,7 @@ func TestHTTPErrorHandlerIntegration(t *testing.T) {
 
 	// Create a route that returns an error
 	e.GET("/not-found", func(c echo.Context) error {
-		return appErrors.NewNotFoundError("Resource")
+		return apiErrors.NewNotFoundError("Resource")
 	})
 
 	e.GET("/echo-error", func(c echo.Context) error {
@@ -296,7 +296,7 @@ func TestHTTPErrorHandlerIntegration(t *testing.T) {
 
 	assert.Equal(t, http.StatusNotFound, rec.Code)
 
-	var response appErrors.ErrorResponse
+	var response apiErrors.ErrorResponse
 	err := json.Unmarshal(rec.Body.Bytes(), &response)
 	assert.NoError(t, err)
 
@@ -310,7 +310,7 @@ func TestHTTPErrorHandlerIntegration(t *testing.T) {
 
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 
-	response = appErrors.ErrorResponse{}
+	response = apiErrors.ErrorResponse{}
 	err = json.Unmarshal(rec.Body.Bytes(), &response)
 	assert.NoError(t, err)
 
@@ -324,7 +324,7 @@ func TestHTTPErrorHandlerIntegration(t *testing.T) {
 
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
 
-	response = appErrors.ErrorResponse{}
+	response = apiErrors.ErrorResponse{}
 	err = json.Unmarshal(rec.Body.Bytes(), &response)
 	assert.NoError(t, err)
 

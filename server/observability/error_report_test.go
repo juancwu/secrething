@@ -8,7 +8,7 @@ import (
 
 	"github.com/getsentry/sentry-go"
 	sentryecho "github.com/getsentry/sentry-go/echo"
-	apperrors "github.com/juancwu/konbini/server/errors"
+	apiErrors "github.com/juancwu/konbini/server/api/errors"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 )
@@ -35,7 +35,7 @@ func TestReportError(t *testing.T) {
 		// Add Sentry hub to context
 		sentryMiddleware := sentryecho.New(sentryecho.Options{})
 		hubMiddleware := sentryMiddleware(func(c echo.Context) error {
-			appErr := apperrors.NewValidationError(
+			appErr := apiErrors.NewValidationError(
 				"Validation failed",
 				[]string{"Field 'name' is required"},
 			)

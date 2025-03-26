@@ -9,7 +9,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/juancwu/go-valkit/v2/validator"
-	"github.com/juancwu/konbini/server/errors"
+	"github.com/juancwu/konbini/server/api/errors"
 	"github.com/juancwu/konbini/server/observability"
 )
 
