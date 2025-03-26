@@ -50,7 +50,7 @@ func main() {
 	e.Use(observability.SentryHubMiddleware())
 
 	// Create new validator
-	v := validator.New()
+	v := validator.New().UseJsonTagName()
 
 	// Set default message for validation errors
 	v.SetDefaultMessage("{0} has invalid value")
