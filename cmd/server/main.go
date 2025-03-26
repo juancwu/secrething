@@ -2,8 +2,8 @@ package main
 
 import (
 	sentryecho "github.com/getsentry/sentry-go/echo"
-	echoval "github.com/juancwu/go-valkit/integrations/echo"
-	"github.com/juancwu/go-valkit/validations"
+	"github.com/juancwu/go-valkit/v2/validations"
+	"github.com/juancwu/go-valkit/v2/validator"
 	"github.com/juancwu/konbini/server/api/routes"
 	"github.com/juancwu/konbini/server/config"
 	"github.com/juancwu/konbini/server/db"
@@ -50,8 +50,7 @@ func main() {
 	e.Use(observability.SentryHubMiddleware())
 
 	// Create new validator
-	ev := echoval.NewValidator()
-	v := ev.GetValidator()
+	v := validator.New()
 
 	// Set default message for validation errors
 	v.SetDefaultMessage("{0} has invalid value")
@@ -60,10 +59,10 @@ func main() {
 	validations.AddPasswordValidation(v, validations.DefaultPasswordOptions())
 
 	// Setup validation error handler
-	e.HTTPErrorHandler = echoval.ValidationErrorHandler(ev, middleware.ErrorHandlerMiddleware())
+	e.HTTPErrorHandler = middleware.ErrorHandlerMiddleware()
 
-	e.Validator = ev
-	cfg.Validator = ev
+	// Set the validator to config
+	cfg.Validator = v
 
 	// Register routes
 	routes.RegisterRoutes(e, cfg, tursoConnector)

@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/juancwu/go-valkit/validator"
+	"github.com/juancwu/go-valkit/v2/validator"
 	"github.com/juancwu/konbini/server/api/helpers"
 	"github.com/juancwu/konbini/server/db"
 	"github.com/juancwu/konbini/server/errors"
@@ -38,7 +38,7 @@ func (h *AuthHandler) Register() echo.HandlerFunc {
 	messages.SetMessage("name", "max", "Name must be at most {2} characters long")
 	messages.SetMessage("name", "printascii", "Name must only consist of printable ascii characters")
 
-	val := h.config.Validator.GetValidator().UseMessages(messages)
+	val := h.config.Validator.UseMessages(messages)
 
 	return func(echoCtx echo.Context) error {
 		processCtx, cancel := context.WithTimeout(echoCtx.Request().Context(), time.Minute)
