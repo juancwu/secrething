@@ -8,6 +8,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/rs/zerolog/log"
 
+	"github.com/juancwu/go-valkit/v2/validator"
 	"github.com/juancwu/konbini/server/errors"
 	"github.com/juancwu/konbini/server/observability"
 )
@@ -35,12 +36,20 @@ func HTTPErrorHandler(err error, c echo.Context) {
 	var message string
 	var details []string
 	var logLevel string
+	var valErrors validator.ValidationErrors
 
 	observability.ReportError(err, c)
 
 	requestID := c.Response().Header().Get(echo.HeaderXRequestID)
 
-	if stderrors.As(err, &appErr) {
+	if stderrors.As(err, &valErrors) {
+		groupedErrors := valErrors.GroupErrorsByPath()
+		type Result struct {
+			Errors map[string]validator.ValidationErrors `json:"errors"`
+		}
+		c.JSON(http.StatusBadRequest, Result{Errors: groupedErrors})
+		return
+	} else if stderrors.As(err, &appErr) {
 		// Handle AppError
 		statusCode = appErr.Code
 		message = appErr.PublicMessage
