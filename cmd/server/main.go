@@ -47,7 +47,7 @@ func main() {
 
 	// Sentry setup
 	e.Use(sentryecho.New(sentryecho.Options{}))
-	e.Use(observability.SentryHubMiddleware())
+	e.Use(middleware.SentryHubMiddleware())
 
 	// Create new validator
 	v := validator.New().UseJsonTagName()
