@@ -9,12 +9,61 @@ import (
 	"context"
 )
 
-const userExistsWithEmail = `-- name: UserExistsWithEmail :one
-SELECT email FROM users WHERE email = ?1
+const existsUser = `-- name: ExistsUser :one
+SELECT 1 FROM users WHERE email = ?1
 `
 
-func (q *Queries) UserExistsWithEmail(ctx context.Context, email string) (string, error) {
-	row := q.db.QueryRowContext(ctx, userExistsWithEmail, email)
-	err := row.Scan(&email)
-	return email, err
+func (q *Queries) ExistsUser(ctx context.Context, email string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, existsUser, email)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const newUser = `-- name: NewUser :one
+INSERT INTO users
+(
+    email,
+    password_hash,
+    name,
+    created_at,
+    updated_at
+)
+VALUES (?1, ?2, ?3, ?4, ?5)
+RETURNING user_id, email, password_hash, name, email_verified, totp_secret, totp_enabled, account_status, failed_login_attempts, last_failed_login_at, account_locked_until, created_at, updated_at
+`
+
+type NewUserParams struct {
+	Email        string  `db:"email" json:"email"`
+	PasswordHash string  `db:"password_hash" json:"password_hash"`
+	Name         *string `db:"name" json:"name"`
+	CreatedAt    string  `db:"created_at" json:"created_at"`
+	UpdatedAt    string  `db:"updated_at" json:"updated_at"`
+}
+
+func (q *Queries) NewUser(ctx context.Context, arg NewUserParams) (User, error) {
+	row := q.db.QueryRowContext(ctx, newUser,
+		arg.Email,
+		arg.PasswordHash,
+		arg.Name,
+		arg.CreatedAt,
+		arg.UpdatedAt,
+	)
+	var i User
+	err := row.Scan(
+		&i.UserID,
+		&i.Email,
+		&i.PasswordHash,
+		&i.Name,
+		&i.EmailVerified,
+		&i.TotpSecret,
+		&i.TotpEnabled,
+		&i.AccountStatus,
+		&i.FailedLoginAttempts,
+		&i.LastFailedLoginAt,
+		&i.AccountLockedUntil,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
