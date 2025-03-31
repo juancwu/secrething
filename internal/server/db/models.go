@@ -4,6 +4,10 @@
 
 package db
 
+import (
+	"github.com/juancwu/secrething/internal/server/permissions"
+)
+
 type AccessLog struct {
 	AccessLogID  string      `db:"access_log_id" json:"access_log_id"`
 	UserID       *string     `db:"user_id" json:"user_id"`
@@ -114,11 +118,11 @@ type TeamInvitation struct {
 }
 
 type TeamPermission struct {
-	TeamID      string `db:"team_id" json:"team_id"`
-	VaultID     string `db:"vault_id" json:"vault_id"`
-	Permissions int64  `db:"permissions" json:"permissions"`
-	CreatedAt   string `db:"created_at" json:"created_at"`
-	UpdatedAt   string `db:"updated_at" json:"updated_at"`
+	TeamID      string                     `db:"team_id" json:"team_id"`
+	VaultID     string                     `db:"vault_id" json:"vault_id"`
+	Permissions permissions.TeamPermission `db:"permissions" json:"permissions"`
+	CreatedAt   string                     `db:"created_at" json:"created_at"`
+	UpdatedAt   string                     `db:"updated_at" json:"updated_at"`
 }
 
 type Token struct {
@@ -224,11 +228,11 @@ type VaultIngredient struct {
 }
 
 type VaultPermission struct {
-	UserID      string `db:"user_id" json:"user_id"`
-	VaultID     string `db:"vault_id" json:"vault_id"`
-	Permissions int64  `db:"permissions" json:"permissions"`
-	CreatedAt   string `db:"created_at" json:"created_at"`
-	UpdatedAt   string `db:"updated_at" json:"updated_at"`
+	UserID      string                      `db:"user_id" json:"user_id"`
+	VaultID     string                      `db:"vault_id" json:"vault_id"`
+	Permissions permissions.VaultPermission `db:"permissions" json:"permissions"`
+	CreatedAt   string                      `db:"created_at" json:"created_at"`
+	UpdatedAt   string                      `db:"updated_at" json:"updated_at"`
 }
 
 type VaultToken struct {

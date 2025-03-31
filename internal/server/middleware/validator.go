@@ -11,8 +11,8 @@ type Registry interface {
 	GetMessages() validator.ValidationMessages
 }
 
-func SetValidator(v *validator.Validator, r Registry) echo.MiddlewareFunc {
-	customV := v.UseMessages(r.GetMessages())
+func SetValidator(v *validator.Validator, m validator.ValidationMessages) echo.MiddlewareFunc {
+	customV := v.UseMessages(m)
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			c.Set("validator", customV)

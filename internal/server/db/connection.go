@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/juancwu/konbini/internal/server/config"
+	"github.com/juancwu/secrething/internal/server/config"
 	_ "github.com/tursodatabase/go-libsql"
 )
 

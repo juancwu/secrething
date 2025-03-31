@@ -2,9 +2,9 @@ package main
 
 import (
 	"github.com/juancwu/go-valkit/v2/validations"
-	"github.com/juancwu/konbini/internal/server/config"
-	"github.com/juancwu/konbini/internal/server/db"
-	authHandler "github.com/juancwu/konbini/internal/server/handlers/auth"
+	"github.com/juancwu/secrething/internal/server/config"
+	"github.com/juancwu/secrething/internal/server/db"
+	authHandler "github.com/juancwu/secrething/internal/server/handlers/auth"
 	"github.com/labstack/echo/v4"
 )
 

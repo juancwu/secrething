@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"time"
 
-	handlerErrors "github.com/juancwu/konbini/internal/server/handlers/errors"
-	"github.com/juancwu/konbini/internal/server/middleware"
-	authService "github.com/juancwu/konbini/internal/server/services/auth"
+	handlerErrors "github.com/juancwu/secrething/internal/server/handlers/errors"
+	"github.com/juancwu/secrething/internal/server/middleware"
+	authService "github.com/juancwu/secrething/internal/server/services/auth"
 	"github.com/labstack/echo/v4"
 )
 
@@ -18,7 +18,7 @@ func createUser(c echo.Context) error {
 
 	requestID := ""
 
-	var body createUserBody
+	var body createUserRequest
 	if err := c.Bind(&body); err != nil {
 		return err
 	}

@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/juancwu/konbini/internal/server/db"
-	"github.com/juancwu/konbini/internal/server/utils"
+	"github.com/juancwu/secrething/internal/server/db"
+	"github.com/juancwu/secrething/internal/server/utils"
 )
 
 func CreateUser(ctx context.Context, email, password string, name *string) (*db.User, error) {

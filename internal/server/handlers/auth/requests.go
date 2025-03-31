@@ -2,13 +2,13 @@ package auth
 
 import "github.com/juancwu/go-valkit/v2/validator"
 
-type createUserBody struct {
+type createUserRequest struct {
 	Email    string  `json:"email" validate:"required,email"`
 	Password string  `json:"password" validate:"required,password"`
 	Name     *string `json:"name" validate:"omitnil,omitempty,max=50"`
 }
 
-func (b createUserBody) GetMessages() validator.ValidationMessages {
+func getCreateUserRequestMessages() validator.ValidationMessages {
 	msgs := validator.NewValidationMessages()
 	msgs.SetMessage("email", "required", "Email is required.")
 	msgs.SetMessage("email", "email", "'{2}' is not a valid email.")
@@ -17,12 +17,12 @@ func (b createUserBody) GetMessages() validator.ValidationMessages {
 	return msgs
 }
 
-type signinBody struct {
+type signinRequest struct {
 	Email    string `json:"email" validate:"required,email"`
 	Password string `json:"password" validate:"required,password"`
 }
 
-func (b signinBody) GetMessages() validator.ValidationMessages {
+func getSigninRequestMessages() validator.ValidationMessages {
 	msgs := validator.NewValidationMessages()
 	msgs.SetMessage("email", "required", "Email is required.")
 	msgs.SetMessage("email", "email", "'{2}' is not a valid email.")

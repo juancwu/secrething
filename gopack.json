@@ -10,7 +10,6 @@
     "migrate:down": "CWD=$(pwd) .scripts/migrate.sh down",
     "migrate:status": "CWD=$(pwd) .scripts/migrate.sh status",
     "migrate:create": "CWD=$(pwd) .scripts/migrate.sh create",
-    "sqlc": "sqlc generate",
     "setup": "CWD=$(pwd) .scripts/setup.sh"
   }
 }
