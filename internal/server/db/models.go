@@ -15,41 +15,6 @@ type AccessLog struct {
 	AccessedAt   string      `db:"accessed_at" json:"accessed_at"`
 }
 
-type Bento struct {
-	BentoID   string `db:"bento_id" json:"bento_id"`
-	UserID    string `db:"user_id" json:"user_id"`
-	Name      string `db:"name" json:"name"`
-	CreatedAt string `db:"created_at" json:"created_at"`
-	UpdatedAt string `db:"updated_at" json:"updated_at"`
-}
-
-type BentoIngredient struct {
-	IngredientID string `db:"ingredient_id" json:"ingredient_id"`
-	BentoID      string `db:"bento_id" json:"bento_id"`
-	Name         string `db:"name" json:"name"`
-	Value        []byte `db:"value" json:"value"`
-	CreatedAt    string `db:"created_at" json:"created_at"`
-	UpdatedAt    string `db:"updated_at" json:"updated_at"`
-}
-
-type BentoPermission struct {
-	UserID      string `db:"user_id" json:"user_id"`
-	BentoID     string `db:"bento_id" json:"bento_id"`
-	Permissions string `db:"permissions" json:"permissions"`
-	CreatedAt   string `db:"created_at" json:"created_at"`
-	UpdatedAt   string `db:"updated_at" json:"updated_at"`
-}
-
-type BentoToken struct {
-	BentoTokenID string  `db:"bento_token_id" json:"bento_token_id"`
-	BentoID      string  `db:"bento_id" json:"bento_id"`
-	TokenSalt    []byte  `db:"token_salt" json:"token_salt"`
-	CreatedBy    string  `db:"created_by" json:"created_by"`
-	CreatedAt    string  `db:"created_at" json:"created_at"`
-	LastUsedAt   *string `db:"last_used_at" json:"last_used_at"`
-	ExpiresAt    *string `db:"expires_at" json:"expires_at"`
-}
-
 type Device struct {
 	DeviceID            string      `db:"device_id" json:"device_id"`
 	UserID              string      `db:"user_id" json:"user_id"`
@@ -86,31 +51,6 @@ type FailedLoginAttempt struct {
 	AttemptTime        string      `db:"attempt_time" json:"attempt_time"`
 	FailureReason      string      `db:"failure_reason" json:"failure_reason"`
 	DeviceID           interface{} `db:"device_id" json:"device_id"`
-}
-
-type Group struct {
-	GroupID   string `db:"group_id" json:"group_id"`
-	Name      string `db:"name" json:"name"`
-	OwnerID   string `db:"owner_id" json:"owner_id"`
-	CreatedAt string `db:"created_at" json:"created_at"`
-	UpdatedAt string `db:"updated_at" json:"updated_at"`
-}
-
-type GroupInvitation struct {
-	GroupInvitationID string `db:"group_invitation_id" json:"group_invitation_id"`
-	UserID            string `db:"user_id" json:"user_id"`
-	GroupID           string `db:"group_id" json:"group_id"`
-	ResendEmailID     string `db:"resend_email_id" json:"resend_email_id"`
-	CreatedAt         string `db:"created_at" json:"created_at"`
-	ExpiresAt         string `db:"expires_at" json:"expires_at"`
-}
-
-type GroupPermission struct {
-	GroupID     string `db:"group_id" json:"group_id"`
-	BentoID     string `db:"bento_id" json:"bento_id"`
-	Permissions string `db:"permissions" json:"permissions"`
-	CreatedAt   string `db:"created_at" json:"created_at"`
-	UpdatedAt   string `db:"updated_at" json:"updated_at"`
 }
 
 type SecurityEvent struct {
@@ -154,6 +94,31 @@ type SecurityNotificationSetting struct {
 	NotifyOnEmailChange     bool        `db:"notify_on_email_change" json:"notify_on_email_change"`
 	NotifyOnTotpChange      bool        `db:"notify_on_totp_change" json:"notify_on_totp_change"`
 	NotificationEmail       interface{} `db:"notification_email" json:"notification_email"`
+}
+
+type Team struct {
+	TeamID    string `db:"team_id" json:"team_id"`
+	Name      string `db:"name" json:"name"`
+	OwnerID   string `db:"owner_id" json:"owner_id"`
+	CreatedAt string `db:"created_at" json:"created_at"`
+	UpdatedAt string `db:"updated_at" json:"updated_at"`
+}
+
+type TeamInvitation struct {
+	TeamInvitationID string `db:"team_invitation_id" json:"team_invitation_id"`
+	UserID           string `db:"user_id" json:"user_id"`
+	TeamID           string `db:"team_id" json:"team_id"`
+	ResendEmailID    string `db:"resend_email_id" json:"resend_email_id"`
+	CreatedAt        string `db:"created_at" json:"created_at"`
+	ExpiresAt        string `db:"expires_at" json:"expires_at"`
+}
+
+type TeamPermission struct {
+	TeamID      string `db:"team_id" json:"team_id"`
+	VaultID     string `db:"vault_id" json:"vault_id"`
+	Permissions int64  `db:"permissions" json:"permissions"`
+	CreatedAt   string `db:"created_at" json:"created_at"`
+	UpdatedAt   string `db:"updated_at" json:"updated_at"`
 }
 
 type Token struct {
@@ -235,8 +200,43 @@ type UserVerification struct {
 	CreatedAt           string      `db:"created_at" json:"created_at"`
 }
 
-type UsersGroup struct {
+type UsersTeam struct {
 	UserID    string `db:"user_id" json:"user_id"`
-	GroupID   string `db:"group_id" json:"group_id"`
+	TeamID    string `db:"team_id" json:"team_id"`
 	CreatedAt string `db:"created_at" json:"created_at"`
+}
+
+type Vault struct {
+	VaultID   string `db:"vault_id" json:"vault_id"`
+	UserID    string `db:"user_id" json:"user_id"`
+	Name      string `db:"name" json:"name"`
+	CreatedAt string `db:"created_at" json:"created_at"`
+	UpdatedAt string `db:"updated_at" json:"updated_at"`
+}
+
+type VaultIngredient struct {
+	IngredientID string `db:"ingredient_id" json:"ingredient_id"`
+	VaultID      string `db:"vault_id" json:"vault_id"`
+	Name         string `db:"name" json:"name"`
+	Value        []byte `db:"value" json:"value"`
+	CreatedAt    string `db:"created_at" json:"created_at"`
+	UpdatedAt    string `db:"updated_at" json:"updated_at"`
+}
+
+type VaultPermission struct {
+	UserID      string `db:"user_id" json:"user_id"`
+	VaultID     string `db:"vault_id" json:"vault_id"`
+	Permissions int64  `db:"permissions" json:"permissions"`
+	CreatedAt   string `db:"created_at" json:"created_at"`
+	UpdatedAt   string `db:"updated_at" json:"updated_at"`
+}
+
+type VaultToken struct {
+	VaultTokenID string  `db:"vault_token_id" json:"vault_token_id"`
+	VaultID      string  `db:"vault_id" json:"vault_id"`
+	TokenSalt    []byte  `db:"token_salt" json:"token_salt"`
+	CreatedBy    string  `db:"created_by" json:"created_by"`
+	CreatedAt    string  `db:"created_at" json:"created_at"`
+	LastUsedAt   *string `db:"last_used_at" json:"last_used_at"`
+	ExpiresAt    *string `db:"expires_at" json:"expires_at"`
 }
