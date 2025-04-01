@@ -43,6 +43,25 @@ type Device struct {
 	LastLocationCity    interface{} `db:"last_location_city" json:"last_location_city"`
 }
 
+type Environment struct {
+	EnvironmentID string  `db:"environment_id" json:"environment_id"`
+	VaultID       string  `db:"vault_id" json:"vault_id"`
+	Name          string  `db:"name" json:"name"`
+	Description   *string `db:"description" json:"description"`
+	CreatedAt     string  `db:"created_at" json:"created_at"`
+	UpdatedAt     string  `db:"updated_at" json:"updated_at"`
+}
+
+type EnvironmentPermission struct {
+	EnvironmentPermissionID string `db:"environment_permission_id" json:"environment_permission_id"`
+	VaultID                 string `db:"vault_id" json:"vault_id"`
+	EnvironmentID           string `db:"environment_id" json:"environment_id"`
+	UserID                  string `db:"user_id" json:"user_id"`
+	Permissions             int64  `db:"permissions" json:"permissions"`
+	CreatedAt               string `db:"created_at" json:"created_at"`
+	UpdatedAt               string `db:"updated_at" json:"updated_at"`
+}
+
 type FailedLoginAttempt struct {
 	AttemptID          string      `db:"attempt_id" json:"attempt_id"`
 	UserID             interface{} `db:"user_id" json:"user_id"`
@@ -118,11 +137,13 @@ type TeamInvitation struct {
 }
 
 type TeamPermission struct {
-	TeamID      string                     `db:"team_id" json:"team_id"`
-	VaultID     string                     `db:"vault_id" json:"vault_id"`
-	Permissions permissions.TeamPermission `db:"permissions" json:"permissions"`
-	CreatedAt   string                     `db:"created_at" json:"created_at"`
-	UpdatedAt   string                     `db:"updated_at" json:"updated_at"`
+	TeamPermissionID string                     `db:"team_permission_id" json:"team_permission_id"`
+	TeamID           string                     `db:"team_id" json:"team_id"`
+	VaultID          string                     `db:"vault_id" json:"vault_id"`
+	UserID           string                     `db:"user_id" json:"user_id"`
+	Permissions      permissions.TeamPermission `db:"permissions" json:"permissions"`
+	CreatedAt        string                     `db:"created_at" json:"created_at"`
+	UpdatedAt        string                     `db:"updated_at" json:"updated_at"`
 }
 
 type Token struct {
@@ -218,21 +239,23 @@ type Vault struct {
 	UpdatedAt string `db:"updated_at" json:"updated_at"`
 }
 
-type VaultIngredient struct {
-	IngredientID string `db:"ingredient_id" json:"ingredient_id"`
-	VaultID      string `db:"vault_id" json:"vault_id"`
-	Name         string `db:"name" json:"name"`
-	Value        []byte `db:"value" json:"value"`
-	CreatedAt    string `db:"created_at" json:"created_at"`
-	UpdatedAt    string `db:"updated_at" json:"updated_at"`
+type VaultPermission struct {
+	VaultPermissionID string                      `db:"vault_permission_id" json:"vault_permission_id"`
+	UserID            string                      `db:"user_id" json:"user_id"`
+	VaultID           string                      `db:"vault_id" json:"vault_id"`
+	Permissions       permissions.VaultPermission `db:"permissions" json:"permissions"`
+	CreatedAt         string                      `db:"created_at" json:"created_at"`
+	UpdatedAt         string                      `db:"updated_at" json:"updated_at"`
 }
 
-type VaultPermission struct {
-	UserID      string                      `db:"user_id" json:"user_id"`
-	VaultID     string                      `db:"vault_id" json:"vault_id"`
-	Permissions permissions.VaultPermission `db:"permissions" json:"permissions"`
-	CreatedAt   string                      `db:"created_at" json:"created_at"`
-	UpdatedAt   string                      `db:"updated_at" json:"updated_at"`
+type VaultSecret struct {
+	SecretID      string  `db:"secret_id" json:"secret_id"`
+	VaultID       string  `db:"vault_id" json:"vault_id"`
+	Name          string  `db:"name" json:"name"`
+	Value         []byte  `db:"value" json:"value"`
+	CreatedAt     string  `db:"created_at" json:"created_at"`
+	UpdatedAt     string  `db:"updated_at" json:"updated_at"`
+	EnvironmentID *string `db:"environment_id" json:"environment_id"`
 }
 
 type VaultToken struct {

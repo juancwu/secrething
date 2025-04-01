@@ -1,18 +1,18 @@
 -- +goose Up
 -- +goose StatementBegin
-CREATE TABLE IF NOT EXISTS vault_permissions (
-    vault_permission_id TEXT NOT NULL PRIMARY KEY,
-    user_id TEXT NOT NULL CHECK (user_id != ''),
+CREATE TABLE IF NOT EXISTS environments (
+    environment_id TEXT NOT NULL PRIMARY KEY,
     vault_id TEXT NOT NULL CHECK (vault_id != ''),
-    permissions INTEGER NOT NULL,
+    name TEXT NOT NULL CHECK (name != ''),
+    description TEXT,
     created_at TEXT NOT NULL CHECK (created_at != ''),
     updated_at TEXT NOT NULL CHECK (updated_at != ''),
-    CONSTRAINT fk_user_id FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    CONSTRAINT unique_environment_name_vault UNIQUE (vault_id, name),
     CONSTRAINT fk_vault_id FOREIGN KEY (vault_id) REFERENCES vaults(vault_id) ON DELETE CASCADE
 );
 -- +goose StatementEnd
 
 -- +goose Down
 -- +goose StatementBegin
-DROP TABLE IF EXISTS vault_permissions;
+DROP TABLE IF EXISTS environments;
 -- +goose StatementEnd

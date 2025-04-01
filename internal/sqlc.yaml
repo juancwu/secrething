@@ -14,5 +14,7 @@ sql:
         overrides:
           - column: "vault_permissions.permissions"
             go_type: "github.com/juancwu/secrething/internal/server/permissions.VaultPermission"
+          - column: "secret_permissions.permissions"
+            go_type: "github.com/juancwu/secrething/internal/server/permissions.VaultPermission"
           - column: "team_permissions.permissions"
             go_type: "github.com/juancwu/secrething/internal/server/permissions.TeamPermission"
