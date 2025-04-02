@@ -21,8 +21,12 @@ export interface LoginRequest {
 }
 
 export interface LoginResponse {
-	token: string;
-	type: TokenType;
+	user_id: string;
+	email: string;
+	name?: string;
+	access_token: string;
+	refresh_token?: string; // Only present for CLI clients
+	expires_in: number;
 }
 
 // Register
@@ -33,8 +37,12 @@ export interface RegisterRequest {
 }
 
 export interface RegisterResponse {
-	token: string;
-	type: TokenType;
+	user_id: string;
+	email: string;
+	name?: string;
+	access_token: string;
+	refresh_token?: string; // Only present for CLI clients
+	expires_in: number;
 }
 
 // Check Token
@@ -74,14 +82,14 @@ export interface RemoveTOTPRequest {
 
 // API routes
 export const API_ROUTES = {
-	LOGIN: "/auth/login",
-	REGISTER: "/auth/register",
-	CHECK_TOKEN: "/auth/token/check",
-	TOTP_SETUP: "/auth/totp/setup",
-	TOTP_LOCK: "/auth/totp/lock",
-	TOTP_DELETE: "/auth/totp",
-	VERIFY_EMAIL: "/auth/email/verify",
-	RESEND_VERIFICATION: "/auth/email/resend-verification",
+	LOGIN: "/api/auth/sign-in",
+	REGISTER: "/api/auth/sign-up",
+	CHECK_TOKEN: "/api/auth/token/check", // This will need to be updated to match server endpoint
+	TOTP_SETUP: "/api/auth/totp/activate",
+	TOTP_LOCK: "/api/auth/totp/verify",
+	TOTP_DELETE: "/api/auth/totp/remove",
+	VERIFY_EMAIL: "/api/auth/email/verify", // This will need to be updated to match server endpoint
+	RESEND_VERIFICATION: "/api/auth/email/resend-verification", // This will need to be updated to match server endpoint
 };
 
 // Local storage keys

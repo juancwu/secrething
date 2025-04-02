@@ -9,31 +9,23 @@ import (
 	"context"
 )
 
-const existsUser = `-- name: ExistsUser :one
-SELECT 1 FROM users WHERE email = ?1
-`
-
-func (q *Queries) ExistsUser(ctx context.Context, email string) (int64, error) {
-	row := q.db.QueryRowContext(ctx, existsUser, email)
-	var column_1 int64
-	err := row.Scan(&column_1)
-	return column_1, err
-}
-
-const newUser = `-- name: NewUser :one
-INSERT INTO users
-(
-    email,
-    password_hash,
-    name,
-    created_at,
-    updated_at
+const createUser = `-- name: CreateUser :one
+INSERT INTO users (
+  user_id,
+  email,
+  password_hash,
+  name,
+  created_at,
+  updated_at
+) VALUES (
+  ?1, ?2, ?3, ?4, ?5, ?6
 )
-VALUES (?1, ?2, ?3, ?4, ?5)
-RETURNING user_id, email, password_hash, name, email_verified, totp_secret, totp_enabled, account_status, failed_login_attempts, last_failed_login_at, account_locked_until, created_at, updated_at
+RETURNING user_id, email, password_hash, name, email_verified, totp_secret, totp_enabled, 
+  account_status, failed_login_attempts, last_failed_login_at, account_locked_until, created_at, updated_at
 `
 
-type NewUserParams struct {
+type CreateUserParams struct {
+	UserID       string  `db:"user_id" json:"user_id"`
 	Email        string  `db:"email" json:"email"`
 	PasswordHash string  `db:"password_hash" json:"password_hash"`
 	Name         *string `db:"name" json:"name"`
@@ -41,12 +33,344 @@ type NewUserParams struct {
 	UpdatedAt    string  `db:"updated_at" json:"updated_at"`
 }
 
-func (q *Queries) NewUser(ctx context.Context, arg NewUserParams) (User, error) {
-	row := q.db.QueryRowContext(ctx, newUser,
+func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
+	row := q.db.QueryRowContext(ctx, createUser,
+		arg.UserID,
 		arg.Email,
 		arg.PasswordHash,
 		arg.Name,
 		arg.CreatedAt,
+		arg.UpdatedAt,
+	)
+	var i User
+	err := row.Scan(
+		&i.UserID,
+		&i.Email,
+		&i.PasswordHash,
+		&i.Name,
+		&i.EmailVerified,
+		&i.TotpSecret,
+		&i.TotpEnabled,
+		&i.AccountStatus,
+		&i.FailedLoginAttempts,
+		&i.LastFailedLoginAt,
+		&i.AccountLockedUntil,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const deleteUser = `-- name: DeleteUser :exec
+DELETE FROM users
+WHERE user_id = ?1
+`
+
+func (q *Queries) DeleteUser(ctx context.Context, userID string) error {
+	_, err := q.db.ExecContext(ctx, deleteUser, userID)
+	return err
+}
+
+const getUserByEmail = `-- name: GetUserByEmail :one
+SELECT user_id, email, password_hash, name, email_verified, totp_secret, totp_enabled, 
+  account_status, failed_login_attempts, last_failed_login_at, account_locked_until, created_at, updated_at
+FROM users
+WHERE email = ?1
+`
+
+func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
+	row := q.db.QueryRowContext(ctx, getUserByEmail, email)
+	var i User
+	err := row.Scan(
+		&i.UserID,
+		&i.Email,
+		&i.PasswordHash,
+		&i.Name,
+		&i.EmailVerified,
+		&i.TotpSecret,
+		&i.TotpEnabled,
+		&i.AccountStatus,
+		&i.FailedLoginAttempts,
+		&i.LastFailedLoginAt,
+		&i.AccountLockedUntil,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getUserByID = `-- name: GetUserByID :one
+SELECT user_id, email, password_hash, name, email_verified, totp_secret, totp_enabled, 
+  account_status, failed_login_attempts, last_failed_login_at, account_locked_until, created_at, updated_at
+FROM users
+WHERE user_id = ?1
+`
+
+func (q *Queries) GetUserByID(ctx context.Context, userID string) (User, error) {
+	row := q.db.QueryRowContext(ctx, getUserByID, userID)
+	var i User
+	err := row.Scan(
+		&i.UserID,
+		&i.Email,
+		&i.PasswordHash,
+		&i.Name,
+		&i.EmailVerified,
+		&i.TotpSecret,
+		&i.TotpEnabled,
+		&i.AccountStatus,
+		&i.FailedLoginAttempts,
+		&i.LastFailedLoginAt,
+		&i.AccountLockedUntil,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const resetFailedLoginAttempts = `-- name: ResetFailedLoginAttempts :one
+UPDATE users
+SET failed_login_attempts = 0, 
+    last_failed_login_at = NULL,
+    account_locked_until = NULL,
+    updated_at = ?2
+WHERE user_id = ?1
+RETURNING user_id, email, password_hash, name, email_verified, totp_secret, totp_enabled, 
+  account_status, failed_login_attempts, last_failed_login_at, account_locked_until, created_at, updated_at
+`
+
+type ResetFailedLoginAttemptsParams struct {
+	UserID    string `db:"user_id" json:"user_id"`
+	UpdatedAt string `db:"updated_at" json:"updated_at"`
+}
+
+func (q *Queries) ResetFailedLoginAttempts(ctx context.Context, arg ResetFailedLoginAttemptsParams) (User, error) {
+	row := q.db.QueryRowContext(ctx, resetFailedLoginAttempts, arg.UserID, arg.UpdatedAt)
+	var i User
+	err := row.Scan(
+		&i.UserID,
+		&i.Email,
+		&i.PasswordHash,
+		&i.Name,
+		&i.EmailVerified,
+		&i.TotpSecret,
+		&i.TotpEnabled,
+		&i.AccountStatus,
+		&i.FailedLoginAttempts,
+		&i.LastFailedLoginAt,
+		&i.AccountLockedUntil,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateFailedLoginAttempt = `-- name: UpdateFailedLoginAttempt :one
+UPDATE users
+SET failed_login_attempts = failed_login_attempts + 1, 
+    last_failed_login_at = ?2,
+    account_locked_until = CASE 
+      WHEN failed_login_attempts + 1 >= 5 THEN ?3
+      ELSE account_locked_until
+    END,
+    updated_at = ?4
+WHERE user_id = ?1
+RETURNING user_id, email, password_hash, name, email_verified, totp_secret, totp_enabled, 
+  account_status, failed_login_attempts, last_failed_login_at, account_locked_until, created_at, updated_at
+`
+
+type UpdateFailedLoginAttemptParams struct {
+	UserID             string  `db:"user_id" json:"user_id"`
+	LastFailedLoginAt  *string `db:"last_failed_login_at" json:"last_failed_login_at"`
+	AccountLockedUntil *string `db:"account_locked_until" json:"account_locked_until"`
+	UpdatedAt          string  `db:"updated_at" json:"updated_at"`
+}
+
+func (q *Queries) UpdateFailedLoginAttempt(ctx context.Context, arg UpdateFailedLoginAttemptParams) (User, error) {
+	row := q.db.QueryRowContext(ctx, updateFailedLoginAttempt,
+		arg.UserID,
+		arg.LastFailedLoginAt,
+		arg.AccountLockedUntil,
+		arg.UpdatedAt,
+	)
+	var i User
+	err := row.Scan(
+		&i.UserID,
+		&i.Email,
+		&i.PasswordHash,
+		&i.Name,
+		&i.EmailVerified,
+		&i.TotpSecret,
+		&i.TotpEnabled,
+		&i.AccountStatus,
+		&i.FailedLoginAttempts,
+		&i.LastFailedLoginAt,
+		&i.AccountLockedUntil,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateUserAccountStatus = `-- name: UpdateUserAccountStatus :one
+UPDATE users
+SET account_status = ?2, updated_at = ?3
+WHERE user_id = ?1
+RETURNING user_id, email, password_hash, name, email_verified, totp_secret, totp_enabled, 
+  account_status, failed_login_attempts, last_failed_login_at, account_locked_until, created_at, updated_at
+`
+
+type UpdateUserAccountStatusParams struct {
+	UserID        string `db:"user_id" json:"user_id"`
+	AccountStatus string `db:"account_status" json:"account_status"`
+	UpdatedAt     string `db:"updated_at" json:"updated_at"`
+}
+
+func (q *Queries) UpdateUserAccountStatus(ctx context.Context, arg UpdateUserAccountStatusParams) (User, error) {
+	row := q.db.QueryRowContext(ctx, updateUserAccountStatus, arg.UserID, arg.AccountStatus, arg.UpdatedAt)
+	var i User
+	err := row.Scan(
+		&i.UserID,
+		&i.Email,
+		&i.PasswordHash,
+		&i.Name,
+		&i.EmailVerified,
+		&i.TotpSecret,
+		&i.TotpEnabled,
+		&i.AccountStatus,
+		&i.FailedLoginAttempts,
+		&i.LastFailedLoginAt,
+		&i.AccountLockedUntil,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateUserEmailVerification = `-- name: UpdateUserEmailVerification :one
+UPDATE users
+SET email_verified = ?2, updated_at = ?3
+WHERE user_id = ?1
+RETURNING user_id, email, password_hash, name, email_verified, totp_secret, totp_enabled, 
+  account_status, failed_login_attempts, last_failed_login_at, account_locked_until, created_at, updated_at
+`
+
+type UpdateUserEmailVerificationParams struct {
+	UserID        string `db:"user_id" json:"user_id"`
+	EmailVerified bool   `db:"email_verified" json:"email_verified"`
+	UpdatedAt     string `db:"updated_at" json:"updated_at"`
+}
+
+func (q *Queries) UpdateUserEmailVerification(ctx context.Context, arg UpdateUserEmailVerificationParams) (User, error) {
+	row := q.db.QueryRowContext(ctx, updateUserEmailVerification, arg.UserID, arg.EmailVerified, arg.UpdatedAt)
+	var i User
+	err := row.Scan(
+		&i.UserID,
+		&i.Email,
+		&i.PasswordHash,
+		&i.Name,
+		&i.EmailVerified,
+		&i.TotpSecret,
+		&i.TotpEnabled,
+		&i.AccountStatus,
+		&i.FailedLoginAttempts,
+		&i.LastFailedLoginAt,
+		&i.AccountLockedUntil,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateUserName = `-- name: UpdateUserName :one
+UPDATE users
+SET name = ?2, updated_at = ?3
+WHERE user_id = ?1
+RETURNING user_id, email, password_hash, name, email_verified, totp_secret, totp_enabled, 
+  account_status, failed_login_attempts, last_failed_login_at, account_locked_until, created_at, updated_at
+`
+
+type UpdateUserNameParams struct {
+	UserID    string  `db:"user_id" json:"user_id"`
+	Name      *string `db:"name" json:"name"`
+	UpdatedAt string  `db:"updated_at" json:"updated_at"`
+}
+
+func (q *Queries) UpdateUserName(ctx context.Context, arg UpdateUserNameParams) (User, error) {
+	row := q.db.QueryRowContext(ctx, updateUserName, arg.UserID, arg.Name, arg.UpdatedAt)
+	var i User
+	err := row.Scan(
+		&i.UserID,
+		&i.Email,
+		&i.PasswordHash,
+		&i.Name,
+		&i.EmailVerified,
+		&i.TotpSecret,
+		&i.TotpEnabled,
+		&i.AccountStatus,
+		&i.FailedLoginAttempts,
+		&i.LastFailedLoginAt,
+		&i.AccountLockedUntil,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateUserPassword = `-- name: UpdateUserPassword :one
+UPDATE users
+SET password_hash = ?2, updated_at = ?3
+WHERE user_id = ?1
+RETURNING user_id, email, password_hash, name, email_verified, totp_secret, totp_enabled, 
+  account_status, failed_login_attempts, last_failed_login_at, account_locked_until, created_at, updated_at
+`
+
+type UpdateUserPasswordParams struct {
+	UserID       string `db:"user_id" json:"user_id"`
+	PasswordHash string `db:"password_hash" json:"password_hash"`
+	UpdatedAt    string `db:"updated_at" json:"updated_at"`
+}
+
+func (q *Queries) UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) (User, error) {
+	row := q.db.QueryRowContext(ctx, updateUserPassword, arg.UserID, arg.PasswordHash, arg.UpdatedAt)
+	var i User
+	err := row.Scan(
+		&i.UserID,
+		&i.Email,
+		&i.PasswordHash,
+		&i.Name,
+		&i.EmailVerified,
+		&i.TotpSecret,
+		&i.TotpEnabled,
+		&i.AccountStatus,
+		&i.FailedLoginAttempts,
+		&i.LastFailedLoginAt,
+		&i.AccountLockedUntil,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateUserTOTP = `-- name: UpdateUserTOTP :one
+UPDATE users
+SET totp_secret = ?2, totp_enabled = ?3, updated_at = ?4
+WHERE user_id = ?1
+RETURNING user_id, email, password_hash, name, email_verified, totp_secret, totp_enabled, 
+  account_status, failed_login_attempts, last_failed_login_at, account_locked_until, created_at, updated_at
+`
+
+type UpdateUserTOTPParams struct {
+	UserID      string  `db:"user_id" json:"user_id"`
+	TotpSecret  *string `db:"totp_secret" json:"totp_secret"`
+	TotpEnabled bool    `db:"totp_enabled" json:"totp_enabled"`
+	UpdatedAt   string  `db:"updated_at" json:"updated_at"`
+}
+
+func (q *Queries) UpdateUserTOTP(ctx context.Context, arg UpdateUserTOTPParams) (User, error) {
+	row := q.db.QueryRowContext(ctx, updateUserTOTP,
+		arg.UserID,
+		arg.TotpSecret,
+		arg.TotpEnabled,
 		arg.UpdatedAt,
 	)
 	var i User

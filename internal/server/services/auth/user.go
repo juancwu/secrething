@@ -30,7 +30,7 @@ func CreateUser(ctx context.Context, email, password string, name *string) (*db.
 
 	timestamp := utils.FormatRFC3339NanoFixed(time.Now())
 
-	user, err := q.NewUser(ctx, db.NewUserParams{
+	user, err := q.CreateUser(ctx, db.CreateUserParams{
 		Email:        email,
 		PasswordHash: hashed,
 		Name:         name,
@@ -50,7 +50,7 @@ func ExistsUser(ctx context.Context, email string) (bool, error) {
 		// Default return true to avoid mistakenly proceed with other operations on error
 		return true, err
 	}
-	_, err = q.ExistsUser(ctx, email)
+	_, err = q.GetUserByEmail(ctx, email)
 	if db.IsNoRows(err) {
 		return false, err
 	}

@@ -49,11 +49,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
 				false,
 			);
 
-			saveToken(response.token);
-			setTokenType(response.type);
+			// Save the access token
+			saveToken(response.access_token);
+			// Set token type as full since we have a complete authentication
+			setTokenType("full");
 
-			// After successful login, check the session to get user data
-			await checkSession();
+			// Create a user object from the response
+			setUser({
+				id: response.user_id,
+				email: response.email,
+				emailVerified: true, // We don't know this from login response, we'll assume true until checkSession
+				nickname: response.name || '',
+				totpEnabled: false, // We don't know this from login response, we'll assume false until checkSession
+			});
+
+			// Optional: Still call checkSession to get complete user profile if needed
+			// await checkSession();
 		} catch (error) {
 			console.error("Login failed:", error);
 			toast.error("Login Failed");
@@ -75,11 +86,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
 				false,
 			);
 
-			saveToken(response.token);
-			setTokenType(response.type);
+			// Save the access token
+			saveToken(response.access_token);
+			// Set token type as full since we have a complete authentication
+			setTokenType("full");
 
-			// After successful registration, check the session to get user data
-			await checkSession();
+			// Create a user object from the response
+			setUser({
+				id: response.user_id,
+				email: response.email,
+				emailVerified: false, // New users start with unverified email
+				nickname: data.nickname,
+				totpEnabled: false, // New users don't have TOTP enabled by default
+			});
 		} catch (error) {
 			console.error("Registration failed:", error);
 			throw error;

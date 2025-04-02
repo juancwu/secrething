@@ -55,7 +55,7 @@ func HashPassword(password string) (string, error) {
 	return encodedResult, nil
 }
 
-func ComparePasswordAndHash(password string, encodedHash string) (bool, error) {
+func VerifyPassword(password string, encodedHash string) (bool, error) {
 	decodedHash, err := decodePasswordHash(encodedHash)
 	if err != nil {
 		return false, err

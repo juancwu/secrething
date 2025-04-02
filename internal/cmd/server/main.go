@@ -5,6 +5,7 @@ import (
 	"github.com/juancwu/secrething/internal/server/config"
 	"github.com/juancwu/secrething/internal/server/db"
 	authHandler "github.com/juancwu/secrething/internal/server/handlers/auth"
+	"github.com/juancwu/secrething/internal/server/handlers/errors"
 	"github.com/labstack/echo/v4"
 )
 
@@ -22,6 +23,7 @@ func main() {
 
 	e := echo.New()
 	e.HideBanner = !config.IsDevelopment()
+	e.HTTPErrorHandler = errors.ErrorHandler()
 
 	apiGroup := e.Group("/api")
 	authGroup := apiGroup.Group("/auth")
