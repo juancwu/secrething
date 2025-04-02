@@ -1,9 +1,5 @@
 -- +goose Up
 -- +goose StatementBegin
-
--- enable foreign key support
-PRAGMA foreign_keys = ON;
-
 CREATE TABLE IF NOT EXISTS users (
     user_id TEXT NOT NULL PRIMARY KEY,
     email TEXT NOT NULL UNIQUE CHECK (email != ''),
@@ -24,7 +20,4 @@ CREATE TABLE IF NOT EXISTS users (
 -- +goose Down
 -- +goose StatementBegin
 DROP TABLE IF EXISTS users;
-
--- disable foreign key support
-PRAGMA foreign_keys = OFF;
 -- +goose StatementEnd
