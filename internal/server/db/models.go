@@ -4,15 +4,19 @@
 
 package db
 
+import (
+	"github.com/juancwu/secrething/internal/server/permissions"
+)
+
 type Permission struct {
-	PermissionID   interface{} `db:"permission_id" json:"permission_id"`
-	VaultID        string      `db:"vault_id" json:"vault_id"`
-	GranteeType    string      `db:"grantee_type" json:"grantee_type"`
-	GranteeID      string      `db:"grantee_id" json:"grantee_id"`
-	PermissionBits int64       `db:"permission_bits" json:"permission_bits"`
-	GrantedBy      string      `db:"granted_by" json:"granted_by"`
-	CreatedAt      string      `db:"created_at" json:"created_at"`
-	UpdatedAt      string      `db:"updated_at" json:"updated_at"`
+	PermissionID   string                     `db:"permission_id" json:"permission_id"`
+	VaultID        string                     `db:"vault_id" json:"vault_id"`
+	GranteeType    string                     `db:"grantee_type" json:"grantee_type"`
+	GranteeID      string                     `db:"grantee_id" json:"grantee_id"`
+	PermissionBits permissions.PermissionBits `db:"permission_bits" json:"permission_bits"`
+	GrantedBy      string                     `db:"granted_by" json:"granted_by"`
+	CreatedAt      string                     `db:"created_at" json:"created_at"`
+	UpdatedAt      string                     `db:"updated_at" json:"updated_at"`
 }
 
 type Secret struct {
@@ -50,12 +54,19 @@ type User struct {
 	UpdatedAt           string  `db:"updated_at" json:"updated_at"`
 }
 
+type UserToken struct {
+	UserTokenID string `db:"user_token_id" json:"user_token_id"`
+	UserID      string `db:"user_id" json:"user_id"`
+	TokenType   string `db:"token_type" json:"token_type"`
+	ExpiresAt   string `db:"expires_at" json:"expires_at"`
+	CreatedAt   string `db:"created_at" json:"created_at"`
+}
+
 type UsersTeam struct {
-	UserTeamID interface{} `db:"user_team_id" json:"user_team_id"`
-	UserID     string      `db:"user_id" json:"user_id"`
-	TeamID     string      `db:"team_id" json:"team_id"`
-	CreatedAt  string      `db:"created_at" json:"created_at"`
-	UpdatedAt  string      `db:"updated_at" json:"updated_at"`
+	UserID    string `db:"user_id" json:"user_id"`
+	TeamID    string `db:"team_id" json:"team_id"`
+	CreatedAt string `db:"created_at" json:"created_at"`
+	UpdatedAt string `db:"updated_at" json:"updated_at"`
 }
 
 type Vault struct {
