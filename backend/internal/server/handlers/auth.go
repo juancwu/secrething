@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -116,7 +117,8 @@ func (AuthHandler) createUser(c echo.Context) error {
 		clientType = services.ClientTypeCLI
 	}
 
-	tokenPair, err := services.NewTokenService().GenerateTokenPair(ctx, user.UserID, clientType)
+	tokenService := services.NewTokenService()
+	tokenPair, err := tokenService.GenerateTokenPair(ctx, user.UserID, clientType)
 	if err != nil {
 		return c.JSON(201, createUserResponse{
 			User: userResponse{
@@ -127,6 +129,23 @@ func (AuthHandler) createUser(c echo.Context) error {
 			},
 		})
 	}
+
+	go func(clientType string, email string, userID db.UserID) {
+		ctx, cancel := context.WithTimeoutCause(context.Background(), time.Second*30, fmt.Errorf("Send account verification email to '%s' timeout", email))
+		defer cancel()
+
+		now := time.Now()
+		exp := now.Add(time.Hour * 24)
+
+		emailToken, err := tokenService.GenerateToken(ctx, userID, services.TokenGeneral, clientType, now, exp)
+		if err != nil {
+			fmt.Printf("Failed to send account verification email: %v\n", err)
+			return
+		}
+
+		emailService := services.NewEmailService()
+		emailService.SendAccountVerificationEmail(ctx, email, emailToken.TokenID)
+	}(clientType, user.Email, user.UserID)
 
 	return c.JSON(201, createUserResponse{
 		TokenPair: tokenPair,
