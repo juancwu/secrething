@@ -1,0 +1,19 @@
+meta {
+  name: CLI TOTP Verification
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{base_url}}/api/auth/cli/sign-in/totp
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "email": "test@mail.com",
+    "password": "VerySecurePassword123@",
+    "totp_code": "123456"
+  }
+}

@@ -1,0 +1,23 @@
+meta {
+  name: CLI Sign Up
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{base_url}}/api/auth/cli/sign-up
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "email": "test@mail.com",
+    "password": "VerySecurePassword123@",
+    "name": "{{name}}"
+  }
+}
+
+vars:pre-request {
+  name: 
+}

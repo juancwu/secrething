@@ -1,0 +1,28 @@
+meta {
+  name: Sign Up
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{base_url}}/api/auth/sign-up
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "email": "test@mail.com",
+    "password": "VerySecurePassword123@"
+  }
+}
+
+vars:pre-request {
+  name: 
+}
+
+script:post-response {
+  bru.setGlobalEnvVar("user_id", res.body.user_id);
+  bru.setGlobalEnvVar("access_token", res.body.access_token);
+  bru.setGlobalEnvVar("refresh_token", res.body.refresh_token);
+}

@@ -1,0 +1,19 @@
+meta {
+  name: Create API Token
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{base_url}}/api/auth/token/api
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{access_token}}
+}
+
+vars:pre-request {
+  access_token: 
+}

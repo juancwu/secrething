@@ -1,0 +1,18 @@
+meta {
+  name: CLI Sign In
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{base_url}}/api/auth/cli/sign-in
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "email": "test@mail.com",
+    "password": "VerySecurePassword123@"
+  }
+}

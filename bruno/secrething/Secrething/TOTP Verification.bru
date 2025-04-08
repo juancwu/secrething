@@ -1,0 +1,22 @@
+meta {
+  name: TOTP Verification
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{base_url}}/api/auth/sign-in/totp
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "temp_token": "{{temp_token}}",
+    "totp_code": "123456"
+  }
+}
+
+vars:pre-request {
+  temp_token: 
+}

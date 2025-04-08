@@ -1,0 +1,26 @@
+meta {
+  name: Revoke API Token
+  type: http
+  seq: 7
+}
+
+delete {
+  url: {{base_url}}/api/auth/token/api
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{access_token}}
+}
+
+body:json {
+  {
+    "api_token": "{{api_token}}"
+  }
+}
+
+vars:pre-request {
+  access_token: 
+  api_token: 
+}

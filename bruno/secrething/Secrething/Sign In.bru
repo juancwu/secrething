@@ -1,0 +1,41 @@
+meta {
+  name: Sign In
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{base_url}}/api/auth/sign-in
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "email": "test@mail.com",
+    "password": "VerySecurePassword123@"
+  }
+}
+
+script:post-response {
+  const tmpToken = res('temp_token');
+  const userId = res("user_id");
+  const accessToken = res("access_token");
+  const refreshToken = res("refresh_token");
+  
+  if (tmpToken !== undefined) {
+    bru.setGlobalEnvVar("temp_token", tmpToken);
+  }
+  
+  if (userId) {
+    bru.setGlobalEnvVar("user_id",userId);
+  }
+  
+  if (accessToken) {
+    bru.setGlobalEnvVar("access_token", accessToken);
+  }
+  
+  if (refreshToken) {
+    bru.setGlobalEnvVar("refresh_token", refreshToken);
+  }
+}
