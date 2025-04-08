@@ -23,8 +23,8 @@ func NewAuthService() *AuthService {
 	return authService
 }
 
-func (*AuthService) CreateUser(ctx context.Context, email, password string, name *string) (*db.User, error) {
-	exists, err := ExistsUser(ctx, email)
+func (s *AuthService) CreateUser(ctx context.Context, email, password string, name *string) (*db.User, error) {
+	exists, err := s.ExistsUser(ctx, email)
 	if err != nil && sql.ErrNoRows != err {
 		return nil, err
 	}
@@ -65,7 +65,7 @@ func (*AuthService) CreateUser(ctx context.Context, email, password string, name
 	return &user, nil
 }
 
-func ExistsUser(ctx context.Context, email string) (bool, error) {
+func (s *AuthService) ExistsUser(ctx context.Context, email string) (bool, error) {
 	q, err := db.Query()
 	if err != nil {
 		// Default return true to avoid mistakenly proceed with other operations on error
