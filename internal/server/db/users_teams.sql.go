@@ -22,7 +22,7 @@ RETURNING user_id, team_id, created_at, updated_at
 `
 
 type AddUserToTeamParams struct {
-	UserID    string `db:"user_id" json:"user_id"`
+	UserID    UserID `db:"user_id" json:"user_id"`
 	TeamID    string `db:"team_id" json:"team_id"`
 	CreatedAt string `db:"created_at" json:"created_at"`
 	UpdatedAt string `db:"updated_at" json:"updated_at"`
@@ -88,7 +88,7 @@ SELECT EXISTS (
 `
 
 type IsUserInTeamParams struct {
-	UserID string `db:"user_id" json:"user_id"`
+	UserID UserID `db:"user_id" json:"user_id"`
 	TeamID string `db:"team_id" json:"team_id"`
 }
 
@@ -115,7 +115,7 @@ WHERE user_id = ?1 AND team_id = ?2
 `
 
 type RemoveUserFromTeamParams struct {
-	UserID string `db:"user_id" json:"user_id"`
+	UserID UserID `db:"user_id" json:"user_id"`
 	TeamID string `db:"team_id" json:"team_id"`
 }
 

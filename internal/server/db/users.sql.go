@@ -25,7 +25,7 @@ RETURNING user_id, email, password_hash, name, email_verified, totp_secret, totp
 `
 
 type CreateUserParams struct {
-	UserID       string  `db:"user_id" json:"user_id"`
+	UserID       UserID  `db:"user_id" json:"user_id"`
 	Email        string  `db:"email" json:"email"`
 	PasswordHash string  `db:"password_hash" json:"password_hash"`
 	Name         *string `db:"name" json:"name"`
@@ -66,7 +66,7 @@ DELETE FROM users
 WHERE user_id = ?1
 `
 
-func (q *Queries) DeleteUser(ctx context.Context, userID string) error {
+func (q *Queries) DeleteUser(ctx context.Context, userID UserID) error {
 	_, err := q.db.ExecContext(ctx, deleteUser, userID)
 	return err
 }
@@ -106,7 +106,7 @@ FROM users
 WHERE user_id = ?1
 `
 
-func (q *Queries) GetUserByID(ctx context.Context, userID string) (User, error) {
+func (q *Queries) GetUserByID(ctx context.Context, userID UserID) (User, error) {
 	row := q.db.QueryRowContext(ctx, getUserByID, userID)
 	var i User
 	err := row.Scan(
@@ -139,7 +139,7 @@ RETURNING user_id, email, password_hash, name, email_verified, totp_secret, totp
 `
 
 type ResetFailedLoginAttemptsParams struct {
-	UserID    string `db:"user_id" json:"user_id"`
+	UserID    UserID `db:"user_id" json:"user_id"`
 	UpdatedAt string `db:"updated_at" json:"updated_at"`
 }
 
@@ -179,7 +179,7 @@ RETURNING user_id, email, password_hash, name, email_verified, totp_secret, totp
 `
 
 type UpdateFailedLoginAttemptParams struct {
-	UserID             string  `db:"user_id" json:"user_id"`
+	UserID             UserID  `db:"user_id" json:"user_id"`
 	LastFailedLoginAt  *string `db:"last_failed_login_at" json:"last_failed_login_at"`
 	AccountLockedUntil *string `db:"account_locked_until" json:"account_locked_until"`
 	UpdatedAt          string  `db:"updated_at" json:"updated_at"`
@@ -220,7 +220,7 @@ RETURNING user_id, email, password_hash, name, email_verified, totp_secret, totp
 `
 
 type UpdateUserAccountStatusParams struct {
-	UserID        string `db:"user_id" json:"user_id"`
+	UserID        UserID `db:"user_id" json:"user_id"`
 	AccountStatus string `db:"account_status" json:"account_status"`
 	UpdatedAt     string `db:"updated_at" json:"updated_at"`
 }
@@ -255,7 +255,7 @@ RETURNING user_id, email, password_hash, name, email_verified, totp_secret, totp
 `
 
 type UpdateUserEmailVerificationParams struct {
-	UserID        string `db:"user_id" json:"user_id"`
+	UserID        UserID `db:"user_id" json:"user_id"`
 	EmailVerified bool   `db:"email_verified" json:"email_verified"`
 	UpdatedAt     string `db:"updated_at" json:"updated_at"`
 }
@@ -290,7 +290,7 @@ RETURNING user_id, email, password_hash, name, email_verified, totp_secret, totp
 `
 
 type UpdateUserNameParams struct {
-	UserID    string  `db:"user_id" json:"user_id"`
+	UserID    UserID  `db:"user_id" json:"user_id"`
 	Name      *string `db:"name" json:"name"`
 	UpdatedAt string  `db:"updated_at" json:"updated_at"`
 }
@@ -325,7 +325,7 @@ RETURNING user_id, email, password_hash, name, email_verified, totp_secret, totp
 `
 
 type UpdateUserPasswordParams struct {
-	UserID       string `db:"user_id" json:"user_id"`
+	UserID       UserID `db:"user_id" json:"user_id"`
 	PasswordHash string `db:"password_hash" json:"password_hash"`
 	UpdatedAt    string `db:"updated_at" json:"updated_at"`
 }
@@ -360,7 +360,7 @@ RETURNING user_id, email, password_hash, name, email_verified, totp_secret, totp
 `
 
 type UpdateUserTOTPParams struct {
-	UserID      string  `db:"user_id" json:"user_id"`
+	UserID      UserID  `db:"user_id" json:"user_id"`
 	TotpSecret  *string `db:"totp_secret" json:"totp_secret"`
 	TotpEnabled bool    `db:"totp_enabled" json:"totp_enabled"`
 	UpdatedAt   string  `db:"updated_at" json:"updated_at"`

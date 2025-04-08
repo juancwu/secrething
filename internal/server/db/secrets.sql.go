@@ -25,13 +25,13 @@ RETURNING secret_id, vault_id, name, value, created_by_user_id, created_at, upda
 `
 
 type CreateSecretParams struct {
-	SecretID        string  `db:"secret_id" json:"secret_id"`
-	VaultID         string  `db:"vault_id" json:"vault_id"`
-	Name            string  `db:"name" json:"name"`
-	Value           []byte  `db:"value" json:"value"`
-	CreatedByUserID *string `db:"created_by_user_id" json:"created_by_user_id"`
-	CreatedAt       string  `db:"created_at" json:"created_at"`
-	UpdatedAt       string  `db:"updated_at" json:"updated_at"`
+	SecretID        string `db:"secret_id" json:"secret_id"`
+	VaultID         string `db:"vault_id" json:"vault_id"`
+	Name            string `db:"name" json:"name"`
+	Value           []byte `db:"value" json:"value"`
+	CreatedByUserID UserID `db:"created_by_user_id" json:"created_by_user_id"`
+	CreatedAt       string `db:"created_at" json:"created_at"`
+	UpdatedAt       string `db:"updated_at" json:"updated_at"`
 }
 
 func (q *Queries) CreateSecret(ctx context.Context, arg CreateSecretParams) (Secret, error) {

@@ -9,103 +9,111 @@ import (
 	"context"
 )
 
-const createUserToken = `-- name: CreateUserToken :one
-INSERT INTO user_tokens (
-  user_id,
-  token_type,
-  expires_at,
-  created_at
+const createToken = `-- name: CreateToken :one
+INSERT INTO tokens (
+    token_id,
+    user_id,
+    token_type,
+    client_type,
+    expires_at,
+    created_at
 ) VALUES (
-  ?1, ?2, ?3, ?4
+    ?1, ?2, ?3, ?4, ?5, ?6
 )
-RETURNING user_token_id, user_id, token_type, expires_at, created_at
+RETURNING token_id, user_id, token_type, client_type, expires_at, created_at
 `
 
-type CreateUserTokenParams struct {
-	UserID    string `db:"user_id" json:"user_id"`
-	TokenType string `db:"token_type" json:"token_type"`
-	ExpiresAt string `db:"expires_at" json:"expires_at"`
-	CreatedAt string `db:"created_at" json:"created_at"`
+type CreateTokenParams struct {
+	TokenID    TokenID `db:"token_id" json:"token_id"`
+	UserID     UserID  `db:"user_id" json:"user_id"`
+	TokenType  string  `db:"token_type" json:"token_type"`
+	ClientType string  `db:"client_type" json:"client_type"`
+	ExpiresAt  string  `db:"expires_at" json:"expires_at"`
+	CreatedAt  string  `db:"created_at" json:"created_at"`
 }
 
-func (q *Queries) CreateUserToken(ctx context.Context, arg CreateUserTokenParams) (UserToken, error) {
-	row := q.db.QueryRowContext(ctx, createUserToken,
+func (q *Queries) CreateToken(ctx context.Context, arg CreateTokenParams) (Token, error) {
+	row := q.db.QueryRowContext(ctx, createToken,
+		arg.TokenID,
 		arg.UserID,
 		arg.TokenType,
+		arg.ClientType,
 		arg.ExpiresAt,
 		arg.CreatedAt,
 	)
-	var i UserToken
+	var i Token
 	err := row.Scan(
-		&i.UserTokenID,
+		&i.TokenID,
 		&i.UserID,
 		&i.TokenType,
+		&i.ClientType,
 		&i.ExpiresAt,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
-const deleteAllUserTokens = `-- name: DeleteAllUserTokens :exec
-DELETE FROM user_tokens
+const deleteAllTokens = `-- name: DeleteAllTokens :exec
+DELETE FROM tokens
 WHERE user_id = ?1
 `
 
-func (q *Queries) DeleteAllUserTokens(ctx context.Context, userID string) error {
-	_, err := q.db.ExecContext(ctx, deleteAllUserTokens, userID)
+func (q *Queries) DeleteAllTokens(ctx context.Context, userID UserID) error {
+	_, err := q.db.ExecContext(ctx, deleteAllTokens, userID)
 	return err
 }
 
-const deleteUserToken = `-- name: DeleteUserToken :exec
-DELETE FROM user_tokens
+const deleteToken = `-- name: DeleteToken :exec
+DELETE FROM tokens
 WHERE user_id = ?1 AND token_type = ?2
 `
 
-type DeleteUserTokenParams struct {
-	UserID    string `db:"user_id" json:"user_id"`
+type DeleteTokenParams struct {
+	UserID    UserID `db:"user_id" json:"user_id"`
 	TokenType string `db:"token_type" json:"token_type"`
 }
 
-func (q *Queries) DeleteUserToken(ctx context.Context, arg DeleteUserTokenParams) error {
-	_, err := q.db.ExecContext(ctx, deleteUserToken, arg.UserID, arg.TokenType)
+func (q *Queries) DeleteToken(ctx context.Context, arg DeleteTokenParams) error {
+	_, err := q.db.ExecContext(ctx, deleteToken, arg.UserID, arg.TokenType)
 	return err
 }
 
-const deleteUserTokensByType = `-- name: DeleteUserTokensByType :exec
-DELETE FROM user_tokens
+const deleteTokensByType = `-- name: DeleteTokensByType :exec
+DELETE FROM tokens
 WHERE user_id = ?1 AND token_type = ?2
 `
 
-type DeleteUserTokensByTypeParams struct {
-	UserID    string `db:"user_id" json:"user_id"`
+type DeleteTokensByTypeParams struct {
+	UserID    UserID `db:"user_id" json:"user_id"`
 	TokenType string `db:"token_type" json:"token_type"`
 }
 
-func (q *Queries) DeleteUserTokensByType(ctx context.Context, arg DeleteUserTokensByTypeParams) error {
-	_, err := q.db.ExecContext(ctx, deleteUserTokensByType, arg.UserID, arg.TokenType)
+func (q *Queries) DeleteTokensByType(ctx context.Context, arg DeleteTokensByTypeParams) error {
+	_, err := q.db.ExecContext(ctx, deleteTokensByType, arg.UserID, arg.TokenType)
 	return err
 }
 
-const getUserTokenByType = `-- name: GetUserTokenByType :one
-SELECT user_token_id, user_id, token_type, expires_at, created_at 
-FROM user_tokens
+const getTokenByType = `-- name: GetTokenByType :one
+SELECT token_id, user_id, token_type, client_type, expires_at, created_at 
+FROM tokens
 WHERE user_id = ?1 AND token_type = ?2
 ORDER BY created_at DESC
 LIMIT 1
 `
 
-type GetUserTokenByTypeParams struct {
-	UserID    string `db:"user_id" json:"user_id"`
+type GetTokenByTypeParams struct {
+	UserID    UserID `db:"user_id" json:"user_id"`
 	TokenType string `db:"token_type" json:"token_type"`
 }
 
-func (q *Queries) GetUserTokenByType(ctx context.Context, arg GetUserTokenByTypeParams) (UserToken, error) {
-	row := q.db.QueryRowContext(ctx, getUserTokenByType, arg.UserID, arg.TokenType)
-	var i UserToken
+func (q *Queries) GetTokenByType(ctx context.Context, arg GetTokenByTypeParams) (Token, error) {
+	row := q.db.QueryRowContext(ctx, getTokenByType, arg.UserID, arg.TokenType)
+	var i Token
 	err := row.Scan(
-		&i.UserTokenID,
+		&i.TokenID,
 		&i.UserID,
 		&i.TokenType,
+		&i.ClientType,
 		&i.ExpiresAt,
 		&i.CreatedAt,
 	)

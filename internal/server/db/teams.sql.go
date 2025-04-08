@@ -27,7 +27,7 @@ type CreateTeamParams struct {
 	TeamID          string  `db:"team_id" json:"team_id"`
 	Name            string  `db:"name" json:"name"`
 	Description     *string `db:"description" json:"description"`
-	CreatedByUserID string  `db:"created_by_user_id" json:"created_by_user_id"`
+	CreatedByUserID UserID  `db:"created_by_user_id" json:"created_by_user_id"`
 	CreatedAt       string  `db:"created_at" json:"created_at"`
 	UpdatedAt       string  `db:"updated_at" json:"updated_at"`
 }
@@ -90,7 +90,7 @@ JOIN users_teams ut ON t.team_id = ut.team_id
 WHERE ut.user_id = ?1
 `
 
-func (q *Queries) GetTeamsByUserID(ctx context.Context, userID string) ([]Team, error) {
+func (q *Queries) GetTeamsByUserID(ctx context.Context, userID UserID) ([]Team, error) {
 	rows, err := q.db.QueryContext(ctx, getTeamsByUserID, userID)
 	if err != nil {
 		return nil, err

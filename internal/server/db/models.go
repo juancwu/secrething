@@ -20,26 +20,35 @@ type Permission struct {
 }
 
 type Secret struct {
-	SecretID        string  `db:"secret_id" json:"secret_id"`
-	VaultID         string  `db:"vault_id" json:"vault_id"`
-	Name            string  `db:"name" json:"name"`
-	Value           []byte  `db:"value" json:"value"`
-	CreatedByUserID *string `db:"created_by_user_id" json:"created_by_user_id"`
-	CreatedAt       string  `db:"created_at" json:"created_at"`
-	UpdatedAt       string  `db:"updated_at" json:"updated_at"`
+	SecretID        string `db:"secret_id" json:"secret_id"`
+	VaultID         string `db:"vault_id" json:"vault_id"`
+	Name            string `db:"name" json:"name"`
+	Value           []byte `db:"value" json:"value"`
+	CreatedByUserID UserID `db:"created_by_user_id" json:"created_by_user_id"`
+	CreatedAt       string `db:"created_at" json:"created_at"`
+	UpdatedAt       string `db:"updated_at" json:"updated_at"`
 }
 
 type Team struct {
 	TeamID          string  `db:"team_id" json:"team_id"`
 	Name            string  `db:"name" json:"name"`
 	Description     *string `db:"description" json:"description"`
-	CreatedByUserID string  `db:"created_by_user_id" json:"created_by_user_id"`
+	CreatedByUserID UserID  `db:"created_by_user_id" json:"created_by_user_id"`
 	CreatedAt       string  `db:"created_at" json:"created_at"`
 	UpdatedAt       string  `db:"updated_at" json:"updated_at"`
 }
 
+type Token struct {
+	TokenID    TokenID `db:"token_id" json:"token_id"`
+	UserID     UserID  `db:"user_id" json:"user_id"`
+	TokenType  string  `db:"token_type" json:"token_type"`
+	ClientType string  `db:"client_type" json:"client_type"`
+	ExpiresAt  string  `db:"expires_at" json:"expires_at"`
+	CreatedAt  string  `db:"created_at" json:"created_at"`
+}
+
 type User struct {
-	UserID              string  `db:"user_id" json:"user_id"`
+	UserID              UserID  `db:"user_id" json:"user_id"`
 	Email               string  `db:"email" json:"email"`
 	PasswordHash        string  `db:"password_hash" json:"password_hash"`
 	Name                *string `db:"name" json:"name"`
@@ -54,16 +63,8 @@ type User struct {
 	UpdatedAt           string  `db:"updated_at" json:"updated_at"`
 }
 
-type UserToken struct {
-	UserTokenID string `db:"user_token_id" json:"user_token_id"`
-	UserID      string `db:"user_id" json:"user_id"`
-	TokenType   string `db:"token_type" json:"token_type"`
-	ExpiresAt   string `db:"expires_at" json:"expires_at"`
-	CreatedAt   string `db:"created_at" json:"created_at"`
-}
-
 type UsersTeam struct {
-	UserID    string `db:"user_id" json:"user_id"`
+	UserID    UserID `db:"user_id" json:"user_id"`
 	TeamID    string `db:"team_id" json:"team_id"`
 	CreatedAt string `db:"created_at" json:"created_at"`
 	UpdatedAt string `db:"updated_at" json:"updated_at"`
@@ -73,7 +74,7 @@ type Vault struct {
 	VaultID         string  `db:"vault_id" json:"vault_id"`
 	Name            string  `db:"name" json:"name"`
 	Description     *string `db:"description" json:"description"`
-	CreatedByUserID string  `db:"created_by_user_id" json:"created_by_user_id"`
+	CreatedByUserID UserID  `db:"created_by_user_id" json:"created_by_user_id"`
 	OwnerType       string  `db:"owner_type" json:"owner_type"`
 	OwnerID         string  `db:"owner_id" json:"owner_id"`
 	CreatedAt       string  `db:"created_at" json:"created_at"`

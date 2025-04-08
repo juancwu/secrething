@@ -13,6 +13,15 @@ sql:
         emit_pointers_for_null_types: true
         overrides:
           - go_type:
+              type: "UserID"
+            column: "*.user_id"
+          - go_type:
+              type: "UserID"
+            column: "*.created_by_user_id"
+          - go_type:
+              type: "TokenID"
+            column: "*.token_id"
+          - go_type:
               import: "github.com/juancwu/secrething/internal/server/permissions"
               type: "PermissionBits"
             column: "permissions.permission_bits"

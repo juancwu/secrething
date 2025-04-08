@@ -1,10 +1,8 @@
-package errors
+package api
 
 import (
 	"fmt"
 	"net/http"
-
-	"github.com/labstack/echo/v4"
 )
 
 type AppError struct {
@@ -17,7 +15,7 @@ type AppError struct {
 }
 
 func (e AppError) Error() string {
-	return fmt.Sprintf("AppError: %s - %s", e.Message, e.AppErrorCode)
+	return fmt.Sprintf("AppError (%s - %s): %v", e.Message, e.AppErrorCode, e.Err)
 }
 
 func NewBadRequestError(message, code, requestID string, err error) AppError {
@@ -29,29 +27,6 @@ func NewBadRequestError(message, code, requestID string, err error) AppError {
 		RequestID:    requestID,
 		Err:          err,
 	}
-}
-
-// NewBadRequest is the current method used in the codebase
-// Keeping for backward compatibility
-func NewBadRequest(message, code, requestID string, err error) AppError {
-	return NewBadRequestError(message, code, requestID, err)
-}
-
-// Alias for consistent naming with other methods
-func NewBadRequestWithDetails(message, details, code, requestID string, err error) AppError {
-	if details != "" {
-		message = fmt.Sprintf("%s: %s", message, details)
-	}
-	return NewBadRequestError(message, code, requestID, err)
-}
-
-// Echo-compatible error handler - converts AppError to echo.HTTPError
-func ToEchoError(err error) *echo.HTTPError {
-	if appErr, ok := err.(AppError); ok {
-		return echo.NewHTTPError(appErr.ResponseCode, appErr.Message)
-	}
-	// Default to internal server error for unknown error types
-	return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
 }
 
 func NewInternalServerError(message string, requestID string, err error) AppError {

@@ -29,7 +29,7 @@ type CreateVaultParams struct {
 	VaultID         string  `db:"vault_id" json:"vault_id"`
 	Name            string  `db:"name" json:"name"`
 	Description     *string `db:"description" json:"description"`
-	CreatedByUserID string  `db:"created_by_user_id" json:"created_by_user_id"`
+	CreatedByUserID UserID  `db:"created_by_user_id" json:"created_by_user_id"`
 	OwnerType       string  `db:"owner_type" json:"owner_type"`
 	OwnerID         string  `db:"owner_id" json:"owner_id"`
 	CreatedAt       string  `db:"created_at" json:"created_at"`
