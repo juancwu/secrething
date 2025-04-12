@@ -5,23 +5,23 @@ meta {
 }
 
 post {
-  url: {{base_url}}/api/auth/sign-in
+  url: {{base_url}}/api/auth/cli/sign-in
   body: json
   auth: none
 }
 
 body:json {
   {
-    "email": "test@mail.com",
-    "password": "VerySecurePassword123@"
+    "email": "{{email}}",
+    "password": "{{password}}"
   }
 }
 
 script:post-response {
-  const tmpToken = res('temp_token');
-  const userId = res("user_id");
-  const accessToken = res("access_token");
-  const refreshToken = res("refresh_token");
+  const tmpToken = res.body.tmp_token;
+  const userId = res.body.user.uid;
+  const accessToken = res.body.atk;
+  const refreshToken = res.body.rtk;
   
   if (tmpToken !== undefined) {
     bru.setGlobalEnvVar("temp_token", tmpToken);
