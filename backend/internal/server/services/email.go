@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/juancwu/secrething/internal/server/config"
-	"github.com/juancwu/secrething/internal/server/db"
 	"github.com/juancwu/secrething/internal/server/templates"
 	"github.com/resend/resend-go/v2"
 )
@@ -31,7 +30,7 @@ func NewEmailService() *EmailService {
 }
 
 // SendAccountVerificationEmail sends an email to verify an account.
-func (s *EmailService) SendAccountVerificationEmail(ctx context.Context, email string, tokenID db.TokenID) error {
+func (s *EmailService) SendAccountVerificationEmail(ctx context.Context, email string, tokenID string) error {
 	serverCfg := config.Server()
 	// Create verification URL with the token
 	verificationURL := fmt.Sprintf("%s/api/auth/account/verify?token=%s", serverCfg.URL, tokenID)

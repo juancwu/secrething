@@ -18,6 +18,11 @@ WHERE user_id = ?1 AND token_type = ?2
 ORDER BY created_at DESC
 LIMIT 1;
 
+-- name: GetTokenByID :one
+SELECT token_id, user_id, token_type, client_type, expires_at, created_at
+FROM tokens
+WHERE token_id = ?1;
+
 -- name: DeleteToken :exec
 DELETE FROM tokens
 WHERE user_id = ?1 AND token_type = ?2;

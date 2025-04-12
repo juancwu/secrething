@@ -7,6 +7,10 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+const (
+	RefreshTokenKey = "refresh_token"
+)
+
 // SetRefreshToken sets an http-only cookie with name "refresh_token"
 func SetRefreshToken(c echo.Context, token string) {
 	cookie := getRefreshTokenCookieConfig()
@@ -25,7 +29,7 @@ func UnsetRefreshToken(c echo.Context) {
 func getRefreshTokenCookieConfig() *http.Cookie {
 	exp := time.Now().UTC().Add(24 * 7 * time.Hour)
 	cookie := &http.Cookie{
-		Name: "refresh_token",
+		Name: RefreshTokenKey,
 		// this is a static path, that it should only be allowed in
 		Path: "/",
 		// TODO: use configuration to determine the domain (CORS)

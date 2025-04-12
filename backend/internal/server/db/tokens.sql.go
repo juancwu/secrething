@@ -93,6 +93,26 @@ func (q *Queries) DeleteTokensByType(ctx context.Context, arg DeleteTokensByType
 	return err
 }
 
+const getTokenByID = `-- name: GetTokenByID :one
+SELECT token_id, user_id, token_type, client_type, expires_at, created_at 
+FROM tokens
+WHERE token_id = ?1
+`
+
+func (q *Queries) GetTokenByID(ctx context.Context, tokenID TokenID) (Token, error) {
+	row := q.db.QueryRowContext(ctx, getTokenByID, tokenID)
+	var i Token
+	err := row.Scan(
+		&i.TokenID,
+		&i.UserID,
+		&i.TokenType,
+		&i.ClientType,
+		&i.ExpiresAt,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const getTokenByType = `-- name: GetTokenByType :one
 SELECT token_id, user_id, token_type, client_type, expires_at, created_at 
 FROM tokens

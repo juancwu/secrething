@@ -35,3 +35,8 @@ func FormatRFC3339NanoFixed(t time.Time) string {
 	// If we have more than 9 digits (shouldn't happen), truncate
 	return s[:dotIndex+10] + "Z"
 }
+
+// ParseRFC3339NanoStr parses the timestamp strings created with FormatRFC3339NanoFixed.
+func ParseRFC3339NanoStr(t string) (time.Time, error) {
+	return time.Parse(time.RFC3339Nano, t)
+}

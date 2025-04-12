@@ -14,25 +14,19 @@ func Query() (q *Queries, err error) {
 	return
 }
 
-// Transaction represents a database transaction
-type Transaction struct {
-	Tx *sql.Tx
-}
-
-// WithTransaction executes the given function within a transaction
-// The transaction is committed if the function returns nil, otherwise it's rolled back
-func WithTransaction(db *sql.DB, fn func(*Transaction) error) error {
-	tx, err := db.Begin()
+func QueryWithTx() (tx *sql.Tx, q *Queries, err error) {
+	var conn *sql.DB
+	conn, err = Connect()
 	if err != nil {
-		return err
+		return
 	}
 
-	// Rollback is a no-op if the transaction is already committed
-	defer tx.Rollback()
-
-	if err := fn(&Transaction{Tx: tx}); err != nil {
-		return err
+	tx, err = conn.Begin()
+	if err != nil {
+		return
 	}
 
-	return tx.Commit()
+	q = &Queries{db: tx}
+
+	return
 }
