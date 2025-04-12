@@ -65,16 +65,16 @@ func (q *Queries) DeleteAllTokens(ctx context.Context, userID UserID) error {
 
 const deleteToken = `-- name: DeleteToken :exec
 DELETE FROM tokens
-WHERE user_id = ?1 AND token_type = ?2
+WHERE user_id = ?1 AND token_id = ?2
 `
 
 type DeleteTokenParams struct {
-	UserID    UserID `db:"user_id" json:"user_id"`
-	TokenType string `db:"token_type" json:"token_type"`
+	UserID  UserID  `db:"user_id" json:"user_id"`
+	TokenID TokenID `db:"token_id" json:"token_id"`
 }
 
 func (q *Queries) DeleteToken(ctx context.Context, arg DeleteTokenParams) error {
-	_, err := q.db.ExecContext(ctx, deleteToken, arg.UserID, arg.TokenType)
+	_, err := q.db.ExecContext(ctx, deleteToken, arg.UserID, arg.TokenID)
 	return err
 }
 
@@ -94,7 +94,7 @@ func (q *Queries) DeleteTokensByType(ctx context.Context, arg DeleteTokensByType
 }
 
 const getTokenByID = `-- name: GetTokenByID :one
-SELECT token_id, user_id, token_type, client_type, expires_at, created_at 
+SELECT token_id, user_id, token_type, client_type, expires_at, created_at
 FROM tokens
 WHERE token_id = ?1
 `

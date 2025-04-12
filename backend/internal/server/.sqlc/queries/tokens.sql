@@ -25,7 +25,7 @@ WHERE token_id = ?1;
 
 -- name: DeleteToken :exec
 DELETE FROM tokens
-WHERE user_id = ?1 AND token_type = ?2;
+WHERE user_id = ?1 AND token_id = ?2;
 
 -- name: DeleteAllTokens :exec
 DELETE FROM tokens
