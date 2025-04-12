@@ -27,7 +27,7 @@ func getRefreshTokenCookieConfig() *http.Cookie {
 	cookie := &http.Cookie{
 		Name: "refresh_token",
 		// this is a static path, that it should only be allowed in
-		Path: "/api/v1/",
+		Path: "/",
 		// TODO: use configuration to determine the domain (CORS)
 		Domain: "localhost",
 		// TODO: use configuration to determine the secure field (CORS)
