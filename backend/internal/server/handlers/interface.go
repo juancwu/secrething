@@ -6,5 +6,5 @@ import (
 )
 
 type Handler interface {
-	ConfigureRoutes(g *echo.Group, v *validator.Validator)
+	ConfigureRoutes(e *echo.Echo, v *validator.Validator)
 }

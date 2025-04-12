@@ -24,11 +24,8 @@ func main() {
 	e.HideBanner = !config.IsDevelopment()
 	e.HTTPErrorHandler = handlers.ErrorHandler()
 
-	apiGroup := e.Group("/api") // Path: /api
-
-	authGroup := apiGroup.Group("/auth") // Path: /api/auth
 	authHandler := handlers.NewAuthHandler()
-	authHandler.ConfigureRoutes(authGroup, v)
+	authHandler.ConfigureRoutes(e, v)
 
 	if err := e.Start(config.Server().Address); err != nil {
 		panic(err)

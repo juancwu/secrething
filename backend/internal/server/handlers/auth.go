@@ -3,12 +3,14 @@ package handlers
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/labstack/echo/v4"
 
 	"github.com/juancwu/go-valkit/v2/validator"
 	"github.com/juancwu/secrething/internal/server/api"
+	"github.com/juancwu/secrething/internal/server/cookie"
 	"github.com/juancwu/secrething/internal/server/db"
 	"github.com/juancwu/secrething/internal/server/middleware"
 	"github.com/juancwu/secrething/internal/server/services"
@@ -55,8 +57,10 @@ func NewAuthHandler() AuthHandler {
 }
 
 // ConfigureRoutes implements the Handler interface
-func (h AuthHandler) ConfigureRoutes(g *echo.Group, v *validator.Validator) {
-	g.POST("/sign-up", h.createUser, middleware.SetValidator(v, getCreateUserRequestMessages()))
+func (h AuthHandler) ConfigureRoutes(e *echo.Echo, v *validator.Validator) {
+	e.POST("/api/auth/sign-up", h.createUser, middleware.SetValidator(v, getCreateUserRequestMessages()))
+
+	e.POST("/api/auth/cli/sign-up", h.createUser, middleware.SetValidator(v, getCreateUserRequestMessages()))
 }
 
 type createUserRequest struct {
@@ -147,7 +151,7 @@ func (AuthHandler) createUser(c echo.Context) error {
 		emailService.SendAccountVerificationEmail(ctx, email, emailToken.TokenID)
 	}(clientType, user.Email, user.UserID)
 
-	return c.JSON(201, createUserResponse{
+	resBody := createUserResponse{
 		TokenPair: tokenPair,
 		User: userResponse{
 			UserID:        user.UserID,
@@ -155,5 +159,14 @@ func (AuthHandler) createUser(c echo.Context) error {
 			EmailVerified: user.EmailVerified,
 			Name:          user.Name,
 		},
-	})
+	}
+
+	if clientType == services.ClientTypeWeb {
+		cookie.SetRefreshToken(c, tokenPair.RefreshToken.String())
+		resBody.TokenPair = services.TokenPair{
+			AccessToken: tokenPair.AccessToken,
+		}
+	}
+
+	return c.JSON(http.StatusCreated, resBody)
 }
