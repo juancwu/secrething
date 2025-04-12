@@ -21,8 +21,8 @@ const (
 	TokenTypeTemp = "temp"
 	// TokenTypeAPI is for API authentication
 	TokenTypeAPI = "api"
-	// TokenGeneral is for simple verification tokens (account activation, email verification, etc...)
-	TokenGeneral = "general"
+	// TokenAccountActivate is for verifying a new user email and activate the account
+	TokenAccountActivate = "account_activate"
 )
 
 // Token duration constants

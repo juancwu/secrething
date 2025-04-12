@@ -137,7 +137,7 @@ func (AuthHandler) createUser(c echo.Context) error {
 		now := time.Now()
 		exp := now.Add(time.Hour * 24)
 
-		emailToken, err := tokenService.GenerateToken(ctx, userID, services.TokenGeneral, clientType, now, exp)
+		emailToken, err := tokenService.GenerateToken(ctx, userID, services.TokenAccountActivate, clientType, now, exp)
 		if err != nil {
 			fmt.Printf("Failed to send account verification email: %v\n", err)
 			return
