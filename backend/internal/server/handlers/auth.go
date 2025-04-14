@@ -15,6 +15,7 @@ import (
 	"github.com/juancwu/secrething/internal/server/db"
 	"github.com/juancwu/secrething/internal/server/middleware"
 	"github.com/juancwu/secrething/internal/server/services"
+	"github.com/juancwu/secrething/internal/server/templates"
 )
 
 // Error codes for authentication
@@ -66,6 +67,15 @@ func (h AuthHandler) ConfigureRoutes(e *echo.Echo, v *validator.Validator) {
 	e.POST("/api/auth/cli/sign-up", h.createUser, middleware.SetValidator(v, getCreateUserRequestMessages()))
 	e.POST("/api/auth/cli/sign-in", h.signIn, middleware.SetValidator(v, getSignInRequestMessages()))
 	e.POST("/api/auth/cli/refresh", h.refreshToken, middleware.SetValidator(v, getRefreshRequestMessages()))
+
+	// The account activate route verifies the token in the query string hence it is not protected
+	// Get method so that when the user clicks on the verify button or paste the url in the browser,
+	// verification can happen immediately.
+	e.GET("/api/auth/account/activate", h.verifyEmail)
+
+	// Protected routes
+	protected := e.Group("", middleware.Protected())
+	protected.POST("/api/auth/account/resend-activation", h.resendAccountActivation)
 }
 
 type createUserRequest struct {
@@ -142,7 +152,7 @@ func (AuthHandler) createUser(c echo.Context) error {
 		})
 	}
 
-	go func(clientType string, email string, userID db.UserID) {
+	go func(email string, userID db.UserID) {
 		ctx, cancel := context.WithTimeoutCause(context.Background(), time.Second*30, fmt.Errorf("Send account verification email to '%s' timeout", email))
 		defer cancel()
 
@@ -154,7 +164,7 @@ func (AuthHandler) createUser(c echo.Context) error {
 
 		emailService := services.NewEmailService()
 		emailService.SendAccountVerificationEmail(ctx, email, token)
-	}(clientType, user.Email, user.UserID)
+	}(user.Email, user.UserID)
 
 	resBody := createUserResponse{
 		AccessToken: tokenPair.AccessToken,
@@ -296,7 +306,7 @@ func (AuthHandler) refreshToken(c echo.Context) error {
 
 	// Verify refresh token
 	tokenService := services.NewTokenService()
-	payload, err := tokenService.VerifyToken(ctx, refreshToken)
+	payload, err := tokenService.VerifyToken(ctx, refreshToken, services.StdPackage)
 	if err != nil {
 		switch err := err.(type) {
 		case services.TokenServiceError:
@@ -362,4 +372,93 @@ func (AuthHandler) refreshToken(c echo.Context) error {
 			Name:          user.Name,
 		},
 	})
+}
+
+func (h *AuthHandler) resendAccountActivation(c echo.Context) error {
+	user, err := middleware.GetUserFromContext(c)
+	if err != nil {
+		return err
+	}
+
+	ctx, cancel := context.WithTimeoutCause(context.Background(), time.Second*30, fmt.Errorf("Send account verification email to '%s' timeout", user.Email))
+	defer cancel()
+
+	q, err := db.Query()
+	if err != nil {
+		return err
+	}
+
+	if err := q.DeleteTokensByType(ctx, db.DeleteTokensByTypeParams{UserID: user.UserID, TokenType: services.TokenTypeAccountActivate}); err != nil {
+		return err
+	}
+
+	tokenService := services.NewTokenService()
+	token, err := tokenService.NewAccountActivateToken(ctx, user.UserID)
+	if err != nil {
+		return err
+	}
+
+	emailService := services.NewEmailService()
+	if err := emailService.SendAccountVerificationEmail(ctx, user.Email, token); err != nil {
+		return err
+	}
+
+	return c.NoContent(http.StatusOK)
+}
+
+func (h *AuthHandler) verifyEmail(c echo.Context) error {
+	// Get token from query parameter and make sure that it is defined
+	token := c.QueryParam("token")
+	// If token is empty, then render general something went wrong page
+	if token == "" {
+		return c.HTML(http.StatusOK, templates.StaticInternalError)
+	}
+
+	tokenService := services.NewTokenService()
+	authService := services.NewAuthService()
+
+	ctx, cancel := context.WithTimeout(c.Request().Context(), time.Second*5)
+	defer cancel()
+
+	// Verify the token
+	payload, err := tokenService.VerifyToken(ctx, token, services.UrlPackage)
+	if err != nil {
+		fmt.Println(err)
+		return c.HTML(http.StatusOK, templates.StaticInternalError)
+	}
+
+	// If token is not of expected type, then fail verification
+	if payload.TokenType != services.TokenTypeAccountActivate {
+		return c.HTML(http.StatusOK, templates.StaticVerificationError)
+	}
+
+	exists, err := authService.ExistsUserWithID(ctx, payload.UserID)
+	if err != nil {
+		// TODO: log error in sentry
+		fmt.Println(err)
+		return c.HTML(http.StatusOK, templates.StaticInternalError)
+	}
+	if !exists {
+		return c.HTML(http.StatusOK, templates.StaticVerificationError)
+	}
+
+	// Check that the token exists in the database
+	_, err = tokenService.GetTokenByID(ctx, payload.TokenID)
+	if err != nil {
+		if db.IsNoRows(err) {
+			return c.HTML(http.StatusOK, templates.StaticVerificationError)
+		}
+		fmt.Println(err)
+		return c.HTML(http.StatusOK, templates.StaticInternalError)
+	}
+
+	// Set the email verification status to true
+	_, err = authService.UpdateUserEmailVerification(ctx, payload.UserID, true)
+	if err != nil {
+		// TODO: log error in sentry
+		fmt.Println(err)
+		return c.HTML(http.StatusOK, templates.StaticVerificationError)
+	}
+
+	return c.HTML(http.StatusOK, templates.StaticVerificationSuccess)
 }

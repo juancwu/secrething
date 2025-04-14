@@ -2,8 +2,10 @@ package services
 
 import (
 	"context"
+	"database/sql"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"sync"
 	"time"
 
@@ -11,6 +13,13 @@ import (
 	"github.com/juancwu/secrething/internal/server/db"
 	"github.com/juancwu/secrething/internal/server/utils"
 	"github.com/sumup/typeid"
+)
+
+type PackageType string
+
+const (
+	StdPackage PackageType = "std"
+	UrlPackage PackageType = "url"
 )
 
 // TokenType constants
@@ -25,15 +34,18 @@ const (
 	TokenTypeAPI = "api"
 	// TokenTypeAccountActivate is for verifying a new user email and activate the account
 	TokenTypeAccountActivate = "account_activate"
+	// TokenTypeAccountActivate is for requesting a new verification email when verification goes wrong
+	TokenTypeTempRequestVerificationEmail = "temp_request_verification_email"
 )
 
 // Token duration constants
 const (
-	AccessTokenDuration          = 15 * time.Minute
-	RefreshTokenDuration         = 7 * 24 * time.Hour // 7 days
-	TempTokenDuration            = 5 * time.Minute
-	APITokenDuration             = 90 * 24 * time.Hour // 90 days
-	AccountActivateTokenDuration = 24 * time.Hour
+	AccessTokenDuration                       = 15 * time.Minute
+	RefreshTokenDuration                      = 7 * 24 * time.Hour // 7 days
+	TempTokenDuration                         = 5 * time.Minute
+	APITokenDuration                          = 90 * 24 * time.Hour // 90 days
+	AccountActivateTokenDuration              = 24 * time.Hour
+	TempRequestVerificationEmailTokenDuration = 10 * time.Minute
 )
 
 const (
@@ -44,12 +56,13 @@ const (
 
 // Error type constants
 const (
-	TokenServiceErrExpired    = "token_service_expired"
-	TokenServiceErrInvalid    = "token_service_invalid"
-	TokenServiceErrGeneration = "token_service_generation"
-	TokenServiceErrEncryption = "token_service_encryption"
-	TokenServiceErrDecryption = "token_service_decryption"
-	TokenServiceErrDatabase   = "token_service_database"
+	TokenServiceErrExpired            = "token_service_expired"
+	TokenServiceErrInvalid            = "token_service_invalid"
+	TokenServiceErrGeneration         = "token_service_generation"
+	TokenServiceErrEncryption         = "token_service_encryption"
+	TokenServiceErrDecryption         = "token_service_decryption"
+	TokenServiceErrDatabase           = "token_service_database"
+	TokenServiceErrInvalidPackageType = "token_service_invalid_package_type"
 )
 
 type TokenServiceError struct {
@@ -132,6 +145,16 @@ func NewTokenDatabaseError(err error, operation string) TokenServiceError {
 	)
 }
 
+// NewTokenInvalidPackageTypeError returns a new error for invalid package type given when generating tokens
+func NewTokenInvalidPackageTypeError(err error, operation string) TokenServiceError {
+	return NewTokenServiceError(
+		"Invalid package type error during {operation}: {err}",
+		TokenServiceErrInvalidPackageType,
+		err,
+		map[string]interface{}{"operation": operation},
+	)
+}
+
 // TokenPayload represents the payload that is encrypted and is sent back to the user.
 // This payload helps the server later verify the integrity and authenticity of the token
 // since it is encrypted using AES256-GCM.
@@ -172,10 +195,21 @@ func NewTokenService() *TokenService {
 	return tokenService
 }
 
+// GetTokenByID gets a token from the database that matches the given tokenID
+func (s *TokenService) GetTokenByID(ctx context.Context, tokenID db.TokenID) (*db.Token, error) {
+	q, err := db.Query()
+	if err != nil {
+		return nil, err
+	}
+
+	token, err := q.GetTokenByID(ctx, tokenID)
+	return &token, err
+}
+
 // VerifyToken does a basic db lookup for the token and matches the token type and
 // makes sure the token hasn't expired yet.
-func (s *TokenService) VerifyToken(ctx context.Context, tokenStr string) (payload *TokenPayload, err error) {
-	payload, err = s.StdUnpack(tokenStr)
+func (s *TokenService) VerifyToken(ctx context.Context, tokenStr string, packageType PackageType) (payload *TokenPayload, err error) {
+	payload, err = s.Unpack(tokenStr, packageType)
 	if err != nil {
 		return nil, NewTokenInvalidError(err, "Failed to unpack token")
 	}
@@ -202,12 +236,12 @@ func (s *TokenService) GenerateTokenPair(ctx context.Context, userID db.UserID, 
 	}
 	defer tx.Rollback()
 
-	refreshToken, err := s.generateToken(ctx, q, userID, TokenTypeRefresh, clientType, now, now.Add(RefreshTokenDuration))
+	refreshToken, err := s.generateTokenPayload(ctx, q, userID, TokenTypeRefresh, clientType, now, now.Add(RefreshTokenDuration))
 	if err != nil {
 		return TokenPair{}, err // generateToken already returns TokenServiceError
 	}
 
-	accessToken, err := s.generateToken(ctx, q, userID, TokenTypeAccess, clientType, now, now.Add(AccessTokenDuration))
+	accessToken, err := s.generateTokenPayload(ctx, q, userID, TokenTypeAccess, clientType, now, now.Add(AccessTokenDuration))
 	if err != nil {
 		return TokenPair{}, err // generateToken already returns TokenServiceError
 	}
@@ -245,29 +279,30 @@ func (s *TokenService) GenerateTokenPair(ctx context.Context, userID db.UserID, 
 
 func (s *TokenService) NewAccountActivateToken(ctx context.Context, userID db.UserID) (string, error) {
 	now := time.Now()
+	exp := now.Add(AccountActivateTokenDuration)
+	return s.generateToken(
+		ctx,
+		UrlPackage,
+		userID,
+		TokenTypeAccountActivate,
+		"?",
+		now,
+		exp,
+	)
+}
 
-	// Perform actions in transaction to ensure both token types are made successfully.
-	tx, q, err := db.QueryWithTx()
-	if err != nil {
-		return "", NewTokenDatabaseError(err, "begin transaction")
-	}
-	defer tx.Rollback()
-
-	token, err := s.generateToken(ctx, q, userID, TokenTypeAccountActivate, "", now, now.Add(AccountActivateTokenDuration))
-	if err != nil {
-		return "", err // generateToken already returns TokenServiceError
-	}
-
-	packaged, err := s.UrlPack(token)
-	if err != nil {
-		return "", err // UrlPack already returns a TokenServiceError
-	}
-
-	if err := tx.Commit(); err != nil {
-		return "", NewTokenDatabaseError(err, "commit transaction")
-	}
-
-	return packaged, nil
+func (s *TokenService) NewTempRequestVerificatioEmailToken(ctx context.Context, userID db.UserID) (string, error) {
+	now := time.Now()
+	exp := now.Add(TempRequestVerificationEmailTokenDuration)
+	return s.generateToken(
+		ctx,
+		UrlPackage,
+		userID,
+		TokenTypeTempRequestVerificationEmail,
+		"?",
+		now,
+		exp,
+	)
 }
 
 func (s *TokenService) DecryptToken(data []byte) ([]byte, error) {
@@ -294,6 +329,16 @@ func (s *TokenService) EncryptToken(data []byte) ([]byte, error) {
 		)
 	}
 	return encrypted, nil
+}
+
+func (s *TokenService) Unpack(t string, packType PackageType) (*TokenPayload, error) {
+	switch packType {
+	case StdPackage:
+		return s.StdUnpack(t)
+	case UrlPackage:
+		return s.UrlUnpack(t)
+	}
+	return nil, NewTokenInvalidPackageTypeError(fmt.Errorf("unknown package type: %s", packType), "token unpacking")
 }
 
 func (s *TokenService) StdPack(t *TokenPayload) (string, error) {
@@ -328,7 +373,52 @@ func (s *TokenService) UrlUnpack(t string) (*TokenPayload, error) {
 	return s.unpack(b)
 }
 
-func (s *TokenService) generateToken(ctx context.Context, q *db.Queries, userID db.UserID, tokenType, clientType string, now time.Time, exp time.Time) (*TokenPayload, error) {
+func (s *TokenService) generateToken(ctx context.Context, packageType PackageType, userID db.UserID, tokenType, clientType string, now, exp time.Time) (string, error) {
+	var packaged string
+	var err error
+	var tx *sql.Tx
+	var q *db.Queries
+
+	// Perform actions in transaction to ensure both token types are made successfully.
+	tx, q, err = db.QueryWithTx()
+	if err != nil {
+		return "", NewTokenDatabaseError(err, "begin transaction")
+	}
+	defer tx.Rollback()
+
+	token, err := s.generateTokenPayload(
+		ctx,
+		q,
+		userID,
+		tokenType,
+		clientType,
+		now,
+		exp,
+	)
+	if err != nil {
+		return "", err // generateToken already returns TokenServiceError
+	}
+
+	switch packageType {
+	case StdPackage:
+		packaged, err = s.StdPack(token)
+	case UrlPackage:
+		packaged, err = s.UrlPack(token)
+	default:
+		return "", NewTokenInvalidPackageTypeError(fmt.Errorf("unknown package type: %s", packageType), "token packaging")
+	}
+	if err != nil {
+		return "", err // Pack methods already return a TokenServiceError
+	}
+
+	if err := tx.Commit(); err != nil {
+		return "", NewTokenDatabaseError(err, "commit transaction")
+	}
+
+	return packaged, nil
+}
+
+func (s *TokenService) generateTokenPayload(ctx context.Context, q *db.Queries, userID db.UserID, tokenType, clientType string, now time.Time, exp time.Time) (*TokenPayload, error) {
 	tokenID, err := s.generateTokenID()
 	if err != nil {
 		// GenerateTokenID already returns TokenServiceError

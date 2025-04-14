@@ -18,24 +18,7 @@ body:json {
 }
 
 script:post-response {
-  const tmpToken = res.body.tmp_token;
-  const userId = res.body.user.uid;
-  const accessToken = res.body.atk;
-  const refreshToken = res.body.rtk;
-  
-  if (tmpToken !== undefined) {
-    bru.setGlobalEnvVar("temp_token", tmpToken);
-  }
-  
-  if (userId) {
-    bru.setGlobalEnvVar("user_id",userId);
-  }
-  
-  if (accessToken) {
-    bru.setGlobalEnvVar("access_token", accessToken);
-  }
-  
-  if (refreshToken) {
-    bru.setGlobalEnvVar("refresh_token", refreshToken);
-  }
+  bru.setGlobalEnvVar("user_id", res.body.user.uid);
+  bru.setGlobalEnvVar("access_token", res.body.atk);
+  bru.setGlobalEnvVar("refresh_token", res.body.rtk);
 }

@@ -8,7 +8,6 @@ CREATE TABLE IF NOT EXISTS users (
     email_verified BOOL NOT NULL DEFAULT false,
     totp_secret TEXT,
     totp_enabled BOOL NOT NULL DEFAULT false,
-    account_status TEXT NOT NULL DEFAULT 'pending', -- pending, active, suspended, locked
     failed_login_attempts INTEGER DEFAULT 0, -- Kept for quick access but detailed tracking in separate table, failed_login_attempts
     last_failed_login_at TEXT,
     account_locked_until TEXT,

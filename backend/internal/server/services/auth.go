@@ -73,6 +73,26 @@ func (s *AuthService) ExistsUser(ctx context.Context, email string) (bool, error
 	}
 	_, err = q.GetUserByEmail(ctx, email)
 	if err != nil {
+		if db.IsNoRows(err) {
+			return false, nil
+		}
+		return false, err
+	}
+
+	return true, nil
+}
+
+func (s *AuthService) ExistsUserWithID(ctx context.Context, userID db.UserID) (bool, error) {
+	q, err := db.Query()
+	if err != nil {
+		// Default return true to avoid mistakenly proceed with other operations on error
+		return false, err
+	}
+	_, err = q.GetUserByID(ctx, userID)
+	if err != nil {
+		if db.IsNoRows(err) {
+			return false, nil
+		}
 		return false, err
 	}
 
@@ -150,6 +170,16 @@ func (s *AuthService) AuthenticateUser(ctx context.Context, email, password stri
 	}
 
 	return &user, nil
+}
+
+func (s *AuthService) UpdateUserEmailVerification(ctx context.Context, userID db.UserID, newStatus bool) (*db.User, error) {
+	q, err := db.Query()
+	if err != nil {
+		return nil, err
+	}
+
+	user, err := q.UpdateUserEmailVerification(ctx, db.UpdateUserEmailVerificationParams{UserID: userID, EmailVerified: newStatus, UpdatedAt: utils.FormatRFC3339NanoFixed(time.Now())})
+	return &user, err
 }
 
 type AuthServiceError struct {

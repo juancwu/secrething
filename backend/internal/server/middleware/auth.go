@@ -14,11 +14,9 @@ import (
 	"github.com/juancwu/secrething/internal/server/services"
 )
 
-// User is a key for storing the authenticated user in the context
-type contextKey string
-
 const (
-	UserContextKey contextKey = "user"
+	// User is a key for storing the authenticated user in the context
+	UserContextKey string = "user"
 )
 
 // Errors
@@ -32,8 +30,8 @@ var (
 )
 
 // GetUserFromContext retrieves the authenticated user from the context
-func GetUserFromContext(ctx context.Context) (*db.User, error) {
-	user, ok := ctx.Value(UserContextKey).(*db.User)
+func GetUserFromContext(ctx echo.Context) (*db.User, error) {
+	user, ok := ctx.Get(UserContextKey).(*db.User)
 	if !ok || user == nil {
 		return nil, errors.New("user not found in context")
 	}
@@ -64,7 +62,7 @@ func Protected() echo.MiddlewareFunc {
 			defer cancel()
 
 			tokenService := services.NewTokenService()
-			payload, err := tokenService.VerifyToken(ctx, accessToken)
+			payload, err := tokenService.VerifyToken(ctx, accessToken, services.StdPackage)
 			if err != nil {
 				switch err := err.(type) {
 				case services.TokenServiceError:
@@ -97,13 +95,8 @@ func Protected() echo.MiddlewareFunc {
 				return api.NewInternalServerError("Failed to get user", "", err)
 			}
 
-			// Check if user account is active
-			if user.AccountStatus != "active" {
-				return api.NewForbiddenError("Account is not active", "ERR_AUTH_ACCOUNT_INACTIVE_4018", "", errors.New("account inactive"))
-			}
-
 			// Store user in context
-			c.Set(string(UserContextKey), &user)
+			c.Set(UserContextKey, &user)
 
 			return next(c)
 		}

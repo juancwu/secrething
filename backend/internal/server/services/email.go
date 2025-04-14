@@ -33,7 +33,7 @@ func NewEmailService() *EmailService {
 func (s *EmailService) SendAccountVerificationEmail(ctx context.Context, email string, tokenID string) error {
 	serverCfg := config.Server()
 	// Create verification URL with the token
-	verificationURL := fmt.Sprintf("%s/api/auth/account/verify?token=%s", serverCfg.URL, tokenID)
+	verificationURL := fmt.Sprintf("%s/api/auth/account/activate?token=%s", serverCfg.URL, tokenID)
 
 	// Render the template to HTML
 	var htmlBuffer bytes.Buffer

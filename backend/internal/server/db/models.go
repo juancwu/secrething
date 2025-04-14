@@ -55,7 +55,6 @@ type User struct {
 	EmailVerified       bool    `db:"email_verified" json:"email_verified"`
 	TotpSecret          *string `db:"totp_secret" json:"totp_secret"`
 	TotpEnabled         bool    `db:"totp_enabled" json:"totp_enabled"`
-	AccountStatus       string  `db:"account_status" json:"account_status"`
 	FailedLoginAttempts *int64  `db:"failed_login_attempts" json:"failed_login_attempts"`
 	LastFailedLoginAt   *string `db:"last_failed_login_at" json:"last_failed_login_at"`
 	AccountLockedUntil  *string `db:"account_locked_until" json:"account_locked_until"`

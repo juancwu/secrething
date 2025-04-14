@@ -1,0 +1,22 @@
+meta {
+  name: Resend Activation Email
+  type: http
+  seq: 12
+}
+
+post {
+  url: {{base_url}}/api/auth/account/resend-activation
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{access_token}}
+}
+
+body:json {
+  {
+    "email": "{{email}}",
+    "password": "{{password}}"
+  }
+}

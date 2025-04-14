@@ -22,7 +22,7 @@ vars:pre-request {
 }
 
 script:post-response {
-  bru.setGlobalEnvVar("user_id", res.body.user_id);
-  bru.setGlobalEnvVar("access_token", res.body.access_token);
-  bru.setGlobalEnvVar("refresh_token", res.body.refresh_token);
+  bru.setEnvVar("user_id", res.body.user.uid);
+  bru.setEnvVar("access_token", res.body.atk);
+  bru.setEnvVar("refresh_token", res.body.rtk);
 }

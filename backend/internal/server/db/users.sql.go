@@ -21,7 +21,7 @@ INSERT INTO users (
   ?1, ?2, ?3, ?4, ?5, ?6
 )
 RETURNING user_id, email, password_hash, name, email_verified, totp_secret, totp_enabled, 
-  account_status, failed_login_attempts, last_failed_login_at, account_locked_until, created_at, updated_at
+  failed_login_attempts, last_failed_login_at, account_locked_until, created_at, updated_at
 `
 
 type CreateUserParams struct {
@@ -51,7 +51,6 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.EmailVerified,
 		&i.TotpSecret,
 		&i.TotpEnabled,
-		&i.AccountStatus,
 		&i.FailedLoginAttempts,
 		&i.LastFailedLoginAt,
 		&i.AccountLockedUntil,
@@ -73,7 +72,7 @@ func (q *Queries) DeleteUser(ctx context.Context, userID UserID) error {
 
 const getUserByEmail = `-- name: GetUserByEmail :one
 SELECT user_id, email, password_hash, name, email_verified, totp_secret, totp_enabled, 
-  account_status, failed_login_attempts, last_failed_login_at, account_locked_until, created_at, updated_at
+  failed_login_attempts, last_failed_login_at, account_locked_until, created_at, updated_at
 FROM users
 WHERE email = ?1
 `
@@ -89,7 +88,6 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.EmailVerified,
 		&i.TotpSecret,
 		&i.TotpEnabled,
-		&i.AccountStatus,
 		&i.FailedLoginAttempts,
 		&i.LastFailedLoginAt,
 		&i.AccountLockedUntil,
@@ -101,7 +99,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 
 const getUserByID = `-- name: GetUserByID :one
 SELECT user_id, email, password_hash, name, email_verified, totp_secret, totp_enabled, 
-  account_status, failed_login_attempts, last_failed_login_at, account_locked_until, created_at, updated_at
+  failed_login_attempts, last_failed_login_at, account_locked_until, created_at, updated_at
 FROM users
 WHERE user_id = ?1
 `
@@ -117,7 +115,6 @@ func (q *Queries) GetUserByID(ctx context.Context, userID UserID) (User, error) 
 		&i.EmailVerified,
 		&i.TotpSecret,
 		&i.TotpEnabled,
-		&i.AccountStatus,
 		&i.FailedLoginAttempts,
 		&i.LastFailedLoginAt,
 		&i.AccountLockedUntil,
@@ -135,7 +132,7 @@ SET failed_login_attempts = 0,
     updated_at = ?2
 WHERE user_id = ?1
 RETURNING user_id, email, password_hash, name, email_verified, totp_secret, totp_enabled, 
-  account_status, failed_login_attempts, last_failed_login_at, account_locked_until, created_at, updated_at
+  failed_login_attempts, last_failed_login_at, account_locked_until, created_at, updated_at
 `
 
 type ResetFailedLoginAttemptsParams struct {
@@ -154,7 +151,6 @@ func (q *Queries) ResetFailedLoginAttempts(ctx context.Context, arg ResetFailedL
 		&i.EmailVerified,
 		&i.TotpSecret,
 		&i.TotpEnabled,
-		&i.AccountStatus,
 		&i.FailedLoginAttempts,
 		&i.LastFailedLoginAt,
 		&i.AccountLockedUntil,
@@ -175,7 +171,7 @@ SET failed_login_attempts = failed_login_attempts + 1,
     updated_at = ?4
 WHERE user_id = ?1
 RETURNING user_id, email, password_hash, name, email_verified, totp_secret, totp_enabled, 
-  account_status, failed_login_attempts, last_failed_login_at, account_locked_until, created_at, updated_at
+  failed_login_attempts, last_failed_login_at, account_locked_until, created_at, updated_at
 `
 
 type UpdateFailedLoginAttemptParams struct {
@@ -201,42 +197,6 @@ func (q *Queries) UpdateFailedLoginAttempt(ctx context.Context, arg UpdateFailed
 		&i.EmailVerified,
 		&i.TotpSecret,
 		&i.TotpEnabled,
-		&i.AccountStatus,
-		&i.FailedLoginAttempts,
-		&i.LastFailedLoginAt,
-		&i.AccountLockedUntil,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
-const updateUserAccountStatus = `-- name: UpdateUserAccountStatus :one
-UPDATE users
-SET account_status = ?2, updated_at = ?3
-WHERE user_id = ?1
-RETURNING user_id, email, password_hash, name, email_verified, totp_secret, totp_enabled, 
-  account_status, failed_login_attempts, last_failed_login_at, account_locked_until, created_at, updated_at
-`
-
-type UpdateUserAccountStatusParams struct {
-	UserID        UserID `db:"user_id" json:"user_id"`
-	AccountStatus string `db:"account_status" json:"account_status"`
-	UpdatedAt     string `db:"updated_at" json:"updated_at"`
-}
-
-func (q *Queries) UpdateUserAccountStatus(ctx context.Context, arg UpdateUserAccountStatusParams) (User, error) {
-	row := q.db.QueryRowContext(ctx, updateUserAccountStatus, arg.UserID, arg.AccountStatus, arg.UpdatedAt)
-	var i User
-	err := row.Scan(
-		&i.UserID,
-		&i.Email,
-		&i.PasswordHash,
-		&i.Name,
-		&i.EmailVerified,
-		&i.TotpSecret,
-		&i.TotpEnabled,
-		&i.AccountStatus,
 		&i.FailedLoginAttempts,
 		&i.LastFailedLoginAt,
 		&i.AccountLockedUntil,
@@ -251,7 +211,7 @@ UPDATE users
 SET email_verified = ?2, updated_at = ?3
 WHERE user_id = ?1
 RETURNING user_id, email, password_hash, name, email_verified, totp_secret, totp_enabled, 
-  account_status, failed_login_attempts, last_failed_login_at, account_locked_until, created_at, updated_at
+  failed_login_attempts, last_failed_login_at, account_locked_until, created_at, updated_at
 `
 
 type UpdateUserEmailVerificationParams struct {
@@ -271,7 +231,6 @@ func (q *Queries) UpdateUserEmailVerification(ctx context.Context, arg UpdateUse
 		&i.EmailVerified,
 		&i.TotpSecret,
 		&i.TotpEnabled,
-		&i.AccountStatus,
 		&i.FailedLoginAttempts,
 		&i.LastFailedLoginAt,
 		&i.AccountLockedUntil,
@@ -286,7 +245,7 @@ UPDATE users
 SET name = ?2, updated_at = ?3
 WHERE user_id = ?1
 RETURNING user_id, email, password_hash, name, email_verified, totp_secret, totp_enabled, 
-  account_status, failed_login_attempts, last_failed_login_at, account_locked_until, created_at, updated_at
+  failed_login_attempts, last_failed_login_at, account_locked_until, created_at, updated_at
 `
 
 type UpdateUserNameParams struct {
@@ -306,7 +265,6 @@ func (q *Queries) UpdateUserName(ctx context.Context, arg UpdateUserNameParams) 
 		&i.EmailVerified,
 		&i.TotpSecret,
 		&i.TotpEnabled,
-		&i.AccountStatus,
 		&i.FailedLoginAttempts,
 		&i.LastFailedLoginAt,
 		&i.AccountLockedUntil,
@@ -321,7 +279,7 @@ UPDATE users
 SET password_hash = ?2, updated_at = ?3
 WHERE user_id = ?1
 RETURNING user_id, email, password_hash, name, email_verified, totp_secret, totp_enabled, 
-  account_status, failed_login_attempts, last_failed_login_at, account_locked_until, created_at, updated_at
+  failed_login_attempts, last_failed_login_at, account_locked_until, created_at, updated_at
 `
 
 type UpdateUserPasswordParams struct {
@@ -341,7 +299,6 @@ func (q *Queries) UpdateUserPassword(ctx context.Context, arg UpdateUserPassword
 		&i.EmailVerified,
 		&i.TotpSecret,
 		&i.TotpEnabled,
-		&i.AccountStatus,
 		&i.FailedLoginAttempts,
 		&i.LastFailedLoginAt,
 		&i.AccountLockedUntil,
@@ -356,7 +313,7 @@ UPDATE users
 SET totp_secret = ?2, totp_enabled = ?3, updated_at = ?4
 WHERE user_id = ?1
 RETURNING user_id, email, password_hash, name, email_verified, totp_secret, totp_enabled, 
-  account_status, failed_login_attempts, last_failed_login_at, account_locked_until, created_at, updated_at
+  failed_login_attempts, last_failed_login_at, account_locked_until, created_at, updated_at
 `
 
 type UpdateUserTOTPParams struct {
@@ -382,7 +339,6 @@ func (q *Queries) UpdateUserTOTP(ctx context.Context, arg UpdateUserTOTPParams) 
 		&i.EmailVerified,
 		&i.TotpSecret,
 		&i.TotpEnabled,
-		&i.AccountStatus,
 		&i.FailedLoginAttempts,
 		&i.LastFailedLoginAt,
 		&i.AccountLockedUntil,
