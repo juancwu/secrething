@@ -34,18 +34,15 @@ const (
 	TokenTypeAPI = "api"
 	// TokenTypeAccountActivate is for verifying a new user email and activate the account
 	TokenTypeAccountActivate = "account_activate"
-	// TokenTypeAccountActivate is for requesting a new verification email when verification goes wrong
-	TokenTypeTempRequestVerificationEmail = "temp_request_verification_email"
 )
 
 // Token duration constants
 const (
-	AccessTokenDuration                       = 15 * time.Minute
-	RefreshTokenDuration                      = 7 * 24 * time.Hour // 7 days
-	TempTokenDuration                         = 5 * time.Minute
-	APITokenDuration                          = 90 * 24 * time.Hour // 90 days
-	AccountActivateTokenDuration              = 24 * time.Hour
-	TempRequestVerificationEmailTokenDuration = 10 * time.Minute
+	AccessTokenDuration          = 15 * time.Minute
+	RefreshTokenDuration         = 7 * 24 * time.Hour // 7 days
+	TempTokenDuration            = 5 * time.Minute
+	APITokenDuration             = 90 * 24 * time.Hour // 90 days
+	AccountActivateTokenDuration = 24 * time.Hour
 )
 
 const (
@@ -285,20 +282,6 @@ func (s *TokenService) NewAccountActivateToken(ctx context.Context, userID db.Us
 		UrlPackage,
 		userID,
 		TokenTypeAccountActivate,
-		"?",
-		now,
-		exp,
-	)
-}
-
-func (s *TokenService) NewTempRequestVerificatioEmailToken(ctx context.Context, userID db.UserID) (string, error) {
-	now := time.Now()
-	exp := now.Add(TempRequestVerificationEmailTokenDuration)
-	return s.generateToken(
-		ctx,
-		UrlPackage,
-		userID,
-		TokenTypeTempRequestVerificationEmail,
 		"?",
 		now,
 		exp,
