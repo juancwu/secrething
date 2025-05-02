@@ -5,7 +5,7 @@ go 1.24.1
 require (
 	github.com/ilyakaznacheev/cleanenv v1.5.0
 	github.com/joho/godotenv v1.5.1
-	github.com/juancwu/go-valkit/v2 v2.0.0
+	github.com/juancwu/go-valkit/v2 v2.1.0
 	github.com/labstack/echo/v4 v4.13.3
 	github.com/resend/resend-go/v2 v2.17.0
 	github.com/sumup/typeid v0.2.0
