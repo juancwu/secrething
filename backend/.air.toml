@@ -5,7 +5,7 @@ tmp_dir = "tmp"
 [build]
   args_bin = []
   bin = "./tmp/main"
-  cmd = "go build -ldflags \"-X github.com/juancwu/konbini/internal/server/config.version=development\" -o ./tmp/main ./internal/cmd/server"
+  cmd = "go build -ldflags \"-X github.com/juancwu/konbini/config.version=development\" -o ./tmp/main ./cmd/server"
   delay = 1000
   exclude_dir = ["assets", "tmp", "vendor", "testdata", "bruno"]
   exclude_file = []

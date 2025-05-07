@@ -6,7 +6,7 @@ cd "$CWD" || exit 1
 
 GOOSE_DRIVER=turso
 GOOSE_DBSTRING=file:$CWD/.local/local.db
-GOOSE_MIGRATION_DIR=$CWD/internal/server/.sqlc/migrations
+GOOSE_MIGRATION_DIR=$CWD/db/.sqlc/migrations
 
 usage() {
   echo "Usage: $0 [command]"
