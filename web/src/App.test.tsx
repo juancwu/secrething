@@ -1,4 +1,5 @@
-import { render, screen } from "@testing-library/react";
+import { render } from "@/test-utils/render";
+import { screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import App from "./App";
 
