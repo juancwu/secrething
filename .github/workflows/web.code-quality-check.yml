@@ -1,4 +1,4 @@
-name: Code quality
+name: "[Web] Code Quality"
 
 on:
   push:
