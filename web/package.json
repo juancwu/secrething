@@ -9,21 +9,32 @@
 		"quality:code": "biome check --write",
 		"check:lint": "biome lint",
 		"preview": "vite preview",
-		"test": "vitest"
+		"test": "vitest run",
+		"test:dev": "vitest"
 	},
 	"dependencies": {
+		"@mantine/core": "^8.0.0",
+		"@mantine/hooks": "^8.0.0",
 		"react": "^19.1.0",
 		"react-dom": "^19.1.0"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "1.9.4",
+		"@testing-library/dom": "^10.4.0",
+		"@testing-library/jest-dom": "^6.6.3",
+		"@testing-library/react": "^16.3.0",
+		"@testing-library/user-event": "^14.6.1",
 		"@types/node": "^22.15.15",
 		"@types/react": "^19.1.2",
 		"@types/react-dom": "^19.1.2",
 		"@vitejs/plugin-react": "^4.4.1",
 		"@vitest/browser": "^3.1.3",
 		"globals": "^16.0.0",
+		"jsdom": "^26.1.0",
 		"playwright": "^1.52.0",
+		"postcss": "^8.5.3",
+		"postcss-preset-mantine": "^1.17.0",
+		"postcss-simple-vars": "^7.0.1",
 		"typescript": "~5.8.3",
 		"vite": "^6.3.5",
 		"vitest": "^3.1.3"

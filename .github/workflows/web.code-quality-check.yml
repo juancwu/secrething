@@ -1,10 +1,12 @@
-name: Code quality
+name: "[Web] Code Quality"
 
 on:
   push:
+    branches: ["main"]
     paths:
       - "web/**"
   pull_request:
+    branches: ["main"]
     paths:
       - "web/**"
 

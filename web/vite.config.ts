@@ -10,5 +10,10 @@ export default defineConfig({
 			"@": path.resolve(__dirname, "./src"),
 		},
 	},
-	test: {},
+	test: {
+		globals: true,
+		environment: "jsdom",
+		setupFiles: "./vitest.setup.ts",
+		reporters: process.env.GITHUB_ACTIONS ? ["dot", "github-actions"] : ["dot"],
+	},
 });
