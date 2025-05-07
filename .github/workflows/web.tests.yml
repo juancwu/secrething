@@ -1,6 +1,7 @@
 name: "[Web] Tests"
 
 on:
+  workflow_dispatch:
   push:
     branches: ["main"]
     paths:
@@ -13,7 +14,9 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    working-directory: ./web
+    defaults:
+      run:
+        working-directory: ./web
     steps:
       - uses: actions/checkout@v4
 
