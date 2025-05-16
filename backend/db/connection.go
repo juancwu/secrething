@@ -3,9 +3,9 @@ package db
 import (
 	"database/sql"
 	"fmt"
-	"os"
 	"sync"
 
+	"github.com/juancwu/secrething/config"
 	_ "github.com/tursodatabase/go-libsql"
 )
 
@@ -15,14 +15,14 @@ var mu sync.RWMutex
 // Connect establishes a connection using the active driver.
 // It's safe to call Connect multiple times - it will reuse the existing connection
 // if one exists
-func Connect() (*sql.DB, error) {
+func Connect(cfg *config.Config) (*sql.DB, error) {
 	mu.Lock()
 	defer mu.Unlock()
 
 	if connection == nil {
 		var err error
-		url := os.Getenv("DB_URL")
-		authToken := os.Getenv("DB_TOKEN")
+		url := cfg.DB.URL
+		authToken := cfg.DB.Token
 		if authToken != "" {
 			// Handle remote connection to a Turso database
 			url = fmt.Sprintf("%s?authToken=%s", url, authToken)
