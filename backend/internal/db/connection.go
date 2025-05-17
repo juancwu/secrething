@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/juancwu/secrething/config"
-	_ "github.com/tursodatabase/go-libsql"
+	"github.com/juancwu/secrething/internal/config"
+	_ "github.com/tursodatabase/libsql-client-go/libsql"
+	// For local db connection, comment line above and uncomment line below.
+	// _ "github.com/tursodatabase/go-libsql"
 )
 
 var connection *sql.DB

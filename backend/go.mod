@@ -3,9 +3,11 @@ module github.com/juancwu/secrething
 go 1.24.1
 
 require (
+	github.com/ilyakaznacheev/cleanenv v1.5.0
 	github.com/joho/godotenv v1.5.1
 	github.com/labstack/echo/v4 v4.13.3
-	github.com/tursodatabase/go-libsql v0.0.0-20250401144753-0be9a6ec7849
+	github.com/tursodatabase/libsql-client-go v0.0.0-20240902231107-85af5b9d094d
+	go.jetify.com/typeid v1.3.0
 )
 
 require (
@@ -16,11 +18,12 @@ require (
 	github.com/antlr4-go/antlr/v4 v4.13.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cli/browser v1.3.0 // indirect
+	github.com/coder/websocket v1.8.12 // indirect
 	github.com/fatih/color v1.16.0 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
-	github.com/ilyakaznacheev/cleanenv v1.5.0 // indirect
+	github.com/gofrs/uuid/v5 v5.2.0 // indirect
+	github.com/kr/text v0.2.0 // indirect
 	github.com/labstack/gommon v0.4.2 // indirect
-	github.com/libsql/sqlite-antlr4-parser v0.0.0-20240721121621-c0bdc870f11c // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/natefinch/atomic v1.0.1 // indirect

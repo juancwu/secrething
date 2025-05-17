@@ -2,8 +2,8 @@ package main
 
 import (
 	"github.com/joho/godotenv"
-	"github.com/juancwu/secrething/config"
-	"github.com/juancwu/secrething/db"
+	"github.com/juancwu/secrething/internal/config"
+	"github.com/juancwu/secrething/internal/db"
 	"github.com/labstack/echo/v4"
 )
 
