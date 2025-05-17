@@ -4,6 +4,7 @@ CREATE TABLE users (
     user_id TEXT NOT NULL PRIMARY KEY,
 
     email TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
     first_name TEXT NOT NULL,
     last_name TEXT NOT NULL,
 

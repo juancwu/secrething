@@ -17,15 +17,14 @@ func main() {
 		panic("Failed to load configuration: " + err.Error())
 	}
 
-	e := echo.New()
-
 	// Pass config to DB connect
 	conn, err := db.Connect(cfg)
 	if err != nil {
-		e.Logger.Fatal(err)
+		panic("Failed to connect to database: " + err.Error())
 	}
-
 	conn.Ping()
+
+	e := echo.New()
 
 	e.GET("/", func(c echo.Context) error {
 		return c.String(200, "ok")
