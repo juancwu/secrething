@@ -1,4 +1,6 @@
 import { Anchor } from "@/components/ui/anchor";
+import { useAuth } from "@/contexts/auth";
+import { AuthError } from "@/lib/api/errors";
 import {
 	Button,
 	Flex,
@@ -9,6 +11,7 @@ import {
 	Title,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
+import { notifications } from "@mantine/notifications";
 import { zodResolver } from "mantine-form-zod-resolver";
 import { z } from "zod";
 
@@ -18,6 +21,7 @@ const schema = z.object({
 });
 
 export function SignInPage() {
+	const auth = useAuth();
 	const formProps = useForm({
 		mode: "uncontrolled",
 		initialValues: {
@@ -31,7 +35,26 @@ export function SignInPage() {
 		<Flex h="100vh" w="100%" align="center" justify="center">
 			<Stack w={{ base: "90%", xs: "450px" }}>
 				<Title order={5}>Sign in to your account</Title>
-				<form onSubmit={formProps.onSubmit((values) => console.log(values))}>
+				<form
+					onSubmit={formProps.onSubmit(async (values) => {
+						try {
+							if (auth.signin) {
+								await auth.signin(values);
+							}
+						} catch (error) {
+							let message =
+								"Oops, something went wrong. Please try again later.";
+							if (error instanceof AuthError) {
+								message = error.message;
+							}
+							notifications.show({
+								title: "Sign In Failure",
+								color: "red",
+								message,
+							});
+						}
+					})}
+				>
 					<Stack>
 						<TextInput
 							withAsterisk

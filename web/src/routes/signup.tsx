@@ -1,4 +1,4 @@
-import { SignUpPage } from "@/pages/signup.page";
+import { SignUpPage } from "@/components/pages/signup";
 import { createFileRoute } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/signup")({

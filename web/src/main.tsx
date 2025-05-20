@@ -1,3 +1,4 @@
+import { AuthProvider } from "@/contexts/auth";
 import { MantineProvider, createTheme } from "@mantine/core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
@@ -6,10 +7,11 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
 import "@mantine/core/styles.css";
+import "@mantine/notifications/styles.css";
 
-import { AuthProvider } from "./providers/auth/provider";
 // Import the generated route tree
-import { routeTree } from "./routeTree.gen";
+import { routeTree } from "@/routeTree.gen";
+import { Notifications } from "@mantine/notifications";
 
 // Create a new router instance
 const router = createRouter({ routeTree });
@@ -37,6 +39,7 @@ if (!rootElement) {
 			<QueryClientProvider client={queryClient}>
 				<AuthProvider>
 					<MantineProvider theme={theme}>
+						<Notifications />
 						<RouterProvider router={router} />
 						<ReactQueryDevtools />
 					</MantineProvider>
