@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"net/http"
 
 	"github.com/ilyakaznacheev/cleanenv"
 )
@@ -43,10 +44,13 @@ type Config struct {
 
 	// Authentication configuration
 	Auth struct {
-		JWTSecret            string `env:"JWT_SECRET" env-description:"Secret key for JWT token generation"`
-		JWTExpirationMinutes int    `env:"JWT_EXPIRATION_MINUTES" env-default:"60" env-description:"JWT token expiration time in minutes"`
-		CookieDomain         string `env:"COOKIE_DOMAIN" env-description:"Domain for auth cookies"`
-		CookieSecure         bool   `env:"COOKIE_SECURE" env-default:"false" env-description:"Whether cookies should only be sent over HTTPS"`
+		JWTSecret            string        `env:"JWT_SECRET" env-description:"Secret key for JWT token generation"`
+		JWTExpirationMinutes int           `env:"JWT_EXPIRATION_MINUTES" env-default:"60" env-description:"JWT token expiration time in minutes"`
+		CookieDomain         string        `env:"COOKIE_DOMAIN" env-description:"Domain for auth cookies"`
+		CookieSecure         bool          `env:"COOKIE_SECURE" env-default:"false" env-description:"Whether cookies should only be sent over HTTPS"`
+		CookiePath           string        `env:"COOKIE_PATH" env-default:"" env-description:"Path cookie is included in requests"`
+		CookieSameSite       http.SameSite `env:"COOKIE_SAME_SITE" env-default:"3" env-description:"Same site mode for cookie. Default: strict(3)"`
+		CookieHttpOnly       bool          `env:"COOKIE_HTTP_ONLY" env-default:"true" env-description:"Set cookie to be http-only"`
 	}
 
 	// Application configuration

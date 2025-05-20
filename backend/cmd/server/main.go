@@ -2,9 +2,8 @@ package main
 
 import (
 	"github.com/joho/godotenv"
+	"github.com/juancwu/secrething/internal/api"
 	"github.com/juancwu/secrething/internal/config"
-	"github.com/juancwu/secrething/internal/db"
-	"github.com/labstack/echo/v4"
 )
 
 func main() {
@@ -17,20 +16,10 @@ func main() {
 		panic("Failed to load configuration: " + err.Error())
 	}
 
-	// Pass config to DB connect
-	conn, err := db.Connect(cfg)
-	if err != nil {
-		panic("Failed to connect to database: " + err.Error())
-	}
-	conn.Ping()
-
-	e := echo.New()
-
-	e.GET("/", func(c echo.Context) error {
-		return c.String(200, "ok")
-	})
-
-	if err := e.Start(cfg.Server.Address); err != nil {
-		e.Logger.Fatal(err)
+	// Initialize API and register routes
+	apiHandler := api.New(cfg)
+	// Start server
+	if err := apiHandler.Start(cfg.Server.Address); err != nil {
+		panic("Failed to start server: " + err.Error())
 	}
 }
