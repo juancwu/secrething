@@ -4,9 +4,6 @@
 CWD=${CWD:-$(pwd)}
 cd "$CWD" || exit 1
 
-GOOSE_DRIVER=turso
-GOOSE_MIGRATION_DIR=$CWD/.sqlc/migrations
-
 usage() {
   echo "Usage: $0 [command]"
   echo ""
@@ -27,19 +24,19 @@ fi
 
 case "$1" in
   up)
-    GOOSE_DRIVER=$GOOSE_DRIVER GOOSE_DBSTRING=$GOOSE_DBSTRING GOOSE_MIGRATION_DIR=$GOOSE_MIGRATION_DIR goose up
+    goose up
     ;;
   up-by-one)
-    GOOSE_DRIVER=$GOOSE_DRIVER GOOSE_DBSTRING=$GOOSE_DBSTRING GOOSE_MIGRATION_DIR=$GOOSE_MIGRATION_DIR goose up-by-one
+    goose up-by-one
     ;;
   down)
-    GOOSE_DRIVER=$GOOSE_DRIVER GOOSE_DBSTRING=$GOOSE_DBSTRING GOOSE_MIGRATION_DIR=$GOOSE_MIGRATION_DIR goose down-to 0
+    goose down-to 0
     ;;
   down-by-one)
-    GOOSE_DRIVER=$GOOSE_DRIVER GOOSE_DBSTRING=$GOOSE_DBSTRING GOOSE_MIGRATION_DIR=$GOOSE_MIGRATION_DIR goose down
+    goose down
     ;;
   status)
-    GOOSE_DRIVER=$GOOSE_DRIVER GOOSE_DBSTRING=$GOOSE_DBSTRING GOOSE_MIGRATION_DIR=$GOOSE_MIGRATION_DIR goose status
+    goose status
     ;;
   create)
     if [ "$#" -lt 2 ]; then
@@ -47,7 +44,7 @@ case "$1" in
       echo "Usage: $0 create <migration_name>"
       exit 1
     fi
-    GOOSE_DRIVER=$GOOSE_DRIVER GOOSE_DBSTRING=$GOOSE_DBSTRING GOOSE_MIGRATION_DIR=$GOOSE_MIGRATION_DIR goose create "$2" sql
+    goose create "$2" sql
     ;;
   *)
     usage
