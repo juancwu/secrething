@@ -25,7 +25,7 @@ import { z } from "zod";
 
 const fallback = "/dashboard" as const;
 
-export const Route = createFileRoute("/signup")({
+export const Route = createFileRoute("/_header/signup")({
 	validateSearch: z.object({
 		redirect: z.string().optional().catch(""),
 	}),
@@ -154,7 +154,7 @@ function SignUpPage() {
 		));
 
 	return (
-		<Flex h="100vh" w="100%" align="center" justify="center">
+		<Flex h="" w="100%" align="center" justify="center">
 			<Stack w={{ base: "90%", xs: "450px" }}>
 				<Title order={5}>Join Secrething community</Title>
 				<form

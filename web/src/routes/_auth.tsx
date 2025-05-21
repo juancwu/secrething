@@ -1,4 +1,4 @@
-import { Navbar } from "@/components/navbar";
+import { Header } from "@/components/ui/header";
 import { Box } from "@mantine/core";
 import { Outlet, createFileRoute, redirect } from "@tanstack/react-router";
 
@@ -18,8 +18,8 @@ export const Route = createFileRoute("/_auth")({
 
 function AuthLayout() {
 	return (
-		<Box pl="80px" h="full">
-			<Navbar />
+		<Box h="full">
+			<Header />
 			<Outlet />
 		</Box>
 	);

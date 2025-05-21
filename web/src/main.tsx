@@ -51,7 +51,7 @@ function App() {
 	return (
 		<QueryClientProvider client={queryClient}>
 			<AuthProvider>
-				<MantineProvider theme={theme}>
+				<MantineProvider theme={theme} defaultColorScheme="dark">
 					<InnerApp />
 				</MantineProvider>
 			</AuthProvider>

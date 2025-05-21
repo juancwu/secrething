@@ -24,7 +24,7 @@ const schema = z.object({
 
 const fallback = "/dashboard" as const;
 
-export const Route = createFileRoute("/signin")({
+export const Route = createFileRoute("/_header/signin")({
 	validateSearch: z.object({
 		redirect: z.string().optional().catch(""),
 	}),
@@ -51,7 +51,7 @@ function SignInPage() {
 	});
 
 	return (
-		<Flex h="100vh" w="100%" align="center" justify="center">
+		<Flex w="100%" align="center" justify="center">
 			<Stack w={{ base: "90%", xs: "450px" }}>
 				<Title order={5}>Sign in to your account</Title>
 				<form
