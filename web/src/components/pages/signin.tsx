@@ -13,6 +13,7 @@ import {
 import { useForm } from "@mantine/form";
 import { notifications } from "@mantine/notifications";
 import { zodResolver } from "mantine-form-zod-resolver";
+import { useState } from "react";
 import { z } from "zod";
 
 const schema = z.object({
@@ -21,6 +22,7 @@ const schema = z.object({
 });
 
 export function SignInPage() {
+	const [isLoading, setIsLoading] = useState(false);
 	const auth = useAuth();
 	const formProps = useForm({
 		mode: "uncontrolled",
@@ -38,20 +40,38 @@ export function SignInPage() {
 				<form
 					onSubmit={formProps.onSubmit(async (values) => {
 						try {
+							setIsLoading(true);
 							if (auth.signin) {
 								await auth.signin(values);
 							}
 						} catch (error) {
+							let showNotification = true;
 							let message =
 								"Oops, something went wrong. Please try again later.";
 							if (error instanceof AuthError) {
+								if (error.data.errors) {
+									formProps.setErrors(error.data.errors);
+									showNotification = false;
+								} else if (error.data.message) {
+									formProps.setErrors({
+										email: error.data.message,
+										password: error.data.message,
+									});
+									showNotification = false;
+								}
+								message = error.message;
+							} else if (error instanceof Error) {
 								message = error.message;
 							}
-							notifications.show({
-								title: "Sign In Failure",
-								color: "red",
-								message,
-							});
+							if (showNotification) {
+								notifications.show({
+									title: "Sign In Failure",
+									color: "red",
+									message,
+								});
+							}
+						} finally {
+							setIsLoading(false);
 						}
 					})}
 				>
@@ -59,6 +79,8 @@ export function SignInPage() {
 						<TextInput
 							withAsterisk
 							label="Email"
+							// type="email"
+							autoComplete="email"
 							placeholder="your@mail.com"
 							key={formProps.key("email")}
 							required
@@ -67,11 +89,15 @@ export function SignInPage() {
 						<PasswordInput
 							withAsterisk
 							label="Password"
+							placeholder="Your password"
+							autoComplete="current-password"
 							key={formProps.key("password")}
 							required
 							{...formProps.getInputProps("password")}
 						/>
-						<Button type="submit">Sign In</Button>
+						<Button type="submit" loading={isLoading}>
+							Sign In
+						</Button>
 					</Stack>
 					<Text size="sm" c="dimmed" mt="sm">
 						Don't have an account? <Anchor to="/signup">Create account</Anchor>

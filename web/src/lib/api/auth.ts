@@ -3,19 +3,27 @@ import { post } from "./common";
 import { AuthError } from "./errors";
 
 export async function signup(body: SignupBody): Promise<AuthResponse> {
-	try {
-		const res = await post("auth/signup", body);
-		return res.json();
-	} catch (error) {
-		throw new AuthError("failed to signup", "SignUp");
+	const res = await post("auth/signup", body);
+	const data = await res.json();
+	if (!res.ok) {
+		throw new AuthError(
+			`Signup failed with status: ${res.status}`,
+			"SignUp",
+			data,
+		);
 	}
+	return data;
 }
 
 export async function signin(body: SigninBody): Promise<AuthResponse> {
-	try {
-		const res = await post("auth/signin", body);
-		return res.json();
-	} catch (error) {
-		throw new AuthError("failed to signin", "SignIn");
+	const res = await post("auth/signin", body);
+	const data = await res.json();
+	if (!res.ok) {
+		throw new AuthError(
+			`Signin failed with status: ${res.status}`,
+			"SignIn",
+			data,
+		);
 	}
+	return data;
 }

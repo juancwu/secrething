@@ -151,7 +151,10 @@ export function SignUpPage() {
 							let message =
 								"Oops, something went wrong. Please try again later.";
 							if (error instanceof AuthError) {
-								message = error.message;
+								if (error.data.errors) {
+									formProps.setErrors(error.data.errors);
+								}
+								message = error.data.message || error.message;
 							}
 							notifications.show({
 								title: "Sign Up Failure",

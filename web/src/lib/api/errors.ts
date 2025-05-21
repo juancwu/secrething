@@ -1,3 +1,5 @@
+import type { ApiErrorResponse } from "@/lib/api/types";
+
 class APIError extends Error {
 	constructor(message: string, name: string) {
 		super(message);
@@ -6,7 +8,9 @@ class APIError extends Error {
 }
 
 export class AuthError extends APIError {
-	constructor(message: string, name: string) {
+	public data: ApiErrorResponse;
+	constructor(message: string, name: string, data: ApiErrorResponse) {
 		super(message, `AuthError/${name}`);
+		this.data = data;
 	}
 }
