@@ -1,4 +1,4 @@
-export async function post(path: string, body: unknown) {
+export async function post(path: string, body?: unknown) {
 	const url = getApiUrl(path);
 	const res = await fetch(url, {
 		method: "POST",

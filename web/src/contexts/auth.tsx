@@ -1,4 +1,4 @@
-import { signin, signup } from "@/lib/api/auth";
+import { signin, signout, signup } from "@/lib/api/auth";
 import type { SigninBody, SignupBody } from "@/lib/api/types";
 import type { User } from "@/lib/types/auth";
 import type { ReactNode } from "@tanstack/react-router";
@@ -8,8 +8,10 @@ import { flushSync } from "react-dom";
 
 export type AuthContextValue = {
 	isLoading: boolean;
+	isAuthenticated: boolean;
 	signup?: typeof signup;
 	signin?: typeof signin;
+	signout?: typeof signout;
 	user?: User;
 	token?: string;
 	expiresAt?: number;
@@ -17,13 +19,15 @@ export type AuthContextValue = {
 
 export const AuthContext = createContext<AuthContextValue>({
 	isLoading: true,
+	isAuthenticated: false,
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-	const [isLoading, setIsLoading] = useState(true);
+	const [isLoading, _setIsLoading] = useState(true);
 	const [user, setUser] = useState<User | undefined>();
 	const [token, setToken] = useState<string | undefined>();
 	const [expiresAt, setExpiresAt] = useState<number | undefined>();
+	const isAuthenticated = !!user;
 
 	const handleSignup = useCallback(async (body: SignupBody) => {
 		const res = await signup(body);
@@ -45,21 +49,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 		return res;
 	}, []);
 
+	const handleSignout = useCallback(async () => {
+		const res = await signout();
+		flushSync(() => {
+			setUser(undefined);
+			setToken(undefined);
+			setExpiresAt(undefined);
+		});
+		return res;
+	}, []);
+
 	const value = useMemo<AuthContextValue>(() => {
 		return {
 			isLoading,
+			isAuthenticated,
 			user,
 			token,
 			expiresAt,
 			signup: handleSignup,
 			signin: handleSignin,
+			signout: handleSignout,
 		} satisfies AuthContextValue;
-	}, [isLoading, handleSignup, user, token, expiresAt]);
+	}, [
+		isLoading,
+		isAuthenticated,
+		user,
+		token,
+		expiresAt,
+		handleSignin,
+		handleSignup,
+	]);
 
 	return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
 	const value = useContext(AuthContext);
+	if (!value) {
+		throw new Error("useAuth must be used within an AuthProvider");
+	}
 	return value;
 }

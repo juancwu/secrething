@@ -13,7 +13,9 @@
 import { Route as rootRoute } from './routes/__root'
 import { Route as SignupImport } from './routes/signup'
 import { Route as SigninImport } from './routes/signin'
+import { Route as AuthImport } from './routes/_auth'
 import { Route as IndexImport } from './routes/index'
+import { Route as AuthDashboardImport } from './routes/_auth.dashboard'
 
 // Create/Update Routes
 
@@ -29,10 +31,21 @@ const SigninRoute = SigninImport.update({
   getParentRoute: () => rootRoute,
 } as any)
 
+const AuthRoute = AuthImport.update({
+  id: '/_auth',
+  getParentRoute: () => rootRoute,
+} as any)
+
 const IndexRoute = IndexImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRoute,
+} as any)
+
+const AuthDashboardRoute = AuthDashboardImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AuthRoute,
 } as any)
 
 // Populate the FileRoutesByPath interface
@@ -44,6 +57,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexImport
+      parentRoute: typeof rootRoute
+    }
+    '/_auth': {
+      id: '/_auth'
+      path: ''
+      fullPath: ''
+      preLoaderRoute: typeof AuthImport
       parentRoute: typeof rootRoute
     }
     '/signin': {
@@ -60,47 +80,72 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignupImport
       parentRoute: typeof rootRoute
     }
+    '/_auth/dashboard': {
+      id: '/_auth/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AuthDashboardImport
+      parentRoute: typeof AuthImport
+    }
   }
 }
 
 // Create and export the route tree
 
+interface AuthRouteChildren {
+  AuthDashboardRoute: typeof AuthDashboardRoute
+}
+
+const AuthRouteChildren: AuthRouteChildren = {
+  AuthDashboardRoute: AuthDashboardRoute,
+}
+
+const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
+
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '': typeof AuthRouteWithChildren
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRoute
+  '/dashboard': typeof AuthDashboardRoute
 }
 
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '': typeof AuthRouteWithChildren
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRoute
+  '/dashboard': typeof AuthDashboardRoute
 }
 
 export interface FileRoutesById {
   __root__: typeof rootRoute
   '/': typeof IndexRoute
+  '/_auth': typeof AuthRouteWithChildren
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRoute
+  '/_auth/dashboard': typeof AuthDashboardRoute
 }
 
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/signin' | '/signup'
+  fullPaths: '/' | '' | '/signin' | '/signup' | '/dashboard'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/signin' | '/signup'
-  id: '__root__' | '/' | '/signin' | '/signup'
+  to: '/' | '' | '/signin' | '/signup' | '/dashboard'
+  id: '__root__' | '/' | '/_auth' | '/signin' | '/signup' | '/_auth/dashboard'
   fileRoutesById: FileRoutesById
 }
 
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthRoute: typeof AuthRouteWithChildren
   SigninRoute: typeof SigninRoute
   SignupRoute: typeof SignupRoute
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthRoute: AuthRouteWithChildren,
   SigninRoute: SigninRoute,
   SignupRoute: SignupRoute,
 }
@@ -116,6 +161,7 @@ export const routeTree = rootRoute
       "filePath": "__root.tsx",
       "children": [
         "/",
+        "/_auth",
         "/signin",
         "/signup"
       ]
@@ -123,11 +169,21 @@ export const routeTree = rootRoute
     "/": {
       "filePath": "index.tsx"
     },
+    "/_auth": {
+      "filePath": "_auth.tsx",
+      "children": [
+        "/_auth/dashboard"
+      ]
+    },
     "/signin": {
       "filePath": "signin.tsx"
     },
     "/signup": {
       "filePath": "signup.tsx"
+    },
+    "/_auth/dashboard": {
+      "filePath": "_auth.dashboard.tsx",
+      "parent": "/_auth"
     }
   }
 }
