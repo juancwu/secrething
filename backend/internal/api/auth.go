@@ -70,9 +70,10 @@ func (api *API) handleSignup(c echo.Context) error {
 	// Check if user already exists
 	_, err := api.DB.GetUserByEmail(c.Request().Context(), req.Email)
 	if err == nil {
-		return c.JSON(http.StatusConflict, apiResponse{
-			Code:    http.StatusConflict,
-			Message: "Email already registered",
+		return c.JSON(http.StatusConflict, apiErrorResponse{
+			Errors: map[string]string{
+				"email": "Email already registered",
+			},
 		})
 	} else if err != sql.ErrNoRows {
 		return c.JSON(http.StatusInternalServerError, apiResponse{
