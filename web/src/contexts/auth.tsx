@@ -78,6 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 		expiresAt,
 		handleSignin,
 		handleSignup,
+		handleSignout,
 	]);
 
 	return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

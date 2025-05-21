@@ -1,8 +1,8 @@
 import type {
+	ApiResponse,
+	AuthResponse,
 	SigninBody,
 	SignupBody,
-	AuthResponse,
-	ApiResponse,
 } from "@/lib/api/types";
 import { post } from "./common";
 import { AuthError } from "./errors";
