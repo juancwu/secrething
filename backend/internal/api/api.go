@@ -1,6 +1,8 @@
 package api
 
 import (
+	"github.com/juancwu/go-valkit/v2/validations"
+	"github.com/juancwu/go-valkit/v2/validator"
 	"github.com/juancwu/secrething/internal/config"
 	"github.com/juancwu/secrething/internal/db"
 	"github.com/labstack/echo/v4"
@@ -12,10 +14,20 @@ type API struct {
 	Echo   *echo.Echo
 	Config *config.Config
 	DB     *db.Queries
+	Valkit *validator.Validator
 }
 
 // New creates a new API instance
 func New(cfg *config.Config) *API {
+	conn, err := db.Connect(cfg)
+	if err != nil {
+		panic("Failed to connect to database: " + err.Error())
+	}
+	if err := conn.Ping(); err != nil {
+		panic("Failed to ping database: " + err.Error())
+	}
+	queries := db.New(conn)
+
 	e := echo.New()
 
 	e.Use(middleware.Logger())
@@ -29,19 +41,23 @@ func New(cfg *config.Config) *API {
 		MaxAge:           300,
 	}))
 
-	conn, err := db.Connect(cfg)
-	if err != nil {
-		panic("Failed to connect to database: " + err.Error())
-	}
-	if err := conn.Ping(); err != nil {
-		panic("Failed to ping database: " + err.Error())
-	}
-	queries := db.New(conn)
+	e.HTTPErrorHandler = errorHandler
+
+	valkit := validator.New()
+	valkit.UseJsonTagName()
+
+	valkit.SetDefaultMessage("{field} is invalid.")
+	valkit.SetDefaultTagMessage("required", "{field} is required.")
+	valkit.SetDefaultTagMessage("min", "{field} length must be at least {param}.")
+	valkit.SetDefaultTagMessage("max", "{field} length must be at most {param}.")
+	valkit.SetDefaultTagMessage("email", "{value} is not a valid email address.")
+	validations.AddPasswordValidation(valkit, validations.DefaultPasswordOptions())
 
 	api := &API{
 		Echo:   e,
 		Config: cfg,
 		DB:     queries,
+		Valkit: valkit,
 	}
 
 	api.registerRoutes()
@@ -68,7 +84,7 @@ func (api *API) registerRoutes() {
 	api.registerUserRoutes()
 }
 
-type APIResponse struct {
+type apiResponse struct {
+	Code    int    `json:"-"`
 	Message string `json:"message"`
-	Success bool   `json:"success"`
 }

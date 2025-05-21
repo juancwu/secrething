@@ -27,16 +27,16 @@ func (api *API) registerAuthRoutes() {
 
 // SignupRequest represents the payload for user registration
 type SignupRequest struct {
-	Email     string `json:"email"`
-	Password  string `json:"password"`
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
+	Email     string `json:"email" validate:"required,email"`
+	Password  string `json:"password" validate:"required,password"`
+	FirstName string `json:"first_name" validate:"required"`
+	LastName  string `json:"last_name" validate:"required"`
 }
 
-// LoginRequest represents the payload for user login
-type LoginRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
+// SigninRequest represents the payload for user login
+type SigninRequest struct {
+	Email    string `json:"email" validate:"required,email" errmsg-email:"{value} is not a valid email."`
+	Password string `json:"password" validate:"required"`
 }
 
 // AuthResponse represents the successful authentication response
@@ -49,33 +49,45 @@ type AuthResponse struct {
 		FirstName string `json:"first_name"`
 		LastName  string `json:"last_name"`
 	} `json:"user"`
-	APIResponse
+	apiResponse
 }
 
 // handleSignup handles user registration
 func (api *API) handleSignup(c echo.Context) error {
 	var req SignupRequest
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request body"})
+		return c.JSON(http.StatusBadRequest, apiResponse{
+			Code:    http.StatusBadRequest,
+			Message: "Invalid request body",
+		})
 	}
 
 	// Validate request
-	if req.Email == "" || req.Password == "" || req.FirstName == "" || req.LastName == "" {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "All fields are required"})
+	if err := api.Valkit.Validate(&req); err != nil {
+		return err
 	}
 
 	// Check if user already exists
 	_, err := api.DB.GetUserByEmail(c.Request().Context(), req.Email)
 	if err == nil {
-		return c.JSON(http.StatusConflict, map[string]string{"error": "Email already registered"})
+		return c.JSON(http.StatusConflict, apiResponse{
+			Code:    http.StatusConflict,
+			Message: "Email already registered",
+		})
 	} else if err != sql.ErrNoRows {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to check existing user"})
+		return c.JSON(http.StatusInternalServerError, apiResponse{
+			Code:    http.StatusInternalServerError,
+			Message: "Failed to check existing user",
+		})
 	}
 
 	// Hash password
 	passwordHash, err := auth.HashPassword(req.Password)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to hash password"})
+		return c.JSON(http.StatusInternalServerError, apiResponse{
+			Code:    http.StatusInternalServerError,
+			Message: "Failed to hash password",
+		})
 	}
 
 	// Generate user ID
@@ -95,13 +107,19 @@ func (api *API) handleSignup(c echo.Context) error {
 		UpdatedAt:    now,
 	})
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to create user"})
+		return c.JSON(http.StatusInternalServerError, apiResponse{
+			Code:    http.StatusInternalServerError,
+			Message: "Failed to create user",
+		})
 	}
 
 	// Generate JWT token
 	token, err := auth.GenerateToken(user, api.Config.Auth.JWTSecret, api.Config.Auth.JWTExpirationMinutes)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to generate token"})
+		return c.JSON(http.StatusInternalServerError, apiResponse{
+			Code:    http.StatusInternalServerError,
+			Message: "Failed to generate token",
+		})
 	}
 
 	// Set auth cookie
@@ -113,7 +131,6 @@ func (api *API) handleSignup(c echo.Context) error {
 		ExpiresAt: time.Now().Add(time.Duration(api.Config.Auth.JWTExpirationMinutes) * time.Minute).Unix(),
 	}
 	response.Message = "Sign up successful."
-	response.Success = true
 	response.User.ID = user.UserID.String()
 	response.User.Email = user.Email
 	response.User.FirstName = user.FirstName
@@ -124,35 +141,50 @@ func (api *API) handleSignup(c echo.Context) error {
 
 // handleSignin handles user login
 func (api *API) handleSignin(c echo.Context) error {
-	var req LoginRequest
+	var req SigninRequest
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request body"})
+		return c.JSON(http.StatusBadRequest, apiResponse{
+			Code:    http.StatusBadRequest,
+			Message: "Invalid request body",
+		})
 	}
 
 	// Validate request
-	if req.Email == "" || req.Password == "" {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Email and password are required"})
+	if err := api.Valkit.Validate(&req); err != nil {
+		return err
 	}
 
 	// Get user by email
 	user, err := api.DB.GetUserByEmail(c.Request().Context(), req.Email)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return c.JSON(http.StatusUnauthorized, map[string]string{"error": "Invalid credentials"})
+			return c.JSON(http.StatusUnauthorized, apiResponse{
+				Code:    http.StatusUnauthorized,
+				Message: "Invalid credentials",
+			})
 		}
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to retrieve user"})
+		return c.JSON(http.StatusInternalServerError, apiResponse{
+			Code:    http.StatusInternalServerError,
+			Message: "Failed to retrieve user",
+		})
 	}
 
 	// Verify password
 	valid, err := auth.CompareHashes(req.Password, user.PasswordHash)
 	if err != nil || !valid {
-		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "Invalid credentials"})
+		return c.JSON(http.StatusUnauthorized, apiResponse{
+			Code:    http.StatusUnauthorized,
+			Message: "Invalid credentials",
+		})
 	}
 
 	// Generate JWT token
 	token, err := auth.GenerateToken(user, api.Config.Auth.JWTSecret, api.Config.Auth.JWTExpirationMinutes)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to generate token"})
+		return c.JSON(http.StatusInternalServerError, apiResponse{
+			Code:    http.StatusInternalServerError,
+			Message: "Failed to generate token",
+		})
 	}
 
 	// Set auth cookie
@@ -164,7 +196,6 @@ func (api *API) handleSignin(c echo.Context) error {
 		ExpiresAt: time.Now().Add(time.Duration(api.Config.Auth.JWTExpirationMinutes) * time.Minute).Unix(),
 	}
 	response.Message = "Sign in successful."
-	response.Success = true
 	response.User.ID = user.UserID.String()
 	response.User.Email = user.Email
 	response.User.FirstName = user.FirstName
@@ -187,7 +218,7 @@ func (api *API) handleSignout(c echo.Context) error {
 	cookie.SameSite = api.Config.Auth.CookieSameSite
 	c.SetCookie(cookie)
 
-	return c.JSON(http.StatusOK, map[string]string{"message": "Logged out successfully"})
+	return c.JSON(http.StatusOK, apiResponse{Message: "Signed out successfully"})
 }
 
 // Helper function to set auth cookie

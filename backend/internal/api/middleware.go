@@ -41,13 +41,19 @@ func (api *API) AuthMiddleware() echo.MiddlewareFunc {
 
 			// If no token found, return unauthorized
 			if tokenString == "" {
-				return c.JSON(http.StatusUnauthorized, map[string]string{"error": "Authentication required"})
+				return c.JSON(http.StatusUnauthorized, apiResponse{
+					Code:    http.StatusUnauthorized,
+					Message: "Authentication required",
+				})
 			}
 
 			// Validate token
 			claims, err := auth.ValidateToken(tokenString, api.Config.Auth.JWTSecret)
 			if err != nil {
-				return c.JSON(http.StatusUnauthorized, map[string]string{"error": "Invalid or expired token"})
+				return c.JSON(http.StatusUnauthorized, apiResponse{
+					Code:    http.StatusUnauthorized,
+					Message: "Invalid or expired token",
+				})
 			}
 
 			// Set user in context
@@ -61,4 +67,3 @@ func (api *API) AuthMiddleware() echo.MiddlewareFunc {
 		}
 	}
 }
-

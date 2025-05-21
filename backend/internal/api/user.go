@@ -22,6 +22,7 @@ type UserProfile struct {
 	Email     string `json:"email"`
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
+	apiResponse
 }
 
 // handleGetProfile returns the authenticated user's profile
@@ -29,13 +30,19 @@ func (api *API) handleGetProfile(c echo.Context) error {
 	// Get user from context (set by auth middleware)
 	user, ok := c.Get("user").(User)
 	if !ok {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to get user from context"})
+		return c.JSON(http.StatusInternalServerError, apiResponse{
+			Code:    http.StatusInternalServerError,
+			Message: "Failed to get user from context",
+		})
 	}
 
 	// Get user details from database
 	dbUser, err := api.DB.GetUserByID(c.Request().Context(), user.ID)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to retrieve user data"})
+		return c.JSON(http.StatusInternalServerError, apiResponse{
+			Code:    http.StatusInternalServerError,
+			Message: "Failed to retrieve user data",
+		})
 	}
 
 	// Return user profile
@@ -44,6 +51,10 @@ func (api *API) handleGetProfile(c echo.Context) error {
 		Email:     dbUser.Email,
 		FirstName: dbUser.FirstName,
 		LastName:  dbUser.LastName,
+		apiResponse: apiResponse{
+			Code:    http.StatusOK,
+			Message: "User profile retrieved successfully",
+		},
 	}
 
 	return c.JSON(http.StatusOK, profile)
