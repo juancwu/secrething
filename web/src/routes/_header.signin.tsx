@@ -3,6 +3,7 @@ import { useAuth } from "@/contexts/auth";
 import { AuthError } from "@/lib/api/errors";
 import {
 	Button,
+	Checkbox,
 	Flex,
 	PasswordInput,
 	Stack,
@@ -46,6 +47,7 @@ function SignInPage() {
 		initialValues: {
 			email: "",
 			password: "",
+			remember_me: false,
 		},
 		validate: zodResolver(schema),
 	});
@@ -112,6 +114,11 @@ function SignInPage() {
 							key={formProps.key("password")}
 							required
 							{...formProps.getInputProps("password")}
+						/>
+						<Checkbox
+							key={formProps.key("remember_me")}
+							label="Remember me"
+							{...formProps.getInputProps("remember_me")}
 						/>
 						<Button type="submit" loading={isLoading}>
 							Sign In

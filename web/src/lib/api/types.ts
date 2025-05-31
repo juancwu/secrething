@@ -24,4 +24,5 @@ export type AuthResponse = {
 export type SigninBody = {
 	email: string;
 	password: string;
+	remember_me: boolean;
 };
