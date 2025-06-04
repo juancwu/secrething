@@ -3,8 +3,9 @@ package config
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
-	"github.com/ilyakaznacheev/cleanenv"
+	"github.com/spf13/viper"
 )
 
 var version string
@@ -21,58 +22,104 @@ const (
 
 // Config holds all application configuration
 type Config struct {
-	// Environment configuration
-	Env Environment `env:"APP_ENV" env-default:"development" env-description:"Application environment (development or production)"`
-
 	// Database configuration
-	DB struct {
-		URL   string `env:"DB_URL" env-default:"file:./.local/local.db" env-description:"Database connection URL"`
-		Token string `env:"DB_TOKEN" env-description:"Authentication token for remote database connections"`
-	}
+	DB DatabaseConfig `mapstructure:"db"`
 
 	// Server configuration
-	Server struct {
-		Address string `env:"SERVER_ADDRESS" env-default:":3000" env-description:"Address and port for the server to listen on"`
-	}
+	Server ServerConfig `mapstructure:"server"`
 
 	// CORS configuration
-	CORS struct {
-		AllowOrigins []string `env:"CORS_ALLOW_ORIGINS" env-default:"http://localhost:5173,https://secrething.app" env-description:"Comma-separated list of allowed origins"`
-		AllowMethods []string `env:"CORS_ALLOW_METHODS" env-default:"GET,POST,PUT,DELETE,OPTIONS" env-description:"Comma-separated list of allowed HTTP methods"`
-		AllowHeaders []string `env:"CORS_ALLOW_HEADERS" env-default:"Accept,Authorization,Content-Type,X-CSRF-Token" env-description:"Comma-separated list of allowed HTTP headers"`
-	}
+	CORS CORSConfig `mapstructure:"cors"`
 
 	// Authentication configuration
-	Auth struct {
-		JWTSecret            string        `env:"JWT_SECRET" env-description:"Secret key for JWT token generation"`
-		JWTExpirationMinutes int           `env:"JWT_EXPIRATION_MINUTES" env-default:"60" env-description:"JWT token expiration time in minutes"`
-		CookieDomain         string        `env:"COOKIE_DOMAIN" env-description:"Domain for auth cookies"`
-		CookieSecure         bool          `env:"COOKIE_SECURE" env-default:"false" env-description:"Whether cookies should only be sent over HTTPS"`
-		CookiePath           string        `env:"COOKIE_PATH" env-default:"" env-description:"Path cookie is included in requests"`
-		CookieSameSite       http.SameSite `env:"COOKIE_SAME_SITE" env-default:"3" env-description:"Same site mode for cookie. Default: strict(3)"`
-		CookieHttpOnly       bool          `env:"COOKIE_HTTP_ONLY" env-default:"true" env-description:"Set cookie to be http-only"`
-	}
-
-	// Application configuration
-	App struct {
-		Version string `env:"-"`
-	}
+	Auth AuthConfig `mapstructure:"auth"`
 }
 
-// NewConfig creates a new Config instance with default values
-func NewConfig() *Config {
-	cfg := &Config{}
-	cfg.App.Version = version
-	return cfg
+type CORSConfig struct {
+	AllowOrigins []string `mapstructure:"allow_origins"`
+	AllowMethods []string `mapstructure:"allow_methods"`
+	AllowHeaders []string `mapstructure:"allow_headers"`
+}
+
+type ServerConfig struct {
+	Address string      `mapstructure:"address"`
+	Env     Environment `mapstructure:"env"`
+	Version string
+}
+
+type DatabaseConfig struct {
+	URL   string `mapstructure:"url"`
+	Token string `mapstructure:"token"`
+}
+
+type AuthConfig struct {
+	JWT    JWTConfig    `mapstructure:"jwt"`
+	Cookie CookieConfig `mapstructure:"cookie"`
+}
+
+type JWTConfig struct {
+	Secret                    string `mapstructure:"secret"`
+	ExpirationMinutes         int    `mapstructure:"expiration_minutes"`
+	ExtendedExpirationMinutes int    `mapstructure:"extended_expiration_minutes"`
+}
+
+type CookieConfig struct {
+	Secure   bool          `mapstructure:"secure"`
+	Domain   string        `mapstructure:"domain"`
+	Path     string        `mapstructure:"path"`
+	SameSite http.SameSite `mapstructure:"same_site"`
+	HttpOnly bool          `mapstructure:"http_only"`
 }
 
 // LoadConfig loads configuration from environment variables
-func LoadConfig() (*Config, error) {
-	cfg := NewConfig()
+func LoadConfig(cfgPath string) (*Config, error) {
+	cfg := &Config{}
+	cfg.Server.Version = version
 
-	// Read from environment variables (.env file loaded separately)
-	if err := cleanenv.ReadEnv(cfg); err != nil {
-		return nil, fmt.Errorf("failed to read environment variables: %w", err)
+	viper.SetConfigFile(cfgPath)
+
+	if err := viper.ReadInConfig(); err != nil {
+		return nil, fmt.Errorf("failed to read configuration: %w", err)
+	}
+
+	requiredKeys := []string{
+		// Database keys
+		"db.url",
+		"db.token",
+
+		// Server keys
+		"server.address",
+		"server.env",
+
+		// CORS keys
+		"cors.allow_origins",
+		"cors.allow_methods",
+		"cors.allow_headers",
+
+		// Auth config
+		"auth.jwt.secret",
+		"auth.jwt.expiration_minutes",
+		"auth.jwt.extended_expiration_minutes",
+		"auth.cookie.secure",
+		"auth.cookie.domain",
+		"auth.cookie.path",
+		"auth.cookie.same_site",
+		"auth.cookie.http_only",
+	}
+
+	notSetList := make([]string, 0)
+	for _, key := range requiredKeys {
+		if !viper.IsSet(key) {
+			notSetList = append(notSetList, key)
+		}
+	}
+
+	if len(notSetList) > 0 {
+		return nil, fmt.Errorf("missing %d required configuration key(s): [%s]", len(notSetList), strings.Join(notSetList, ", "))
+	}
+
+	if err := viper.Unmarshal(cfg); err != nil {
+		return nil, fmt.Errorf("failed to read configuration: %w", err)
 	}
 
 	return cfg, nil
@@ -80,10 +127,10 @@ func LoadConfig() (*Config, error) {
 
 // IsDevelopment returns true if the application is running in development mode
 func (c *Config) IsDevelopment() bool {
-	return c.Env == Development
+	return c.Server.Env == Development
 }
 
 // IsProduction returns true if the application is running in production mode
 func (c *Config) IsProduction() bool {
-	return c.Env == Production
+	return c.Server.Env == Production
 }

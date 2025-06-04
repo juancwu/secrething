@@ -1,7 +1,9 @@
 package api
 
 import (
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"net/http"
 	"time"
 
@@ -35,8 +37,9 @@ type SignupRequest struct {
 
 // SigninRequest represents the payload for user login
 type SigninRequest struct {
-	Email    string `json:"email" validate:"required,email" errmsg-email:"{value} is not a valid email."`
-	Password string `json:"password" validate:"required"`
+	Email      string `json:"email" validate:"required,email" errmsg-email:"{value} is not a valid email."`
+	Password   string `json:"password" validate:"required"`
+	RememberMe bool   `json:"remember_me" validate:"boolean"`
 }
 
 // AuthResponse represents the successful authentication response
@@ -115,7 +118,7 @@ func (api *API) handleSignup(c echo.Context) error {
 	}
 
 	// Generate JWT token
-	token, err := auth.GenerateToken(user, api.Config.Auth.JWTSecret, api.Config.Auth.JWTExpirationMinutes)
+	token, err := auth.GenerateToken(user, api.Config.Auth.JWT.Secret, api.Config.Auth.JWT.ExpirationMinutes)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, apiResponse{
 			Code:    http.StatusInternalServerError,
@@ -124,12 +127,12 @@ func (api *API) handleSignup(c echo.Context) error {
 	}
 
 	// Set auth cookie
-	setAuthCookie(c, token, api.Config)
+	setAuthCookie(c, token, api.Config, api.Config.Auth.JWT.ExpirationMinutes)
 
 	// Prepare response
 	response := AuthResponse{
 		Token:     token,
-		ExpiresAt: time.Now().Add(time.Duration(api.Config.Auth.JWTExpirationMinutes) * time.Minute).Unix(),
+		ExpiresAt: time.Now().Add(time.Duration(api.Config.Auth.JWT.ExpirationMinutes) * time.Minute).Unix(),
 	}
 	response.Message = "Sign up successful."
 	response.User.ID = user.UserID.String()
@@ -179,8 +182,15 @@ func (api *API) handleSignin(c echo.Context) error {
 		})
 	}
 
+	// Determine expiration based on remember_me
+	expirationMinutes := api.Config.Auth.JWT.ExpirationMinutes
+	if req.RememberMe {
+		// 30 days for remember me
+		expirationMinutes = 60 * 24 * 30
+	}
+
 	// Generate JWT token
-	token, err := auth.GenerateToken(user, api.Config.Auth.JWTSecret, api.Config.Auth.JWTExpirationMinutes)
+	token, err := auth.GenerateToken(user, api.Config.Auth.JWT.Secret, expirationMinutes)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, apiResponse{
 			Code:    http.StatusInternalServerError,
@@ -188,13 +198,40 @@ func (api *API) handleSignin(c echo.Context) error {
 		})
 	}
 
+	// Create session if remember me is enabled
+	if req.RememberMe {
+		// Generate session ID
+		sessionID, _ := typeid.New[db.SessionID]()
+
+		// Hash the token for storage
+		hash := sha256.Sum256([]byte(token))
+		tokenHash := hex.EncodeToString(hash[:])
+
+		// Create session
+		now := time.Now().UTC()
+		expiresAt := now.Add(time.Duration(expirationMinutes) * time.Minute)
+
+		_, err = api.DB.CreateSession(c.Request().Context(), db.CreateSessionParams{
+			SessionID:  sessionID,
+			UserID:     user.UserID,
+			TokenHash:  tokenHash,
+			ExpiresAt:  expiresAt.Format(time.RFC3339),
+			CreatedAt:  now.Format(time.RFC3339),
+			LastUsedAt: now.Format(time.RFC3339),
+		})
+		if err != nil {
+			// Log error but don't fail the signin
+			api.Echo.Logger.Errorf("Failed to create session: %v", err)
+		}
+	}
+
 	// Set auth cookie
-	setAuthCookie(c, token, api.Config)
+	setAuthCookie(c, token, api.Config, expirationMinutes)
 
 	// Prepare response
 	response := AuthResponse{
 		Token:     token,
-		ExpiresAt: time.Now().Add(time.Duration(api.Config.Auth.JWTExpirationMinutes) * time.Minute).Unix(),
+		ExpiresAt: time.Now().Add(time.Duration(expirationMinutes) * time.Minute).Unix(),
 	}
 	response.Message = "Sign in successful."
 	response.User.ID = user.UserID.String()
@@ -207,31 +244,59 @@ func (api *API) handleSignin(c echo.Context) error {
 
 // handleSignout handles user logout
 func (api *API) handleSignout(c echo.Context) error {
+	// Try to get token to delete session
+	var tokenString string
+
+	// Try to get from cookie first
+	cookie, err := c.Cookie(auth_cookie_name)
+	if err == nil && cookie.Value != "" {
+		tokenString = cookie.Value
+	}
+
+	// If found, delete the session from database
+	if tokenString != "" {
+		// Hash the token
+		hash := sha256.Sum256([]byte(tokenString))
+		tokenHash := hex.EncodeToString(hash[:])
+
+		// Delete session
+		err := api.DB.DeleteSessionByTokenHash(c.Request().Context(), tokenHash)
+		if err != nil {
+			// Log error but don't fail the signout
+			api.Echo.Logger.Errorf("Failed to delete session: %v", err)
+		}
+	}
+
 	// Clear auth cookie by setting it to expire immediately
-	cookie := new(http.Cookie)
-	cookie.Name = auth_cookie_name
-	cookie.Value = ""
-	cookie.Path = api.Config.Auth.CookiePath
-	cookie.Domain = api.Config.Auth.CookieDomain
-	cookie.Expires = time.Now().Add(-1 * time.Hour) // Set to expire
-	cookie.HttpOnly = api.Config.Auth.CookieHttpOnly
-	cookie.Secure = api.Config.Auth.CookieSecure
-	cookie.SameSite = api.Config.Auth.CookieSameSite
-	c.SetCookie(cookie)
+	unsetAuthCookie(c, api.Config)
 
 	return c.JSON(http.StatusOK, apiResponse{Message: "Signed out successfully"})
 }
 
 // Helper function to set auth cookie
-func setAuthCookie(c echo.Context, token string, cfg *config.Config) {
+func setAuthCookie(c echo.Context, token string, cfg *config.Config, expirationMinutes int) {
 	cookie := new(http.Cookie)
 	cookie.Name = auth_cookie_name
 	cookie.Value = token
-	cookie.Path = cfg.Auth.CookiePath
-	cookie.Domain = cfg.Auth.CookieDomain
-	cookie.Expires = time.Now().UTC().Add(time.Duration(cfg.Auth.JWTExpirationMinutes) * time.Minute)
-	cookie.HttpOnly = cfg.Auth.CookieHttpOnly
-	cookie.Secure = cfg.Auth.CookieSecure
-	cookie.SameSite = cfg.Auth.CookieSameSite
+	cookie.Path = cfg.Auth.Cookie.Path
+	cookie.Domain = cfg.Auth.Cookie.Domain
+	cookie.Expires = time.Now().UTC().Add(time.Duration(expirationMinutes) * time.Minute)
+	cookie.HttpOnly = cfg.Auth.Cookie.HttpOnly
+	cookie.Secure = cfg.Auth.Cookie.Secure
+	cookie.SameSite = cfg.Auth.Cookie.SameSite
+	c.SetCookie(cookie)
+}
+
+// Helper function to unset auth cookie
+func unsetAuthCookie(c echo.Context, cfg *config.Config) {
+	cookie := new(http.Cookie)
+	cookie.Name = auth_cookie_name
+	cookie.Value = ""
+	cookie.Path = cfg.Auth.Cookie.Path
+	cookie.Domain = cfg.Auth.Cookie.Domain
+	cookie.Expires = time.Now().Add(-1 * time.Hour) // Set to expire
+	cookie.HttpOnly = cfg.Auth.Cookie.HttpOnly
+	cookie.Secure = cfg.Auth.Cookie.Secure
+	cookie.SameSite = cfg.Auth.Cookie.SameSite
 	c.SetCookie(cookie)
 }

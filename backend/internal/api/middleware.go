@@ -48,7 +48,7 @@ func (api *API) AuthMiddleware() echo.MiddlewareFunc {
 			}
 
 			// Validate token
-			claims, err := auth.ValidateToken(tokenString, api.Config.Auth.JWTSecret)
+			claims, err := auth.ValidateToken(tokenString, api.Config.Auth.JWT.Secret)
 			if err != nil {
 				return c.JSON(http.StatusUnauthorized, apiResponse{
 					Code:    http.StatusUnauthorized,

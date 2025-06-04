@@ -1,17 +1,18 @@
 package main
 
 import (
-	"github.com/joho/godotenv"
+	"flag"
+
 	"github.com/juancwu/secrething/internal/api"
 	"github.com/juancwu/secrething/internal/config"
 )
 
 func main() {
-	// Load .env file first
-	godotenv.Load()
+	// Parse flag for custom config path
+	cfgPath := flag.String("config", "app.config.yaml", "Configuration file path")
 
 	// Load configuration
-	cfg, err := config.LoadConfig()
+	cfg, err := config.LoadConfig(*cfgPath)
 	if err != nil {
 		panic("Failed to load configuration: " + err.Error())
 	}

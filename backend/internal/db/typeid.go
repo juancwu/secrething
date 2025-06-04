@@ -17,3 +17,11 @@ func (UserIDPrefix) Prefix() string { return "user" }
 type UserID struct {
 	typeid.TypeID[UserIDPrefix]
 }
+
+type SessionIDPrefix struct{}
+
+func (SessionIDPrefix) Prefix() string { return "session" }
+
+type SessionID struct {
+	typeid.TypeID[SessionIDPrefix]
+}

@@ -15,3 +15,5 @@ coverage.html
 .local
 
 .DS_Store
+
+app.config.yaml
