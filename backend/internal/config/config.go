@@ -10,14 +10,11 @@ import (
 
 var version string
 
-// Environment represents the runtime environment
-type Environment string
-
 const (
 	// Development environment
-	Development Environment = "development"
+	Development string = "development"
 	// Production environment
-	Production Environment = "production"
+	Production string = "production"
 )
 
 // Config holds all application configuration
@@ -42,8 +39,8 @@ type CORSConfig struct {
 }
 
 type ServerConfig struct {
-	Address string      `mapstructure:"address"`
-	Env     Environment `mapstructure:"env"`
+	Address string `mapstructure:"address"`
+	Env     string `mapstructure:"env"`
 	Version string
 }
 
