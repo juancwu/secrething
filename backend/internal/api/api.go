@@ -30,6 +30,9 @@ func New(cfg *config.Config) *API {
 
 	e := echo.New()
 
+	e.HideBanner = true
+	e.HidePort = true
+
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 
